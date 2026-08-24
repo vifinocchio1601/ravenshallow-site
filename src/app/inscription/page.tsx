@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import AdminLink from "@/components/AdminLink";
 import ConsentGate from "@/components/ConsentGate";
 import Nav from "@/components/Nav";
 import ReglementArticle from "@/components/ReglementArticle";
@@ -170,6 +171,8 @@ export default function InscriptionPage() {
           <ConsentGate />
         </div>
       </main>
+
+      <AdminLink />
     </>
   );
 }

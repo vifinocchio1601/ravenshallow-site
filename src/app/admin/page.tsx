@@ -1,0 +1,91 @@
+import type { Metadata } from "next";
+import { ExternalLink } from "lucide-react";
+import AdminCard from "@/components/AdminCard";
+import AdminEmptyState from "@/components/AdminEmptyState";
+
+export const metadata: Metadata = {
+  title: "Administration — Ravenshallow",
+  robots: { index: false, follow: false },
+};
+
+// À remplacer par l'URL exacte du projet une fois connue
+// (https://vercel.com/<équipe>/<projet>/analytics).
+const VERCEL_ANALYTICS_URL = "https://vercel.com/dashboard";
+
+export default function AdminPage() {
+  return (
+    <main className="relative min-h-[100svh] bg-void">
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-x-0 top-0 h-96 bg-[radial-gradient(70%_60%_at_50%_0%,rgba(63,217,199,0.07)_0%,transparent_72%)]"
+      />
+
+      <div className="relative mx-auto max-w-content px-6 py-14 sm:px-8 sm:py-20">
+        {/* — En-tête — */}
+        <header className="flex flex-wrap items-end justify-between gap-6 border-b border-silver/10 pb-8">
+          <div>
+            <p className="eyebrow flex flex-wrap items-center gap-x-3 gap-y-1">
+              <span aria-hidden="true" className="rune text-aurora-teal">
+                ᚨᛞᛗᛁᚾ
+              </span>
+              <span>· Accès restreint</span>
+            </p>
+            <h1 className="mt-3 font-display text-[clamp(1.9rem,6vw,2.75rem)] font-bold leading-[1.1] tracking-[0.04em] text-parchment">
+              Administration
+            </h1>
+          </div>
+
+          {/* Déconnexion en POST : un simple lien ne doit pas pouvoir la
+              déclencher depuis l'extérieur. Un formulaire natif suffit, la
+              page reste un composant serveur. */}
+          <form action="/api/admin/logout" method="post">
+            <button
+              type="submit"
+              className="font-display text-[0.68rem] uppercase tracking-[0.22em] text-silver transition-colors duration-300 hover:text-aurora-teal"
+            >
+              Se déconnecter
+            </button>
+          </form>
+        </header>
+
+        {/* — Tableau de bord — */}
+        <div className="mt-10 grid gap-6 lg:grid-cols-2">
+          <AdminCard
+            rune="ᛏᚨᛚ"
+            eyebrow="Trafic"
+            title="Statistiques de visite"
+          >
+            <p className="leading-[1.7] text-parchment-dim">
+              Les statistiques de trafic sont gérées par Vercel Analytics.
+            </p>
+
+            <a
+              href={VERCEL_ANALYTICS_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn btn-ghost mt-6"
+            >
+              Voir les statistiques complètes
+              <ExternalLink aria-hidden="true" className="h-4 w-4" />
+            </a>
+          </AdminCard>
+
+          <AdminCard
+            rune="ᛗᛁᚱ"
+            eyebrow="Miroir de Brume"
+            title="Inscriptions"
+          >
+            <AdminEmptyState>
+              Aucune inscription pour l&apos;instant — cette section sera
+              activée quand la base de données sera connectée.
+            </AdminEmptyState>
+          </AdminCard>
+
+          <AdminCard rune="ᚹᛁᛏ" eyebrow="Assistance" title="Assistant IA">
+            <AdminEmptyState>Fonctionnalité à venir.</AdminEmptyState>
+          </AdminCard>
+        </div>
+      </div>
+    </main>
+  );
+}

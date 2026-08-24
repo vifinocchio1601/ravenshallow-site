@@ -1,3 +1,4 @@
+import AdminLink from "@/components/AdminLink";
 import FoundingSection from "@/components/FoundingSection";
 import Footer from "@/components/Footer";
 import Hero from "@/components/Hero";
@@ -16,6 +17,7 @@ export default function Home() {
         <FoundingSection />
       </main>
       <Footer />
+      <AdminLink />
     </>
   );
 }
