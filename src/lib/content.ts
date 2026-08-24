@@ -101,7 +101,26 @@ export const TERRITORIES: Territory[] = [
   },
 ];
 
-export const NAV_LINKS = [
+export type SiteLink = {
+  href: string;
+  label: string;
+  /** Mis en avant dans la navigation (gras) — l'entrée « Inscription ». */
+  emphasis?: boolean;
+};
+
+/**
+ * Navigation principale. Les ancres sont absolues (`/#…`) pour rester
+ * fonctionnelles depuis une autre route que l'accueil, comme /inscription.
+ */
+export const NAV_LINKS: SiteLink[] = [
+  { href: "/#le-monde", label: "Le monde" },
+  { href: "/#les-maisons", label: "Les maisons" },
+  { href: "/#la-fondation", label: "La fondation" },
+  { href: "/inscription", label: "Inscription", emphasis: true },
+];
+
+/** Le pied de page reste sur les ancres de l'accueil, dont « Rejoindre ». */
+export const FOOTER_LINKS: SiteLink[] = [
   { href: "#le-monde", label: "Le monde" },
   { href: "#les-maisons", label: "Les maisons" },
   { href: "#la-fondation", label: "La fondation" },

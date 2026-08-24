@@ -1,6 +1,6 @@
 import RuneDivider from "./RuneDivider";
 import WaitlistForm from "./WaitlistForm";
-import { NAV_LINKS } from "@/lib/content";
+import { FOOTER_LINKS } from "@/lib/content";
 
 export default function Footer() {
   return (
@@ -29,7 +29,7 @@ export default function Footer() {
 
             <nav aria-label="Navigation de pied de page" className="mt-8">
               <ul className="flex flex-wrap gap-x-7 gap-y-3">
-                {NAV_LINKS.map((link) => (
+                {FOOTER_LINKS.map((link) => (
                   <li key={link.href}>
                     <a
                       href={link.href}

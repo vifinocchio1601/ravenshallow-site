@@ -117,6 +117,42 @@
     border-color: color-mix(in srgb, var(--house) 45%, transparent);
   }
 
+  /* — Page Règlement : tableau des sanctions — */
+  .rules-table th,
+  .rules-table td {
+    border: 1px solid rgb(142 160 179 / 0.14);
+    padding: 0.75rem 1rem;
+    vertical-align: top;
+  }
+
+  .rules-table th {
+    background-color: var(--mist-2);
+  }
+
+  .rules-table td {
+    background-color: rgb(24 36 48 / 0.55);
+  }
+
+  /* — Apparition « dans la brume » —
+     Le voile porte le flou et l'opacité ; le bouton garde ses propres
+     transitions de survol, qui ne sont donc jamais écrasées.
+     `prefers-reduced-motion` ramène la durée à l'instantané (voir plus bas) :
+     le bouton se matérialise alors d'un coup, sans dissipation. */
+  .mist-reveal {
+    opacity: 0;
+    filter: blur(12px);
+    pointer-events: none;
+    transition:
+      opacity 1s ease,
+      filter 1s ease;
+  }
+
+  .mist-reveal--visible {
+    opacity: 1;
+    filter: blur(0);
+    pointer-events: auto;
+  }
+
   /* — Filet horizontal dégradé — */
   .hairline {
     height: 1px;
