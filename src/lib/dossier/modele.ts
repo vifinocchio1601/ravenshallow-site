@@ -55,6 +55,15 @@ export type Dossier = {
   limitesEcriture: string[];
   limitesAutres: string | null;
 
+  /**
+   * Réservés au Miroir de Brume et à la boutique Bjornstav. Nuls tant que ces
+   * deux étapes n’existent pas — la fiche affiche alors une attente, pas un
+   * vide.
+   */
+  maison: string | null;
+  baguetteBois: string | null;
+  baguetteCoeur: string | null;
+
   journal: EntreeJournal[];
 };
 

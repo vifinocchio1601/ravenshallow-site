@@ -67,6 +67,10 @@ function versDossier(u: UtilisateurComplet): Dossier | null {
     limitesEcriture: u.limitesEcriture,
     limitesAutres: u.limitesAutres,
 
+    maison: e.maison,
+    baguetteBois: e.baguetteBois,
+    baguetteCoeur: e.baguetteCoeur,
+
     journal: u.journal.map((entree) => ({
       id: entree.id,
       type: entree.type as EvenementMembre,

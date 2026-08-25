@@ -1,15 +1,25 @@
+import MenuParchemin from "@/components/ecole/MenuParchemin";
+import { exigerConnexion } from "@/lib/session/garde";
+
 /**
- * Gabarit commun des pages de l’école.
+ * Gabarit commun des pages de l’école : le bandeau-parchemin, et rien d’autre.
  *
- * Il accueillera le bandeau-parchemin au lot suivant. La garde, elle, reste
- * dans chaque page : un gabarit d’App Router ne connaît pas le chemin
- * demandé, et c’est justement le chemin qui décide — un membre suspendu
- * garde son bureau et sa fiche, pas les cours.
+ * Il exige d’être connecté, sans plus : c’est chaque page qui vérifie le
+ * droit d’ouvrir *son* chemin. Un gabarit d’App Router ne connaît pas l’URL
+ * demandée, et c’est justement elle qui décide — un membre suspendu garde son
+ * bureau et sa fiche, pas les cours.
  */
-export default function EcoleLayout({
+export default async function EcoleLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  return <div className="min-h-[100svh] bg-void">{children}</div>;
+  const compte = await exigerConnexion();
+
+  return (
+    <div className="min-h-[100svh] bg-void">
+      <MenuParchemin prenomNom={compte.prenomNom} maison={compte.maison} />
+      {children}
+    </div>
+  );
 }

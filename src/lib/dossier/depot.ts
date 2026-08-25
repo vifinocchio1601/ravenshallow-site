@@ -69,6 +69,9 @@ function dossierDemo(partiel: Partial<Dossier> & { prenomNom: string }): Dossier
     certification104Le: null,
     limitesEcriture: [],
     limitesAutres: null,
+    maison: null,
+    baguetteBois: null,
+    baguetteCoeur: null,
     journal: [],
     ...partiel,
   };

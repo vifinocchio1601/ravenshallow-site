@@ -18,6 +18,8 @@ const palette = {
   "mist-2": "#212f3d",
   parchment: "#e9e1cd",
   "parchment-dim": "#b9b09a",
+  "parchment-2": "#d5c9ac",
+  ink: "#2b2318",
   "aurora-teal": "#3fd9c7",
   "aurora-violet": "#8a6fd6",
   ember: "#c97b3d",
