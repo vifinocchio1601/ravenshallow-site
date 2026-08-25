@@ -16,6 +16,7 @@ export type EvenementMembre =
   | "DOSSIER_REFUSE"
   | "AGE_MODIFIE"
   | "FONCTION_MODIFIEE"
+  | "ROLE_AFFICHE_MODIFIE"
   | "ACCES_MODIFIE"
   | "COURRIEL_CONFIRMATION";
 
@@ -42,6 +43,20 @@ export type Dossier = {
   prenomNom: string;
   age: number;
   fonction: Fonction;
+
+  /**
+   * Le titre au château, ou `null` pour un élève ordinaire. Il **remplace**
+   * l’année partout où elle s’affiche — `libellePlace` est le seul endroit
+   * qui tranche — et n’ouvre aucun droit, nulle part.
+   *
+   * Sa provenance l’accompagne : ce champ distingue publiquement un membre
+   * des autres, on doit pouvoir dire d’où il vient. Les trois vont ensemble
+   * ou pas du tout, garanti par la base.
+   */
+  roleAffiche: string | null;
+  roleAffichePoseLe: string | null;
+  roleAffichePosePar: string | null;
+
   genre: Genre;
   famille: string;
   portraitType: string;

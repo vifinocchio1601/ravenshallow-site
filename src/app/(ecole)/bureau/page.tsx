@@ -9,7 +9,7 @@ import {
   progression,
   scenesEnCours,
 } from "@/lib/bureau/donnees";
-import { libelleFonction } from "@/lib/dossier/etats";
+import { libellePlace } from "@/lib/dossier/etats";
 import { TEXTES_ECOLE } from "@/lib/ecole/constantes";
 import { ROUTES } from "@/lib/ecole/menu";
 import { exigerAcces } from "@/lib/session/garde";
@@ -141,11 +141,15 @@ export default async function BureauPage() {
                   valeur={String(avancee.pointsMaison)}
                 />
               )}
+              {/* Même règle que sur la fiche : le rôle prend la place de
+                  l’année, et le terme suit la valeur. */}
               <Mesure
-                terme={t.progression.annee}
-                valeur={libelleFonction(
+                terme={
+                  avancee.roleAffiche ? t.progression.role : t.progression.annee
+                }
+                valeur={libellePlace(
                   avancee.fonction as Fonction,
-                  avancee.genre as Genre,
+                  avancee.roleAffiche,
                 )}
               />
               {/* Masquée tant que l’élève n’est pas passé à Kaldvik : la note

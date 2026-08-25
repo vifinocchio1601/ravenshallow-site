@@ -57,6 +57,9 @@ function dossierDemo(partiel: Partial<Dossier> & { prenomNom: string }): Dossier
     noteAdmin: null,
     age: 13,
     fonction: "PREMIERE_ANNEE",
+    roleAffiche: null,
+    roleAffichePoseLe: null,
+    roleAffichePosePar: null,
     genre: "FEMININ",
     famille: "MIXTE",
     portraitType: "IA_ILLUSTRATION",
@@ -283,6 +286,22 @@ export async function lireDossier(id: string): Promise<Dossier | null> {
   return base.lireDossier(id);
 }
 
+/**
+ * Les titres déjà portés, sans doublon — les suggestions du champ de saisie.
+ * Ce n’est qu’une aide : toute autre valeur reste acceptable.
+ */
+export async function listerRolesAffiches(): Promise<string[]> {
+  if (baseAbsente()) {
+    const vus = new Set(
+      demo()
+        .map((d) => d.roleAffiche)
+        .filter((r): r is string => r !== null && r !== ""),
+    );
+    return [...vus].sort((a, b) => a.localeCompare(b, "fr"));
+  }
+  return base.listerRolesAffiches();
+}
+
 // ─────────────────────────────────────────────────────────────
 //  Écriture
 // ─────────────────────────────────────────────────────────────
@@ -427,31 +446,58 @@ export async function modifierMembre(
   modifications: {
     age?: number;
     fonction?: Fonction;
+    /**
+     * Le titre au château. `null` l’efface et fait réapparaître l’année ;
+     * `undefined` n’y touche pas. Décoratif : il n’ouvre aucun droit.
+     */
+    roleAffiche?: string | null;
     statutAcces?: StatutAcces;
     banniJusquau?: Date | null;
   },
   note: string | null,
+  parNom = "Administration",
 ): Promise<void> {
-  if (!baseAbsente()) return base.modifierMembre(id, modifications, note);
+  if (!baseAbsente()) return base.modifierMembre(id, modifications, note, parNom);
 
   const membre = demo().find((d) => d.id === id);
   if (!membre) return;
 
   if (modifications.age !== undefined && modifications.age !== membre.age) {
-    journaliser(membre, "AGE_MODIFIE", String(membre.age), String(modifications.age), note);
+    journaliser(membre, "AGE_MODIFIE", String(membre.age), String(modifications.age), note, parNom);
     membre.age = modifications.age;
   }
 
   if (modifications.fonction !== undefined && modifications.fonction !== membre.fonction) {
-    journaliser(membre, "FONCTION_MODIFIEE", membre.fonction, modifications.fonction, note);
+    journaliser(membre, "FONCTION_MODIFIEE", membre.fonction, modifications.fonction, note, parNom);
     membre.fonction = modifications.fonction;
+  }
+
+  // Le titre distingue publiquement un membre : sa provenance s'écrit avec
+  // lui, et le changement passe au journal comme les autres.
+  if (
+    modifications.roleAffiche !== undefined &&
+    modifications.roleAffiche !== membre.roleAffiche
+  ) {
+    journaliser(
+      membre,
+      "ROLE_AFFICHE_MODIFIE",
+      membre.roleAffiche,
+      modifications.roleAffiche,
+      note,
+      parNom,
+    );
+    membre.roleAffiche = modifications.roleAffiche;
+    membre.roleAffichePoseLe = modifications.roleAffiche
+      ? new Date().toISOString()
+      : null;
+    membre.roleAffichePosePar = modifications.roleAffiche ? parNom : null;
   }
 
   if (
     modifications.statutAcces !== undefined &&
     modifications.statutAcces !== membre.statutAcces
   ) {
-    journaliser(membre, "ACCES_MODIFIE", membre.statutAcces, modifications.statutAcces, note);
+    journaliser(membre, "ACCES_MODIFIE", membre.statutAcces, modifications.statutAcces, note, parNom);
     membre.statutAcces = modifications.statutAcces;
   }
 

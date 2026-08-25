@@ -11,7 +11,8 @@
     "test:watch": "vitest",
     "courriel:verifier": "node scripts/verifier-courriel.mjs",
     "postinstall": "prisma generate",
-    "base:importer": "node scripts/importer-dossiers.mjs"
+    "base:importer": "node scripts/importer-dossiers.mjs",
+    "base:migrer": "node scripts/migrer.mjs"
   },
   "dependencies": {
     "@node-rs/argon2": "^2.1.0",

@@ -42,6 +42,15 @@ export type CompteConnecte = EtatAcces & {
   prenomNom: string;
   genre: Genre;
   fonction: Fonction;
+  /**
+   * Le titre au château, ou `null` pour un élève ordinaire. Relu à chaque
+   * page comme le reste de l’état du compte.
+   *
+   * Il est ici **pour être affiché**, et pour rien d’autre : `EtatAcces` ne
+   * le porte pas, et aucune décision d’accès ne doit le lire. Un libellé ne
+   * gouverne pas une porte.
+   */
+  roleAffiche: string | null;
   age: number;
 };
 
@@ -66,6 +75,7 @@ export async function compteConnecte(): Promise<CompteConnecte | null> {
           prenomNom: true,
           genre: true,
           fonction: true,
+          roleAffiche: true,
           age: true,
           maison: true,
           baguetteBois: true,
@@ -101,6 +111,7 @@ export async function compteConnecte(): Promise<CompteConnecte | null> {
     prenomNom: eleve?.prenomNom ?? "",
     genre: (eleve?.genre ?? "AUTRE") as Genre,
     fonction: (eleve?.fonction ?? "PREMIERE_ANNEE") as Fonction,
+    roleAffiche: eleve?.roleAffiche ?? null,
     age: eleve?.age ?? 13,
   };
 }

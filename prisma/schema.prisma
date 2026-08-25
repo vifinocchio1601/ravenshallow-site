@@ -4,10 +4,12 @@
 // visages, la lecture des dossiers par l'administration, la Cérémonie du
 // Miroir (répartition en maison) et la boutique Bjornstav (la baguette).
 //
-// Deux règles de ce schéma ne sont PAS exprimables en Prisma et vivent en SQL
-// brut, dans `20260825200000_baguette_definitive` : la cohérence des trois
-// colonnes de la baguette, et son immuabilité une fois posée. Les rejouer
-// depuis ce fichier seul les perdrait.
+// Quatre règles de ce schéma ne sont PAS exprimables en Prisma et vivent en
+// SQL brut. Les rejouer depuis ce fichier seul les perdrait :
+//   `20260825200000_baguette_definitive` — la cohérence des trois colonnes de
+//       la baguette, et son immuabilité une fois posée
+//   `20260825210000_role_affiche`        — la cohérence des trois colonnes du
+//       rôle affiché, et la propreté de son texte
 
 generator client {
   provider = "prisma-client-js"
@@ -138,11 +140,40 @@ model Eleve {
   /// notamment après un Rite de passage.
   age Int @default(13)
 
-  /// Place du personnage dans l'école : son année, ou une fonction au
-  /// château. Les rôles du corps professoral sont attribués par
-  /// l'administration seule (art. 13.5). Le libellé affiché suit `genre`
-  /// (professeur/professeure, directeur/directrice).
+  /// L'année d'étude du personnage, et elle seule. Toujours renseignée, même
+  /// pour la directrice : `roleAffiche` la masque à l'affichage, il ne
+  /// l'efface pas.
+  ///
+  /// Les rôles du corps professoral sont attribués par l'administration seule
+  /// (art. 13.5) — ils se posent maintenant dans `roleAffiche`.
   fonction Fonction @default(PREMIERE_ANNEE)
+
+  /// Rôle particulier au château : « Directrice », « Professeur d'alchimie »,
+  /// « Bibliothécaire », « Intendant ». Texte libre, parce que ces rôles sont
+  /// rares, variés, et qu'on en inventera d'autres — les enfermer dans un enum
+  /// obligerait à une migration par nouveau titre.
+  ///
+  /// **Purement décoratif.** Il REMPLACE l'année partout où elle s'affiche —
+  /// une directrice n'est pas en troisième année — et n'ouvre RIEN, nulle
+  /// part : aucun contrôle d'accès, aucun bouton d'administration, aucune
+  /// permission ne le lit. Les droits viennent de `Utilisateur.statutAcces` et
+  /// de l'état du dossier, jamais d'un libellé affiché. Écrire
+  /// « Administratrice » ici n'ouvre pas une porte de plus.
+  ///
+  /// Nul = le membre est un élève de son année, et c'est l'année qui s'affiche.
+  /// L'année reste stockée et modifiable dans les deux cas : elle est masquée,
+  /// pas effacée.
+  roleAffiche String?
+
+  /// Quand le rôle a été posé, et par qui. Ce champ distingue publiquement un
+  /// membre des autres : on doit pouvoir dire d'où il vient. Affiché côté
+  /// administration seule.
+  ///
+  /// `roleAffichePosePar` vaut « Administration » tant que la zone
+  /// d'administration n'est qu'un mot de passe partagé, sans comptes
+  /// distincts : le site n'a personne d'autre à nommer.
+  roleAffichePoseLe  DateTime?
+  roleAffichePosePar String?
 
   portraitType PortraitType
   /// Renseigné uniquement si portraitType = ACTEUR.
@@ -212,8 +243,13 @@ enum Genre {
   AUTRE
 }
 
-/// Année d'étude ou fonction au château. Sept années, conformément à la
-/// bible du lore (§9).
+/// L'année d'étude, et rien d'autre. Sept années, conformément à la bible du
+/// lore (§9).
+///
+/// `PROFESSEUR` et `DIRECTION` en ont été retirés : un rôle au château n'est
+/// pas une année, et deux façons d'écrire « directrice » — par cette liste ou
+/// par le texte libre — auraient fini par se contredire. Ils vivent désormais
+/// dans `Eleve.roleAffiche`.
 enum Fonction {
   PREMIERE_ANNEE
   DEUXIEME_ANNEE
@@ -222,8 +258,6 @@ enum Fonction {
   CINQUIEME_ANNEE
   SIXIEME_ANNEE
   SEPTIEME_ANNEE
-  PROFESSEUR
-  DIRECTION
 }
 
 enum Famille {
@@ -362,6 +396,7 @@ enum EvenementMembre {
   DOSSIER_REFUSE
   AGE_MODIFIE
   FONCTION_MODIFIEE
+  ROLE_AFFICHE_MODIFIE
   ACCES_MODIFIE
   COURRIEL_CONFIRMATION
 }

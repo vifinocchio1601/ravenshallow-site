@@ -42,7 +42,12 @@ export type Progression = {
   /** Nul tant que l’élève n’a pas de maison — le compteur reste masqué. */
   pointsMaison: number | null;
   fonction: string;
-  genre: string;
+  /**
+   * Le titre au château, ou `null`. Transporté à côté de l’année plutôt qu’à
+   * sa place : `libellePlace` est le seul endroit qui tranche entre les deux,
+   * et l’année reste disponible si le rôle s’efface.
+   */
+  roleAffiche: string | null;
   /**
    * « Chêne des tempêtes, cœur de griffe d’ours des cavernes », ou `null`
    * tant que l’élève n’est pas passé à Kaldvik. La ligne reste alors masquée :
@@ -77,15 +82,15 @@ export async function courrierNonLu(
 /**
  * Lot « points et épreuves » — colonnes à créer.
  *
- * Seule l’année est déjà connue : elle vit sur la fiche depuis le dossier
- * d’admission. Le reste est annoncé comme vide, jamais inventé.
+ * Seules l’année et le rôle sont déjà connus : ils vivent sur la fiche. Le
+ * reste est annoncé comme vide, jamais inventé.
  */
 export async function progression(compte: CompteConnecte): Promise<Progression> {
   return {
     pointsPersonnels: 0,
     pointsMaison: compte.maison ? 0 : null,
     fonction: compte.fonction,
-    genre: compte.genre,
+    roleAffiche: compte.roleAffiche,
     baguette: libelleBaguette(compte.baguetteBois, compte.baguetteCoeur),
     prochainesEpreuves: null,
   };

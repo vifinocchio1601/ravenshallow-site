@@ -50,6 +50,11 @@ export const TEXTES_ECOLE = {
       pointsPersonnels: "Points personnels",
       pointsMaison: "Points de la maison",
       annee: "Année",
+      /**
+       * Le terme change avec la valeur : « Année — Directrice » se
+       * contredirait. Le rôle remplace l’année, son libellé aussi.
+       */
+      role: "Rôle",
       baguette: "Baguette",
       prochainesEpreuves: "Prochaines épreuves",
       /** Masqué tant que la répartition n’a pas eu lieu — art. 10.2. */
@@ -74,6 +79,8 @@ export const TEXTES_ECOLE = {
       nom: "Prénom et nom",
       age: "Âge",
       fonction: "Année",
+      /** Affiché à la place de « Année » quand un rôle est posé. */
+      role: "Rôle",
       maison: "Maison",
       famille: "Famille",
       baguette: "Baguette",

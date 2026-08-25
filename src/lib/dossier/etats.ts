@@ -12,6 +12,13 @@ export type StatutDossier =
 
 export type StatutAcces = "EN_ATTENTE" | "VALIDE" | "EN_BANNISSEMENT";
 
+/**
+ * L’année d’étude, et rien d’autre. Miroir de l’enum Prisma `Fonction`.
+ *
+ * `PROFESSEUR` et `DIRECTION` en ont été retirés : un rôle au château se
+ * saisit maintenant en toutes lettres dans `roleAffiche`, et deux façons
+ * d’écrire « directrice » auraient fini par se contredire.
+ */
 export type Fonction =
   | "PREMIERE_ANNEE"
   | "DEUXIEME_ANNEE"
@@ -19,9 +26,7 @@ export type Fonction =
   | "QUATRIEME_ANNEE"
   | "CINQUIEME_ANNEE"
   | "SIXIEME_ANNEE"
-  | "SEPTIEME_ANNEE"
-  | "PROFESSEUR"
-  | "DIRECTION";
+  | "SEPTIEME_ANNEE";
 
 export type Genre = "FEMININ" | "MASCULIN" | "AUTRE";
 
@@ -63,20 +68,6 @@ export const LIBELLES_STATUT_ACCES: Record<
   },
 };
 
-/** Les fonctions dont le libellé s’accorde avec le genre du personnage. */
-const ACCORDS: Partial<Record<Fonction, Record<Genre, string>>> = {
-  PROFESSEUR: {
-    FEMININ: "Professeure",
-    MASCULIN: "Professeur",
-    AUTRE: "Professeur·e",
-  },
-  DIRECTION: {
-    FEMININ: "Directrice",
-    MASCULIN: "Directeur",
-    AUTRE: "Direction",
-  },
-};
-
 const ANNEES: Record<string, string> = {
   PREMIERE_ANNEE: "1re année",
   DEUXIEME_ANNEE: "2e année",
@@ -87,9 +78,42 @@ const ANNEES: Record<string, string> = {
   SEPTIEME_ANNEE: "7e année",
 };
 
-/** Libellé d’une fonction, accordé au genre quand il y a lieu. */
-export function libelleFonction(fonction: Fonction, genre: Genre): string {
-  return ACCORDS[fonction]?.[genre] ?? ANNEES[fonction] ?? fonction;
+/**
+ * Les deux valeurs retirées de la liste.
+ *
+ * Plus personne ne peut les choisir — mais le journal d’un membre garde les
+ * changements d’avant, et « PREMIERE_ANNEE → DIRECTION » doit rester lisible.
+ * Effacer cette table rendrait l’historique muet.
+ */
+const ANNEES_RETIREES: Record<string, string> = {
+  PROFESSEUR: "Professeur",
+  DIRECTION: "Direction",
+};
+
+/** Libellé d’une année. Sait aussi relire les deux valeurs retirées. */
+export function libelleAnnee(fonction: Fonction): string {
+  return ANNEES[fonction] ?? ANNEES_RETIREES[fonction] ?? fonction;
+}
+
+/**
+ * **La place du personnage, telle qu’elle s’affiche.**
+ *
+ * C’est ici que le rôle particulier remplace l’année : une directrice n’est
+ * pas en troisième année. L’année reste stockée et modifiable — elle est
+ * masquée, pas effacée : vider le rôle la fait réapparaître.
+ *
+ * Le rôle n’est pas facultatif dans la signature, et c’est délibéré : partout
+ * où l’année s’affiche, l’oublier devient une erreur de compilation plutôt
+ * qu’une page qui annonce tranquillement la directrice en première année.
+ *
+ * Ce libellé n’ouvre rien. Il n’est lu par aucun contrôle d’accès, et ne doit
+ * jamais l’être — voir `lib/dossier/role-affiche.ts`.
+ */
+export function libellePlace(
+  fonction: Fonction,
+  roleAffiche: string | null,
+): string {
+  return roleAffiche ?? libelleAnnee(fonction);
 }
 
 export const FONCTIONS: Fonction[] = [
@@ -100,8 +124,6 @@ export const FONCTIONS: Fonction[] = [
   "CINQUIEME_ANNEE",
   "SIXIEME_ANNEE",
   "SEPTIEME_ANNEE",
-  "PROFESSEUR",
-  "DIRECTION",
 ];
 
 export const STATUTS_ACCES: StatutAcces[] = [
@@ -187,7 +209,9 @@ export const TEXTES_ETATS = {
       eyebrow: "L’école",
       vide: "Aucun membre pour l’instant.",
       age: "Âge",
-      fonction: "Fonction",
+      // La liste ne porte plus que les sept années : « Fonction » n’aurait
+      // plus décrit ce qu’elle contient.
+      annee: "Année",
       acces: "Statut d’accès",
       jusquau: "Suspendu jusqu’au",
       jusquauAide: "Vide = exclusion définitive",

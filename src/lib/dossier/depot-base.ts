@@ -54,6 +54,9 @@ function versDossier(u: UtilisateurComplet): Dossier | null {
     prenomNom: e.prenomNom,
     age: e.age,
     fonction: e.fonction as Fonction,
+    roleAffiche: e.roleAffiche,
+    roleAffichePoseLe: e.roleAffichePoseLe?.toISOString() ?? null,
+    roleAffichePosePar: e.roleAffichePosePar,
     genre: e.genre as Genre,
     famille: e.famille,
     portraitType: e.portraitType,
@@ -132,6 +135,26 @@ export async function lireDossier(id: string): Promise<Dossier | null> {
     include: AVEC_TOUT,
   });
   return ligne ? versDossier(ligne) : null;
+}
+
+/**
+ * Les titres déjà portés quelque part sur le site, sans doublon.
+ *
+ * Ils alimentent les suggestions du champ, pour qu’un même rôle ne finisse pas
+ * écrit de trois façons. Ce n’est **qu’une aide** : la saisie reste libre, et
+ * rien ici ne restreint ce qu’on peut écrire.
+ *
+ * La recherche porte sur tous les élèves et pas seulement sur les membres
+ * acceptés : un titre posé sur un dossier encore en lecture compte aussi.
+ */
+export async function listerRolesAffiches(): Promise<string[]> {
+  const lignes = await prisma.eleve.findMany({
+    where: { roleAffiche: { not: null } },
+    distinct: ["roleAffiche"],
+    select: { roleAffiche: true },
+    orderBy: { roleAffiche: "asc" },
+  });
+  return lignes.map((l) => l.roleAffiche!).sort((a, b) => a.localeCompare(b, "fr"));
 }
 
 /**
@@ -365,18 +388,28 @@ export async function modifierMembre(
   modifications: {
     age?: number;
     fonction?: Fonction;
+    /**
+     * Le titre au château. `null` l’efface et fait réapparaître l’année ;
+     * `undefined` n’y touche pas. Décoratif : il n’ouvre aucun droit.
+     */
+    roleAffiche?: string | null;
     statutAcces?: StatutAcces;
     /** Fin de suspension. `null` efface la date : exclusion définitive. */
     banniJusquau?: Date | null;
   },
   note: string | null,
+  /**
+   * Qui écrit. « Administration » tant que la zone d’administration n’est
+   * qu’un mot de passe partagé, sans comptes distincts.
+   */
+  parNom = "Administration",
 ): Promise<void> {
   const compte = await prisma.utilisateur.findUnique({
     where: { id },
     select: {
       statutAcces: true,
       banniJusquau: true,
-      eleve: { select: { id: true, age: true, fonction: true } },
+      eleve: { select: { id: true, age: true, fonction: true, roleAffiche: true } },
     },
   });
   const eleve = compte?.eleve;
@@ -391,7 +424,7 @@ export async function modifierMembre(
       valeurAvant: String(eleve.age),
       valeurApres: String(modifications.age),
       note,
-      parNom: "Administration",
+      parNom,
     });
     fiche.age = modifications.age;
   }
@@ -402,9 +435,28 @@ export async function modifierMembre(
       valeurAvant: eleve.fonction,
       valeurApres: modifications.fonction,
       note,
-      parNom: "Administration",
+      parNom,
     });
     fiche.fonction = modifications.fonction;
+  }
+
+  // Le rôle affiché distingue publiquement un membre des autres : on garde
+  // qui l'a posé et quand, sur la fiche pour l'afficher, et au journal pour
+  // l'historique. Les trois colonnes bougent ensemble — la base l'exige.
+  if (
+    modifications.roleAffiche !== undefined &&
+    modifications.roleAffiche !== eleve.roleAffiche
+  ) {
+    entrees.push({
+      type: "ROLE_AFFICHE_MODIFIE",
+      valeurAvant: eleve.roleAffiche,
+      valeurApres: modifications.roleAffiche,
+      note,
+      parNom,
+    });
+    fiche.roleAffiche = modifications.roleAffiche;
+    fiche.roleAffichePoseLe = modifications.roleAffiche ? new Date() : null;
+    fiche.roleAffichePosePar = modifications.roleAffiche ? parNom : null;
   }
 
   const accesChange =
@@ -417,7 +469,7 @@ export async function modifierMembre(
       valeurAvant: compte.statutAcces,
       valeurApres: modifications.statutAcces!,
       note,
-      parNom: "Administration",
+      parNom,
     });
   }
 

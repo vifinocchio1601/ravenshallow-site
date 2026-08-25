@@ -33,6 +33,7 @@ function compte(modifications: Partial<CompteConnecte> = {}): CompteConnecte {
     prenomNom: "Sigrid Vale",
     genre: "FEMININ",
     fonction: "PREMIERE_ANNEE",
+    roleAffiche: null,
     age: 13,
     ...modifications,
   };

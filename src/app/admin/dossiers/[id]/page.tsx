@@ -5,7 +5,7 @@ import EnTeteAdmin from "@/components/admin/EnTeteAdmin";
 import FormulaireDecision from "@/components/admin/FormulaireDecision";
 import JournalMembre from "@/components/admin/JournalMembre";
 import { lireDossier, modeDemonstration } from "@/lib/dossier/depot";
-import { libelleFonction, TEXTES_ETATS } from "@/lib/dossier/etats";
+import { libelleAnnee, libellePlace, TEXTES_ETATS } from "@/lib/dossier/etats";
 import { FAMILLES, LIMITES_ECRITURE, TYPES_PORTRAIT } from "@/lib/dossier/constantes";
 
 export const metadata: Metadata = {
@@ -64,9 +64,22 @@ export default async function DossierAdminPage({
             <dl className="mt-6 space-y-3 font-body text-sm">
               <Ligne terme="Adresse" valeur={dossier.email} />
               <Ligne
-                terme="Âge / fonction"
-                valeur={`${dossier.age} ans · ${libelleFonction(dossier.fonction, dossier.genre)}`}
+                terme="Âge / place"
+                valeur={`${dossier.age} ans · ${libellePlace(dossier.fonction, dossier.roleAffiche)}`}
               />
+              {/* Le rôle masque l'année sans l'effacer : ici, côté
+                  administration, on montre les deux — plus qui l'a posé et
+                  quand. Ce champ distingue publiquement un membre des autres. */}
+              {dossier.roleAffiche ? (
+                <Ligne
+                  terme="Rôle particulier"
+                  valeur={`${dossier.roleAffiche} — décoratif, n’accorde aucun droit. Année masquée : ${libelleAnnee(dossier.fonction)}. ${
+                    dossier.roleAffichePoseLe
+                      ? `Posé par ${dossier.roleAffichePosePar ?? "—"} le ${new Date(dossier.roleAffichePoseLe).toLocaleDateString("fr-FR")}`
+                      : ""
+                  }`}
+                />
+              ) : null}
               <Ligne
                 terme="Famille"
                 valeur={libelle(FAMILLES, dossier.famille)}
@@ -133,11 +146,7 @@ export default async function DossierAdminPage({
               <FormulaireDecision id={dossier.id} />
             ) : null}
 
-            <JournalMembre
-              entrees={dossier.journal}
-              genre={dossier.genre}
-              className="mt-10"
-            />
+            <JournalMembre entrees={dossier.journal} className="mt-10" />
           </div>
         </div>
       </div>

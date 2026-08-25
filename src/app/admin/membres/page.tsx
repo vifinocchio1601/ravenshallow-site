@@ -2,15 +2,22 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { modifierMembreAction } from "@/app/admin/actions";
 import BoutonSupprimerMembre from "@/components/admin/BoutonSupprimerMembre";
+import ChampRoleAffiche from "@/components/admin/ChampRoleAffiche";
 import EnTeteAdmin from "@/components/admin/EnTeteAdmin";
-import { listerMembres, modeDemonstration } from "@/lib/dossier/depot";
+import {
+  listerMembres,
+  listerRolesAffiches,
+  modeDemonstration,
+} from "@/lib/dossier/depot";
 import {
   FONCTIONS,
-  libelleFonction,
+  libelleAnnee,
+  libellePlace,
   LIBELLES_STATUT_ACCES,
   STATUTS_ACCES,
   TEXTES_ETATS,
 } from "@/lib/dossier/etats";
+import { TEXTES_ROLE_AFFICHE } from "@/lib/dossier/role-affiche";
 
 /**
  * Jamais prérendue : la page lit l’état courant des dossiers, et elle est de
@@ -23,8 +30,34 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
+/**
+ * « Posé par l’Administration le 25 août 2026 » — la provenance du rôle,
+ * affichée côté administration seule. Ce champ distingue publiquement un
+ * membre des autres : on doit pouvoir dire d’où il vient.
+ */
+function provenanceRole(membre: {
+  roleAffiche: string | null;
+  roleAffichePoseLe: string | null;
+  roleAffichePosePar: string | null;
+}): string | null {
+  if (!membre.roleAffiche || !membre.roleAffichePoseLe) return null;
+  return TEXTES_ROLE_AFFICHE.provenance
+    .replace("{auteur}", membre.roleAffichePosePar ?? "—")
+    .replace(
+      "{date}",
+      new Date(membre.roleAffichePoseLe).toLocaleDateString("fr-FR", {
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+      }),
+    );
+}
+
 export default async function MembresPage() {
   const membres = await listerMembres();
+  // Les titres déjà portés, pour les proposer pendant la frappe : trois
+  // orthographes du même rôle valent moins qu'une seule bien choisie.
+  const rolesConnus = await listerRolesAffiches();
   const t = TEXTES_ETATS.admin.membres;
 
   return (
@@ -61,7 +94,7 @@ export default async function MembresPage() {
                   </div>
                   <p className="font-body text-sm text-silver">
                     {membre.email} ·{" "}
-                    {libelleFonction(membre.fonction, membre.genre)} ·{" "}
+                    {libellePlace(membre.fonction, membre.roleAffiche)} ·{" "}
                     {LIBELLES_STATUT_ACCES[membre.statutAcces].court}{" "}
                     <Link
                       href={`/admin/dossiers/${membre.id}`}
@@ -76,7 +109,7 @@ export default async function MembresPage() {
                     indépendant et laisse sa trace au journal. */}
                 <form
                   action={modifierMembreAction}
-                  className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-[6rem_1fr_1fr_auto] lg:items-end"
+                  className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-[5rem_1fr_1.2fr_1fr_auto] lg:items-end"
                 >
                   <input type="hidden" name="id" value={membre.id} />
 
@@ -103,7 +136,7 @@ export default async function MembresPage() {
                       htmlFor={`fonction-${membre.id}`}
                       className="font-display text-[0.66rem] uppercase tracking-[0.14em] text-parchment-dim"
                     >
-                      {t.fonction}
+                      {t.annee}
                     </label>
                     <select
                       id={`fonction-${membre.id}`}
@@ -113,11 +146,18 @@ export default async function MembresPage() {
                     >
                       {FONCTIONS.map((fonction) => (
                         <option key={fonction} value={fonction}>
-                          {libelleFonction(fonction, membre.genre)}
+                          {libelleAnnee(fonction)}
                         </option>
                       ))}
                     </select>
                   </div>
+
+                  <ChampRoleAffiche
+                    id={membre.id}
+                    valeur={membre.roleAffiche}
+                    suggestions={rolesConnus}
+                    provenance={provenanceRole(membre)}
+                  />
 
                   <div>
                     <label
@@ -145,7 +185,7 @@ export default async function MembresPage() {
                     {t.enregistrer}
                   </button>
 
-                  <div className="grid gap-3 sm:col-span-2 sm:grid-cols-[13rem_1fr] lg:col-span-4">
+                  <div className="grid gap-3 sm:col-span-2 sm:grid-cols-[13rem_1fr] lg:col-span-5">
                     {/* Vide = exclusion définitive. Ignorée hors bannissement,
                         et effacée dès que l'accès est rétabli. */}
                     <div>

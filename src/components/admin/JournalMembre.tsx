@@ -1,11 +1,10 @@
 import type { EntreeJournal } from "@/lib/dossier/depot";
 import {
-  libelleFonction,
+  libelleAnnee,
   LIBELLES_STATUT_ACCES,
   LIBELLES_STATUT_DOSSIER,
   TEXTES_ETATS,
   type Fonction,
-  type Genre,
   type StatutAcces,
   type StatutDossier,
 } from "@/lib/dossier/etats";
@@ -17,7 +16,8 @@ const LIBELLES: Record<EntreeJournal["type"], string> = {
   DOSSIER_RENVOYE_EN_CORRECTION: "Renvoyé en correction",
   DOSSIER_REFUSE: "Dossier refusé",
   AGE_MODIFIE: "Âge modifié",
-  FONCTION_MODIFIEE: "Fonction modifiée",
+  FONCTION_MODIFIEE: "Année modifiée",
+  ROLE_AFFICHE_MODIFIE: "Rôle particulier modifié",
   ACCES_MODIFIE: "Accès modifié",
   COURRIEL_CONFIRMATION: "Accusé de réception",
 };
@@ -29,8 +29,10 @@ const LIBELLES: Record<EntreeJournal["type"], string> = {
 function lisible(
   type: EntreeJournal["type"],
   valeur: string | null,
-  genre: Genre,
 ): string | null {
+  // Un rôle effacé n'est pas « rien à dire » : c'est le retour à l'année, et
+  // la ligne doit le montrer. D'où ce cas avant le garde-fou du vide.
+  if (type === "ROLE_AFFICHE_MODIFIE") return valeur || "aucun";
   if (!valeur) return null;
   if (type === "AGE_MODIFIE") return `${valeur} ans`;
   // Liste de champs, déjà lisible telle quelle.
@@ -38,7 +40,7 @@ function lisible(
   // « envoyé » ou « échec », déjà écrits en toutes lettres.
   if (type === "COURRIEL_CONFIRMATION") return valeur;
   if (type === "FONCTION_MODIFIEE") {
-    return libelleFonction(valeur as Fonction, genre);
+    return libelleAnnee(valeur as Fonction);
   }
   if (type === "ACCES_MODIFIE") {
     return LIBELLES_STATUT_ACCES[valeur as StatutAcces]?.court ?? valeur;
@@ -49,11 +51,9 @@ function lisible(
 /** Fil chronologique d’un membre : décisions et modifications. */
 export default function JournalMembre({
   entrees,
-  genre,
   className = "",
 }: {
   entrees: EntreeJournal[];
-  genre: Genre;
   className?: string;
 }) {
   const t = TEXTES_ETATS.admin.journal;
@@ -69,8 +69,8 @@ export default function JournalMembre({
       ) : (
         <ol className="mt-4 space-y-4 border-l border-silver/15 pl-5">
           {entrees.map((entree) => {
-            const avant = lisible(entree.type, entree.valeurAvant, genre);
-            const apres = lisible(entree.type, entree.valeurApres, genre);
+            const avant = lisible(entree.type, entree.valeurAvant);
+            const apres = lisible(entree.type, entree.valeurApres);
             return (
             <li key={entree.id}>
               <p className="font-display text-[0.68rem] uppercase tracking-[0.14em] text-parchment-dim">

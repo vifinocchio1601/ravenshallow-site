@@ -38,7 +38,11 @@ npx tsc --noEmit
 npm run build            # à passer avant tout déploiement
 npm run courriel:verifier # teste l'authentification SMTP sans rien envoyer
 npm run base:importer     # reprend .donnees/dossiers.json dans la base
+npm run base:migrer       # applique les migrations en attente
 ```
+
+`base:migrer` existe parce que la CLI Prisma ne lit pas `.env.local` : le
+script fait le pont, sans jamais afficher la chaîne de connexion.
 
 `.env.local` porte cinq variables : `ADMIN_PASSWORD`, `AUTH_SECRET`,
 `MAIL_EXPEDITEUR`, `MAIL_APP_PASSWORD`, `DATABASE_URL`. Les mêmes existent sur
@@ -48,7 +52,7 @@ Vercel, environnement Production — avec là-bas la chaîne Neon **pooled**.
 
 ## Les coutures uniques
 
-Huit endroits concentrent chacun une décision. Ne pas recopier leur logique
+Neuf endroits concentrent chacun une décision. Ne pas recopier leur logique
 ailleurs, l'y ajouter.
 
 | Fichier | Ce qu'il décide, seul |
@@ -61,6 +65,7 @@ ailleurs, l'y ajouter.
 | `lib/ceremonie/repartition.ts` | le calcul de la maison et le départage, reproductibles |
 | `lib/bjornstav/constantes.ts` | toute la scène de la boutique **et les vingt-cinq réactions** — `server-only` |
 | `lib/ecole/baguette.ts` | les dix codes, les dix noms, et la validation de ce qu'envoie le navigateur |
+| `lib/dossier/role-affiche.ts` | ce qu'on peut écrire dans le rôle particulier — **partagé mot pour mot** entre le champ de saisie et l'action serveur |
 
 **L'accès se joue à deux étages**, tous deux dans `acces.ts` :
 
@@ -79,6 +84,23 @@ et l'oubli de l'un comme de l'autre va dans le sens de la fermeture :
 Une route de l'école **sans entrée au bandeau** se déclare dans
 `ROUTES_HORS_MENU` — c'est le cas de la boutique et de la Cérémonie.
 L'oublier, c'est la laisser sans garde côté middleware.
+
+**L'année ne s'affiche jamais en direct.** Un membre peut porter un titre au
+château — « Directrice », « Professeur d'alchimie » — qui **remplace** l'année
+partout où elle s'affiche. Une seule fonction tranche entre les deux :
+
+- `libellePlace(fonction, roleAffiche)` — l'année, **ou** le rôle qui la
+  masque. C'est elle qu'appellent les quatre endroits d'affichage : Ma fiche,
+  Mon bureau, la ligne du membre et son détail. Le rôle n'y est **pas
+  facultatif** : l'oublier est une erreur de compilation, pas une page qui
+  annonce tranquillement la directrice en première année.
+- `libelleAnnee(fonction)` — l'année seule, sans substitution. Réservée à
+  trois usages : la liste déroulante, l'« année masquée » du détail côté
+  administration, et le journal. Elle sait encore relire `PROFESSEUR` et
+  `DIRECTION`, retirés de l'enum mais gravés dans d'anciennes entrées.
+
+Quand un rôle s'affiche, **le libellé suit la valeur** : « Rôle — Directrice »
+et non « Année — Directrice », qui se contredirait.
 
 **Les deux premiers pas ont chacun leur page hors bandeau**, et chacune se
 referme sur son propre prédicat plutôt que sur une fermeture de route — qui
@@ -194,6 +216,19 @@ encore ce traitement**, et c'est le seul écart connu entre les deux scènes.
   nomme une maison, ni la répartition — un test le vérifie sur l'ensemble de
   la scène. La bible du lore (§5) évoque un « indice discret sur sa future
   maison » : c'est le joueur qui a tranché contre, et c'est lui qui prime.
+- **Le rôle particulier est décoratif, et ne donne aucun droit. Jamais.** Il
+  ne remplace que l'année à l'écran. Aucun contrôle d'accès, aucune condition
+  d'affichage, aucune permission ne le lit — les droits viennent des rôles
+  techniques et de `statutAcces`, jamais d'un libellé affiché. Écrire
+  « Administratrice » dans ce champ ne doit strictement rien ouvrir.
+  `EtatAcces` ne porte pas ce champ, et `role-affiche.test.ts` le vérifie de
+  trois façons : par comparaison sur tous les chemins, par lecture du code
+  source des quatre fichiers qui décident d'un accès, et par une directive
+  `@ts-expect-error` qui casse la compilation le jour où le champ entrerait
+  dans `EtatAcces`. **Ne jamais y toucher pour « simplifier ».**
+- **L'année reste stockée et modifiable même sous un rôle** — masquée, pas
+  effacée. Effacer le rôle la fait réapparaître, et l'administration la voit
+  en permanence dans le détail du membre.
 - **Le choix de la baguette est définitif**, comme la maison. Deux verrous
   applicatifs (`updateMany` conditionné, garde de page et de route) **et**
   deux verrous en base — voir ci-dessous.
@@ -217,13 +252,28 @@ brume s'est peinte en transparent une bonne demi-heure avant qu'on comprenne.
 **Prisma CLI lit `.env`, pas `.env.local`.** Passer `DATABASE_URL` en variable
 d'environnement à la commande.
 
-**Deux règles de la base ne sont pas dans `schema.prisma`** et ne s'en
-déduiraient jamais : la cohérence des trois colonnes de la baguette
-(contrainte `CHECK`) et son immuabilité une fois posée (déclencheur). Elles
-vivent en SQL brut dans `20260825200000_baguette_definitive`. Régénérer le
-schéma depuis Prisma seul les perdrait. Pour corriger une baguette écrite par
-erreur, il faut lever le déclencheur explicitement — la commande est en
-commentaire dans la migration.
+**Quatre règles de la base ne sont pas dans `schema.prisma`** et ne s'en
+déduiraient jamais. Régénérer le schéma depuis Prisma seul les perdrait.
+
+Dans `20260825200000_baguette_definitive` : la cohérence des trois colonnes de
+la baguette (contrainte `CHECK`) et son immuabilité une fois posée
+(déclencheur). Pour corriger une baguette écrite par erreur, il faut lever le
+déclencheur explicitement — la commande est en commentaire dans la migration.
+
+Dans `20260825210000_role_affiche` : la cohérence des trois colonnes du rôle
+(titre, date, auteur — ensemble ou pas du tout) et la propreté de son texte
+(40 signes, rogné, sans espaces doublés, sans chevron, sans caractère de
+contrôle). Ce second `CHECK` est **volontairement plus grossier** que le
+schéma Zod : le format fin — lettres, espaces, apostrophes, tirets, points —
+vit dans `lib/dossier/role-affiche.ts`, seule source de vérité. La base
+n'arrête que ce qui casserait l'affichage, et le fait pour tous les chemins :
+le site, un script, une commande tapée à la main.
+
+**`Fonction` ne porte plus que les sept années.** `PROFESSEUR` et `DIRECTION`
+en ont été retirés par cette même migration — Postgres ne sachant pas ôter une
+valeur d'un enum, il a fallu recréer le type. Les rôles au château se saisissent
+maintenant en toutes lettres. Ne pas les réintroduire dans la liste : deux
+façons d'écrire « directrice » finiraient par se contredire.
 
 **La lettrine se recopie sur tous les blocs si on l'y laisse.** La règle est
 écrite `.recit > .recit__narration:first-of-type::first-letter` : sans le
@@ -273,7 +323,8 @@ texte.
 
 **Fait** : site vitrine, règlement (87 points), dossier d'admission complet
 (recadrage 9:16, registre des visages, courriel de confirmation), zone
-d'administration (lecture des dossiers, liste des membres, journal),
+d'administration (lecture des dossiers, liste des membres avec son **rôle
+particulier**, journal),
 connexion, mot de passe oublié, protection des routes, bandeau-parchemin,
 Ma fiche, Mon bureau, la note des premiers pas, **la boutique Bjornstav**
 (récit, mur d'étagères, bois, cœur, réaction assemblée côté serveur,

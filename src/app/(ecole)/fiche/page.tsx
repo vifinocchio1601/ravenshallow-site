@@ -7,7 +7,7 @@ import { TEXTES_ECOLE } from "@/lib/ecole/constantes";
 import { ROUTES } from "@/lib/ecole/menu";
 import { FAMILLES, LIMITES_ECRITURE } from "@/lib/dossier/constantes";
 import { lireDossier } from "@/lib/dossier/depot";
-import { libelleFonction } from "@/lib/dossier/etats";
+import { libellePlace } from "@/lib/dossier/etats";
 import { estBanni, finDuBannissement } from "@/lib/session/acces";
 import { exigerAcces } from "@/lib/session/garde";
 
@@ -123,9 +123,11 @@ export default async function FicheElevePage() {
           <dl className="space-y-3 font-body text-sm">
             <Ligne terme={t.ligne.nom} valeur={dossier.prenomNom} />
             <Ligne terme={t.ligne.age} valeur={`${dossier.age} ans`} />
+            {/* Le rôle remplace l’année — libellé compris : « Année —
+                Directrice » se contredirait. L’année reste en base, masquée. */}
             <Ligne
-              terme={t.ligne.fonction}
-              valeur={libelleFonction(dossier.fonction, dossier.genre)}
+              terme={dossier.roleAffiche ? t.ligne.role : t.ligne.fonction}
+              valeur={libellePlace(dossier.fonction, dossier.roleAffiche)}
             />
             <Ligne
               terme={t.ligne.famille}

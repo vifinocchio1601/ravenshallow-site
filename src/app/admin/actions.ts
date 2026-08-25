@@ -11,6 +11,7 @@ import {
 } from "@/lib/dossier/depot";
 import { envoyerRenvoiEnCorrection } from "@/lib/mail/envoyer";
 import { FONCTIONS, STATUTS_ACCES, type Fonction, type StatutAcces } from "@/lib/dossier/etats";
+import { validerRoleAffiche } from "@/lib/dossier/role-affiche";
 
 /**
  * Actions d’administration.
@@ -61,6 +62,16 @@ export async function modifierMembreAction(donnees: FormData) {
   const acces = String(donnees.get("statutAcces") ?? "") as StatutAcces;
   const note = String(donnees.get("note") ?? "").trim();
 
+  // Le rôle particulier — décoratif, et **revalidé ici** avec le fichier que
+  // le champ utilise déjà : le composant client peut être contourné en
+  // fermant JavaScript, cette route non.
+  //
+  // Une saisie fautive fait renoncer à tout l'enregistrement plutôt que de
+  // passer le rôle sous silence en écrivant le reste : l'administrateur
+  // croirait avoir enregistré ce qu'il vient de taper.
+  const roleLu = validerRoleAffiche(String(donnees.get("roleAffiche") ?? ""));
+  if (!roleLu.ok) return;
+
   // « Jusqu'au » : une date sans heure, donc lue à midi UTC pour qu'un
   // fuseau ne la fasse pas basculer la veille au soir.
   const finBrute = String(donnees.get("banniJusquau") ?? "").trim();
@@ -83,6 +94,9 @@ export async function modifierMembreAction(donnees: FormData) {
           ? ageBrut
           : undefined,
       fonction: FONCTIONS.includes(fonction) ? fonction : undefined,
+      // `null` efface le rôle et fait réapparaître l'année. Il n'ouvre aucun
+      // droit : `modifierMembre` ne fait que l'écrire et le journaliser.
+      roleAffiche: roleLu.valeur,
       statutAcces: STATUTS_ACCES.includes(acces) ? acces : undefined,
       banniJusquau: fin,
     },
