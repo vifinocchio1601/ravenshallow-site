@@ -5,11 +5,24 @@ import Hero from "@/components/Hero";
 import HousesSection from "@/components/HousesSection";
 import Nav from "@/components/Nav";
 import WorldSection from "@/components/WorldSection";
+import { destinationApres } from "@/lib/session/acces";
+import { compteConnecte } from "@/lib/session/garde";
 
-export default function Home() {
+/**
+ * L'accueil lit la session pour savoir laquelle des deux portes montrer :
+ * il ne peut donc plus être rendu une fois pour toutes. Une requête indexée
+ * par visite, contre une page juste pour chacun.
+ */
+export const dynamic = "force-dynamic";
+
+export default async function Home() {
+  const compte = await compteConnecte();
+
   return (
     <>
-      <Nav />
+      <Nav
+        connecte={compte ? { destination: destinationApres(compte) } : null}
+      />
       <main>
         <Hero />
         <WorldSection />

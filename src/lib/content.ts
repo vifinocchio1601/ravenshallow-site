@@ -116,8 +116,22 @@ export const NAV_LINKS: SiteLink[] = [
   { href: "/#le-monde", label: "Le monde" },
   { href: "/#les-maisons", label: "Les maisons" },
   { href: "/#la-fondation", label: "La fondation" },
-  { href: "/inscription", label: "Inscription", emphasis: true },
 ];
+
+/**
+ * Les deux portes du château, à droite de la navigation.
+ *
+ * Elles se valent : on demande son admission, ou on entre parce qu'on l'a
+ * déjà obtenue. Ni l'une ni l'autre n'est secondaire, et elles restent
+ * visibles sur téléphone quand les ancres, elles, se replient.
+ */
+export const PORTES: SiteLink[] = [
+  { href: "/inscription", label: "Inscription", emphasis: true },
+  { href: "/connexion", label: "Accès au château", emphasis: true },
+];
+
+/** Ce que voit un visiteur déjà connecté, à la place des deux portes. */
+export const PORTE_CONNECTE = { label: "Entrer au château" } as const;
 
 /** Le pied de page reste sur les ancres de l'accueil, dont « Rejoindre ». */
 export const FOOTER_LINKS: SiteLink[] = [

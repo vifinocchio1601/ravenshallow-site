@@ -2,13 +2,15 @@
  * Jeton d’accès au dossier.
  *
  * Envoyé par courriel à la soumission, il permet au joueur de revenir
- * corriger sa fiche sans avoir à se connecter. Signé par HMAC-SHA256 avec
- * `AUTH_SECRET` : il porte l’identifiant du compte et sa date d’expiration,
- * et rien d’autre — pas de contenu confidentiel.
+ * corriger sa fiche sans avoir à se connecter. Il porte l’identifiant du
+ * compte, sa date d’expiration et la version des liens — et rien d’autre :
+ * pas de contenu confidentiel dans une charge simplement signée.
  *
- * Web Crypto plutôt que `node:crypto`, pour rester utilisable en runtime Edge
- * comme en Node — même choix que `admin-auth.ts`.
+ * Les primitives de signature vivent dans `@/lib/signature`, partagées avec
+ * la session et la réinitialisation du mot de passe.
  */
+
+import { decoderSigne, encoderSigne } from "@/lib/signature";
 
 /** Durée de validité : 30 jours, en secondes. */
 export const JETON_DUREE = 60 * 60 * 24 * 30;
@@ -24,46 +26,6 @@ export type VerificationJeton =
   | { valide: true; contenu: ContenuJeton }
   | { valide: false; raison: "absent" | "malforme" | "signature" | "expire" };
 
-function base64url(octets: Uint8Array): string {
-  let binaire = "";
-  for (const octet of octets) binaire += String.fromCharCode(octet);
-  return btoa(binaire).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
-}
-
-function depuisBase64url(valeur: string): Uint8Array {
-  const complet = valeur.replace(/-/g, "+").replace(/_/g, "/");
-  const binaire = atob(complet + "=".repeat((4 - (complet.length % 4)) % 4));
-  return Uint8Array.from(binaire, (c) => c.charCodeAt(0));
-}
-
-async function signer(charge: string): Promise<string> {
-  const secret = process.env.AUTH_SECRET;
-  if (!secret) throw new Error("AUTH_SECRET manquant");
-
-  const encodeur = new TextEncoder();
-  const cle = await crypto.subtle.importKey(
-    "raw",
-    encodeur.encode(secret),
-    { name: "HMAC", hash: "SHA-256" },
-    false,
-    ["sign"],
-  );
-  const signature = await crypto.subtle.sign(
-    "HMAC",
-    cle,
-    encodeur.encode(charge),
-  );
-  return base64url(new Uint8Array(signature));
-}
-
-/** Comparaison à temps constant. */
-function egales(a: string, b: string): boolean {
-  if (a.length !== b.length) return false;
-  let ecart = 0;
-  for (let i = 0; i < a.length; i += 1) ecart |= a.charCodeAt(i) ^ b.charCodeAt(i);
-  return ecart === 0;
-}
-
 export async function creerJeton(
   id: string,
   version = 0,
@@ -74,37 +36,16 @@ export async function creerJeton(
     expire: Math.floor(Date.now() / 1000) + dureeSecondes,
     v: version,
   };
-  const charge = base64url(new TextEncoder().encode(JSON.stringify(contenu)));
-  return `${charge}.${await signer(charge)}`;
+  return encoderSigne(contenu);
 }
 
 export async function verifierJeton(
   jeton: string | undefined | null,
 ): Promise<VerificationJeton> {
-  if (!jeton) return { valide: false, raison: "absent" };
+  const decode = await decoderSigne<ContenuJeton>(jeton);
+  if (!decode.valide) return decode;
 
-  const separateur = jeton.lastIndexOf(".");
-  if (separateur <= 0) return { valide: false, raison: "malforme" };
-
-  const charge = jeton.slice(0, separateur);
-  const signature = jeton.slice(separateur + 1);
-
-  let attendue: string;
-  try {
-    attendue = await signer(charge);
-  } catch {
-    return { valide: false, raison: "signature" };
-  }
-  if (!egales(signature, attendue)) {
-    return { valide: false, raison: "signature" };
-  }
-
-  let contenu: ContenuJeton;
-  try {
-    contenu = JSON.parse(new TextDecoder().decode(depuisBase64url(charge)));
-  } catch {
-    return { valide: false, raison: "malforme" };
-  }
+  const contenu = decode.contenu;
   if (
     !contenu?.id ||
     typeof contenu.expire !== "number" ||

@@ -1,0 +1,96 @@
+import "server-only";
+import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
+import { prisma } from "@/lib/prisma";
+import { ROUTES } from "@/lib/ecole/menu";
+import type { Fonction, Genre, StatutAcces, StatutDossier } from "@/lib/dossier/etats";
+import { destinationApres, routeAutorisee, type EtatAcces } from "./acces";
+import { COOKIE_SESSION, lireSession } from "./session";
+
+/**
+ * La garde des pages protégées.
+ *
+ * Le cookie dit qui c’est ; **la base dit ce qu’il a le droit de faire**. Les
+ * deux lectures sont séparées à dessein : un dossier renvoyé en correction,
+ * un bannissement ou un changement de mot de passe prennent effet à la page
+ * suivante, sans attendre l’expiration du cookie.
+ *
+ * Le middleware ne peut pas faire ce travail : il tourne en runtime Edge, où
+ * Prisma n’a pas sa place. Il ne fait qu’un premier tri sur la signature du
+ * cookie ; la vérité est ici, côté serveur, dans le gabarit de chaque page.
+ */
+
+export type CompteConnecte = EtatAcces & {
+  id: string;
+  email: string;
+  sessionVersion: number;
+  prenomNom: string;
+  genre: Genre;
+  fonction: Fonction;
+  age: number;
+};
+
+export async function compteConnecte(): Promise<CompteConnecte | null> {
+  const contenu = await lireSession(cookies().get(COOKIE_SESSION)?.value);
+  if (!contenu) return null;
+
+  const compte = await prisma.utilisateur.findUnique({
+    where: { id: contenu.id },
+    select: {
+      id: true,
+      email: true,
+      sessionVersion: true,
+      statutAcces: true,
+      banniJusquau: true,
+      eleve: {
+        select: {
+          statut: true,
+          prenomNom: true,
+          genre: true,
+          fonction: true,
+          age: true,
+          maison: true,
+        },
+      },
+    },
+  });
+  if (!compte) return null;
+
+  // Mot de passe changé depuis : toutes les sessions antérieures tombent.
+  if (compte.sessionVersion !== contenu.v) return null;
+
+  const eleve = compte.eleve;
+
+  return {
+    id: compte.id,
+    email: compte.email,
+    sessionVersion: compte.sessionVersion,
+    statutAcces: compte.statutAcces as StatutAcces,
+    banniJusquau: compte.banniJusquau,
+    // Un compte sans fiche ne devrait pas exister ; s’il en apparaissait un,
+    // il est traité comme une demande jamais envoyée plutôt qu’ouvert.
+    statut: (eleve?.statut ?? "BROUILLON") as StatutDossier,
+    maison: eleve?.maison ?? null,
+    prenomNom: eleve?.prenomNom ?? "",
+    genre: (eleve?.genre ?? "AUTRE") as Genre,
+    fonction: (eleve?.fonction ?? "PREMIERE_ANNEE") as Fonction,
+    age: eleve?.age ?? 13,
+  };
+}
+
+/** Connecté, quel que soit l’état du dossier. Sinon : la page de connexion. */
+export async function exigerConnexion(): Promise<CompteConnecte> {
+  const compte = await compteConnecte();
+  if (!compte) redirect(ROUTES.connexion);
+  return compte;
+}
+
+/**
+ * Connecté **et** autorisé sur ce chemin. Sinon, renvoi vers la destination
+ * que lui réserve son état — la même que celle calculée à la connexion.
+ */
+export async function exigerAcces(chemin: string): Promise<CompteConnecte> {
+  const compte = await exigerConnexion();
+  if (!routeAutorisee(compte, chemin)) redirect(destinationApres(compte));
+  return compte;
+}

@@ -2,17 +2,29 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { NAV_LINKS, type SiteLink } from "@/lib/content";
+import {
+  NAV_LINKS,
+  PORTE_CONNECTE,
+  PORTES,
+  type SiteLink,
+} from "@/lib/content";
 
 /**
- * Navigation fixe : transparente en haut de page, opaque + floutée au scroll.
- * Masquée sous md (pas de menu hamburger pour l'instant) — les ancres restent
- * accessibles depuis le hero et le footer.
+ * Navigation fixe : transparente en haut de page, opaque et floutée au scroll.
  *
- * L'entrée « Inscription » pointe vers une vraie route et se distingue des
- * ancres de l'accueil par sa graisse.
+ * Les ancres de l'accueil se replient sous `md`, mais **les deux portes
+ * restent visibles sur téléphone** : sans elles, un visiteur sur mobile
+ * n'aurait aucun moyen d'entrer ni de s'inscrire.
+ *
+ * `connecte` porte la destination du visiteur déjà identifié — calculée par
+ * la page serveur avec `destinationApres`, jamais devinée ici. Les deux
+ * portes cèdent alors la place à un accès direct.
  */
-export default function Nav() {
+export default function Nav({
+  connecte,
+}: {
+  connecte?: { destination: string } | null;
+}) {
   const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {
@@ -22,9 +34,12 @@ export default function Nav() {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
+  const classePorte = `relative font-display text-[0.66rem] sm:text-[0.7rem] font-bold uppercase tracking-[0.18em] sm:tracking-[0.24em] text-parchment transition-colors duration-300
+     after:absolute after:-bottom-1.5 after:left-0 after:h-px after:w-0 after:bg-aurora-teal after:transition-[width] after:duration-300 hover:text-aurora-teal hover:after:w-full`;
+
   return (
     <header
-      className={`fixed inset-x-0 top-0 z-50 hidden transition-[background-color,border-color,backdrop-filter,box-shadow] duration-500 md:block ${
+      className={`fixed inset-x-0 top-0 z-50 transition-[background-color,border-color,backdrop-filter,box-shadow] duration-500 ${
         scrolled
           ? "border-b border-silver/10 bg-void/80 shadow-[0_16px_40px_-32px_rgba(0,0,0,0.9)] backdrop-blur-md"
           : "border-b border-transparent bg-transparent"
@@ -32,11 +47,11 @@ export default function Nav() {
     >
       <nav
         aria-label="Navigation principale"
-        className="mx-auto flex h-20 max-w-content items-center justify-between px-8"
+        className="mx-auto flex h-16 max-w-content items-center justify-between gap-4 px-5 sm:h-20 sm:px-8"
       >
         <NavItem
           link={{ href: "/#top", label: "" }}
-          className="group flex items-center gap-3 font-display text-sm font-semibold uppercase tracking-[0.34em] text-parchment transition-colors duration-300 hover:text-aurora-teal"
+          className="group flex shrink-0 items-center gap-3 font-display text-sm font-semibold uppercase tracking-[0.34em] text-parchment transition-colors duration-300 hover:text-aurora-teal"
         >
           <span
             aria-hidden="true"
@@ -44,25 +59,37 @@ export default function Nav() {
           >
             ᚱ
           </span>
-          Ravenshallow
+          {/* Le mot cède la place aux portes sur les petits écrans. */}
+          <span className="hidden sm:inline">Ravenshallow</span>
         </NavItem>
 
-        <ul className="flex items-center gap-9">
+        <ul className="flex items-center gap-5 sm:gap-7 md:gap-9">
           {NAV_LINKS.map((link) => (
-            <li key={link.href}>
+            <li key={link.href} className="hidden md:block">
               <NavItem
                 link={link}
-                className={`relative font-display text-[0.7rem] uppercase transition-colors duration-300
-                            after:absolute after:-bottom-1.5 after:left-0 after:h-px after:w-0 after:bg-aurora-teal after:transition-[width] after:duration-300 hover:after:w-full ${
-                              link.emphasis
-                                ? "font-bold tracking-[0.24em] text-parchment hover:text-aurora-teal"
-                                : "tracking-[0.22em] text-parchment-dim hover:text-parchment"
-                            }`}
+                className="relative font-display text-[0.7rem] uppercase tracking-[0.22em] text-parchment-dim transition-colors duration-300 after:absolute after:-bottom-1.5 after:left-0 after:h-px after:w-0 after:bg-aurora-teal after:transition-[width] after:duration-300 hover:text-parchment hover:after:w-full"
               >
                 {link.label}
               </NavItem>
             </li>
           ))}
+
+          {connecte ? (
+            <li>
+              <Link href={connecte.destination} className={classePorte}>
+                {PORTE_CONNECTE.label}
+              </Link>
+            </li>
+          ) : (
+            PORTES.map((porte) => (
+              <li key={porte.href}>
+                <NavItem link={porte} className={classePorte}>
+                  {porte.label}
+                </NavItem>
+              </li>
+            ))
+          )}
         </ul>
       </nav>
     </header>
