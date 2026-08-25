@@ -162,3 +162,42 @@ export async function envoyerRenvoiEnCorrection(
     note,
   );
 }
+
+/** « Un corbeau pour ton mot de passe », avec le lien de réinitialisation. */
+export async function envoyerLienReinitialisation(
+  destinataire: string,
+  lien: string,
+): Promise<ResultatEnvoi> {
+  const message = MESSAGES_COURRIEL.reinitialisation;
+  return poster(
+    destinataire,
+    message.sujet,
+    versionTexte(message, lien),
+    versionHtml(message, lien),
+  );
+}
+
+/**
+ * « Ton mot de passe a changé ».
+ *
+ * Le seul intérêt de ce message est d’arriver chez quelqu’un qui n’a rien
+ * demandé : c’est ce qui lui permet de réagir. Il pointe donc vers la
+ * demande d’un nouveau lien, pas vers la page d’accueil.
+ */
+export async function envoyerChangementMotDePasse(
+  destinataire: string,
+  lienReprise: string,
+): Promise<ResultatEnvoi> {
+  const message = MESSAGES_COURRIEL.motDePasseChange;
+  return poster(
+    destinataire,
+    message.sujet,
+    versionTexte(message, lienReprise),
+    versionHtml(message, lienReprise),
+  );
+}
+
+/** Adresse publique du site — exposée pour les routes qui bâtissent un lien. */
+export function adresseDuSite(): string {
+  return baseSite();
+}

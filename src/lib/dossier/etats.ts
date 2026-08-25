@@ -120,6 +120,42 @@ export const TEXTES_ETATS = {
     badge: "Refusé",
   },
 
+  /**
+   * Ce qui entoure les trois écrans d’état, une fois le joueur connecté.
+   *
+   * Ces pages sont des culs-de-sac assumés : rien de l’école ne s’ouvre
+   * avant l’acceptation du dossier. On n’y laisse donc que deux issues —
+   * écrire à l’administration, ou repartir.
+   */
+  pages: {
+    eyebrow: "Ton dossier",
+    contact: "Écrire à l’administration",
+    adresseContact: "ravenshallow.rp@gmail.com",
+    deconnexion: "Se déconnecter",
+    accueil: "Retour à l’accueil",
+
+    attente: {
+      detail:
+        "Chaque dossier est lu en entier, dans l’ordre d’arrivée. Tu recevras un courriel dès qu’une décision sera prise — inutile de revenir vérifier ici.",
+      // Le refrain « rien ne s’ouvre » est déjà dans le corps de l’écran :
+      // le répéter ici sonnerait comme une punition. On donne plutôt une
+      // prise — la seule dont le joueur dispose à ce stade.
+      rappel:
+        "Tu as reçu un courriel à l’envoi de ton dossier : son lien te permet de corriger ta fiche tant qu’elle est en lecture, si tu y repères une faute.",
+    },
+
+    correction: {
+      detail:
+        "Tout ce que tu as écrit t’attend intact : reprends seulement ce qui est signalé ci-dessus, puis renvoie ton dossier.",
+    },
+
+    refus: {
+      detail:
+        "Si la décision te paraît injuste ou repose sur un malentendu, tu peux écrire à l’administration. Un refus n’interdit pas de proposer un autre personnage plus tard.",
+      sansNote: "Aucun motif n’a été laissé.",
+    },
+  },
+
   admin: {
     inscriptions: {
       titre: "Inscriptions",

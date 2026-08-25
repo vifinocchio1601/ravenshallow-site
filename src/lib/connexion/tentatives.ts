@@ -34,9 +34,22 @@ function attenteSecondes(echecs: number): number {
   return 900;
 }
 
-async function cles(email: string, ip: string | null): Promise<string[]> {
-  const liste = [await empreinteSecrete(`email:${email.trim().toLowerCase()}`)];
-  if (ip) liste.push(await empreinteSecrete(`ip:${ip}`));
+/**
+ * Le comptage de la connexion et celui des demandes de réinitialisation sont
+ * séparés : une adresse qui a demandé trois liens n'a rien fait de suspect à
+ * la connexion, et l'inverse est vrai aussi.
+ */
+export type Portee = "connexion" | "oubli";
+
+async function cles(
+  portee: Portee,
+  email: string,
+  ip: string | null,
+): Promise<string[]> {
+  const liste = [
+    await empreinteSecrete(`${portee}:email:${email.trim().toLowerCase()}`),
+  ];
+  if (ip) liste.push(await empreinteSecrete(`${portee}:ip:${ip}`));
   return liste;
 }
 
@@ -47,6 +60,7 @@ async function cles(email: string, ip: string | null): Promise<string[]> {
  * prévoir, la table se nettoie d’elle-même au fil des connexions.
  */
 export async function attenteRestante(
+  portee: Portee,
   email: string,
   ip: string | null,
 ): Promise<number> {
@@ -55,7 +69,7 @@ export async function attenteRestante(
   await prisma.tentativeConnexion.deleteMany({ where: { creeLe: { lt: depuis } } });
 
   const lignes = await prisma.tentativeConnexion.findMany({
-    where: { cle: { in: await cles(email, ip) }, creeLe: { gte: depuis } },
+    where: { cle: { in: await cles(portee, email, ip) }, creeLe: { gte: depuis } },
     select: { cle: true, creeLe: true },
   });
   if (lignes.length === 0) return 0;
@@ -77,8 +91,12 @@ export async function attenteRestante(
   return Math.max(0, restante);
 }
 
-export async function noterEchec(email: string, ip: string | null): Promise<void> {
-  const liste = await cles(email, ip);
+export async function noterEchec(
+  portee: Portee,
+  email: string,
+  ip: string | null,
+): Promise<void> {
+  const liste = await cles(portee, email, ip);
   await prisma.tentativeConnexion.createMany({
     data: liste.map((cle) => ({ cle })),
   });
@@ -86,11 +104,12 @@ export async function noterEchec(email: string, ip: string | null): Promise<void
 
 /** Une connexion réussie remet les compteurs de ses deux clés à zéro. */
 export async function effacerTentatives(
+  portee: Portee,
   email: string,
   ip: string | null,
 ): Promise<void> {
   await prisma.tentativeConnexion.deleteMany({
-    where: { cle: { in: await cles(email, ip) } },
+    where: { cle: { in: await cles(portee, email, ip) } },
   });
 }
 

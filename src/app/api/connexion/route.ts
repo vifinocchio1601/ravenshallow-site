@@ -61,8 +61,8 @@ export async function POST(request: Request) {
   const ip = adresseAppelante(request);
 
   try {
-    if ((await attenteRestante(email, ip)) > 0) {
-      await noterEchec(email, ip);
+    if ((await attenteRestante("connexion", email, ip)) > 0) {
+      await noterEchec("connexion", email, ip);
       return echec();
     }
 
@@ -85,11 +85,11 @@ export async function POST(request: Request) {
         await verify(await factice(), lecture.data.motDePasse).catch(() => false);
 
     if (!compte || !correct) {
-      await noterEchec(email, ip);
+      await noterEchec("connexion", email, ip);
       return echec();
     }
 
-    await effacerTentatives(email, ip);
+    await effacerTentatives("connexion", email, ip);
 
     const destination = destinationApres({
       statut: (compte.eleve?.statut ?? "BROUILLON") as StatutDossier,

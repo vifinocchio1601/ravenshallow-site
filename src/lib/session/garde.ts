@@ -24,6 +24,9 @@ export type CompteConnecte = EtatAcces & {
   id: string;
   email: string;
   sessionVersion: number;
+  jetonVersion: number;
+  /** Le mot laissé par l’administration : motif de refus, ou correction. */
+  noteAdmin: string | null;
   prenomNom: string;
   genre: Genre;
   fonction: Fonction;
@@ -40,11 +43,13 @@ export async function compteConnecte(): Promise<CompteConnecte | null> {
       id: true,
       email: true,
       sessionVersion: true,
+      jetonVersion: true,
       statutAcces: true,
       banniJusquau: true,
       eleve: {
         select: {
           statut: true,
+          noteAdmin: true,
           prenomNom: true,
           genre: true,
           fonction: true,
@@ -65,6 +70,8 @@ export async function compteConnecte(): Promise<CompteConnecte | null> {
     id: compte.id,
     email: compte.email,
     sessionVersion: compte.sessionVersion,
+    jetonVersion: compte.jetonVersion,
+    noteAdmin: eleve?.noteAdmin ?? null,
     statutAcces: compte.statutAcces as StatutAcces,
     banniJusquau: compte.banniJusquau,
     // Un compte sans fiche ne devrait pas exister ; s’il en apparaissait un,
@@ -82,6 +89,20 @@ export async function compteConnecte(): Promise<CompteConnecte | null> {
 export async function exigerConnexion(): Promise<CompteConnecte> {
   const compte = await compteConnecte();
   if (!compte) redirect(ROUTES.connexion);
+  return compte;
+}
+
+/**
+ * Garde des trois écrans d’état.
+ *
+ * Chaque page annonce le chemin qu’elle occupe ; si ce n’est pas celui que
+ * l’état du compte lui réserve, elle renvoie où il faut. C’est la même table
+ * de vérité que la connexion — aucune condition n’est réécrite ici.
+ */
+export async function exigerEtat(chemin: string): Promise<CompteConnecte> {
+  const compte = await exigerConnexion();
+  const attendue = destinationApres(compte);
+  if (attendue !== chemin) redirect(attendue);
   return compte;
 }
 

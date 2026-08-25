@@ -30,6 +30,29 @@ export const MESSAGES_COURRIEL = {
     bouton: "Reprendre mon dossier",
     pied: "Ce lien t’est personnel et reste valable trente jours.",
   },
+
+  reinitialisation: {
+    sujet: "Choisir un nouveau mot de passe — Ravenshallow",
+    titre: "Un corbeau pour ton mot de passe",
+    corps: [
+      "Quelqu’un — toi, nous l’espérons — a demandé à choisir un nouveau mot de passe pour ce compte.",
+      "<strong>Ce lien est valable une heure et ne fonctionne qu’une seule fois.</strong> Passé ce délai, il faudra en demander un autre.",
+      "Si tu n’as rien demandé, ignore ce message : rien n’a changé, ton mot de passe actuel reste le seul valable.",
+    ],
+    bouton: "Choisir un nouveau mot de passe",
+    pied: "Ce lien t’est personnel — il ouvre ton compte à qui le détient. Ne le transmets à personne, pas même à l’administration.",
+  },
+
+  motDePasseChange: {
+    sujet: "Ton mot de passe a été changé — Ravenshallow",
+    titre: "Ton mot de passe a changé",
+    corps: [
+      "Le mot de passe de ce compte vient d’être modifié, et toutes les sessions ouvertes ont été fermées.",
+      "<strong>Si ce n’est pas toi</strong>, reprends la main immédiatement : demande un nouveau lien depuis le bouton ci-dessous, puis écris-nous.",
+    ],
+    bouton: "Ce n’est pas moi — reprendre la main",
+    pied: "Ce message est automatique : il part à chaque changement de mot de passe, pour que rien ne se fasse dans ton dos.",
+  },
 } as const;
 
 /** Version texte — celle que liront les clients qui refusent le HTML. */
@@ -38,10 +61,14 @@ export function versionTexte(
   lien: string,
   note?: string | null,
 ): string {
+  // Les gabarits portent quelques `<strong>` pour la version HTML : la version
+  // texte les retire, plutôt que de les afficher en toutes lettres.
+  const sansBalises = (texte: string) => texte.replace(/<[^>]+>/g, "");
+
   const lignes = [
     message.titre.toUpperCase(),
     "",
-    ...message.corps,
+    ...message.corps.map(sansBalises),
     ...(note ? ["", `« ${note} »`] : []),
     "",
     `${message.bouton} : ${lien}`,
@@ -85,6 +112,11 @@ export function versionHtml(
 
           <p style="margin:24px 0;">
             <a href="${lien}" style="display:inline-block;padding:14px 28px;background:#3fd9c7;color:#04211f;text-decoration:none;font-size:13px;letter-spacing:0.2em;text-transform:uppercase;">${message.bouton}</a>
+          </p>
+
+          <p style="margin:0 0 18px;font-size:12px;line-height:1.6;color:#8ea0b3;">
+            Si le bouton ne fonctionne pas, recopie cette adresse dans ton navigateur :<br>
+            <span style="color:#b9b09a;word-break:break-all;">${lien}</span>
           </p>
 
           <p style="margin:0;font-size:13px;line-height:1.6;color:#8ea0b3;">${message.pied}</p>
