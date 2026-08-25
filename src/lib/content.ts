@@ -129,3 +129,18 @@ export const FOOTER_LINKS: SiteLink[] = [
 
 /** Elder Futhark — « RAVENSHALLOW » translittéré, utilisé comme frise. */
 export const RAVENSHALLOW_RUNES = "ᚱ ᚨ ᚡ ᛖ ᚾ ᛊ ᚺ ᚨ ᛚ ᛚ ᛟ ᚹ";
+
+/**
+ * Le serveur Discord — première porte du château.
+ *
+ * C'est là que se fait l'accueil tant que le forum n'est pas ouvert : on s'y
+ * présente, on y pose ses questions, on y apprend l'ouverture des inscriptions.
+ */
+export const DISCORD = {
+  url: "https://discord.gg/V6A7DDUSaQ",
+  eyebrow: "Rejoindre",
+  titre: "Nous rejoindre",
+  bouton: "Rejoindre le Discord",
+  corps:
+    "Le château s'ouvre d'abord sur Discord : viens t'y présenter, poser tes questions et suivre l'ouverture des inscriptions.",
+} as const;
