@@ -171,6 +171,8 @@ export const TEXTES_ETATS = {
       age: "Âge",
       fonction: "Fonction",
       acces: "Statut d’accès",
+      jusquau: "Suspendu jusqu’au",
+      jusquauAide: "Vide = exclusion définitive",
       enregistrer: "Enregistrer",
       enregistre: "Modifications enregistrées",
     },

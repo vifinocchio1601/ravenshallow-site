@@ -64,6 +64,12 @@ export type Dossier = {
   baguetteBois: string | null;
   baguetteCoeur: string | null;
 
+  /**
+   * Fin de la suspension. Nulle pendant un bannissement, c’est une exclusion
+   * définitive (art. 8, niveau 5) ; renseignée, une suspension (niveau 4).
+   */
+  banniJusquau: string | null;
+
   journal: EntreeJournal[];
 };
 

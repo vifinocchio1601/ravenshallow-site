@@ -145,17 +145,44 @@ export default async function MembresPage() {
                     {t.enregistrer}
                   </button>
 
-                  <div className="sm:col-span-2 lg:col-span-4">
-                    <label htmlFor={`note-${membre.id}`} className="sr-only">
-                      Motif
-                    </label>
-                    <input
-                      id={`note-${membre.id}`}
-                      name="note"
-                      type="text"
-                      placeholder="Motif — obligatoire pour un bannissement, consigné au journal"
-                      className="w-full rounded-sm border border-silver/20 bg-mist/40 px-3 py-2 font-body text-sm text-parchment placeholder:italic placeholder:text-silver/50 transition-colors duration-300 hover:border-silver/40 focus:border-aurora-teal/70"
-                    />
+                  <div className="grid gap-3 sm:col-span-2 sm:grid-cols-[13rem_1fr] lg:col-span-4">
+                    {/* Vide = exclusion définitive. Ignorée hors bannissement,
+                        et effacée dès que l'accès est rétabli. */}
+                    <div>
+                      <label
+                        htmlFor={`fin-${membre.id}`}
+                        className="font-display text-[0.66rem] uppercase tracking-[0.14em] text-parchment-dim"
+                      >
+                        {t.jusquau}
+                      </label>
+                      <input
+                        id={`fin-${membre.id}`}
+                        name="banniJusquau"
+                        type="date"
+                        defaultValue={membre.banniJusquau?.slice(0, 10) ?? ""}
+                        aria-describedby={`fin-aide-${membre.id}`}
+                        className="mt-2 w-full rounded-sm border border-silver/25 bg-mist/60 px-3 py-2 font-body text-base text-parchment transition-colors duration-300 hover:border-silver/40 focus:border-aurora-teal/70"
+                      />
+                      <p
+                        id={`fin-aide-${membre.id}`}
+                        className="mt-1 font-body text-xs italic text-silver"
+                      >
+                        {t.jusquauAide}
+                      </p>
+                    </div>
+
+                    <div>
+                      <label htmlFor={`note-${membre.id}`} className="sr-only">
+                        Motif
+                      </label>
+                      <input
+                        id={`note-${membre.id}`}
+                        name="note"
+                        type="text"
+                        placeholder="Motif — obligatoire pour un bannissement, consigné au journal"
+                        className="mt-2 w-full rounded-sm border border-silver/20 bg-mist/40 px-3 py-2 font-body text-sm text-parchment placeholder:italic placeholder:text-silver/50 transition-colors duration-300 hover:border-silver/40 focus:border-aurora-teal/70"
+                      />
+                    </div>
                   </div>
                 </form>
               </li>

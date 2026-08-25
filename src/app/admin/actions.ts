@@ -61,6 +61,20 @@ export async function modifierMembreAction(donnees: FormData) {
   const acces = String(donnees.get("statutAcces") ?? "") as StatutAcces;
   const note = String(donnees.get("note") ?? "").trim();
 
+  // « Jusqu'au » : une date sans heure, donc lue à midi UTC pour qu'un
+  // fuseau ne la fasse pas basculer la veille au soir.
+  const finBrute = String(donnees.get("banniJusquau") ?? "").trim();
+  const fin = /^\d{4}-\d{2}-\d{2}$/.test(finBrute)
+    ? new Date(`${finBrute}T12:00:00.000Z`)
+    : null;
+
+  // La durée fait partie de la sanction : elle doit se retrouver dans le
+  // journal, pas seulement sur la fiche du joueur.
+  const noteComplete =
+    fin && acces === "EN_BANNISSEMENT"
+      ? `${note ? `${note} — ` : ""}jusqu'au ${fin.toLocaleDateString("fr-FR")}`
+      : note;
+
   await modifierMembre(
     id,
     {
@@ -70,8 +84,9 @@ export async function modifierMembreAction(donnees: FormData) {
           : undefined,
       fonction: FONCTIONS.includes(fonction) ? fonction : undefined,
       statutAcces: STATUTS_ACCES.includes(acces) ? acces : undefined,
+      banniJusquau: fin,
     },
-    note || null,
+    noteComplete || null,
   );
 
   revalidatePath("/admin/membres");

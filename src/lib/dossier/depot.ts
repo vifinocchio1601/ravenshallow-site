@@ -72,6 +72,7 @@ function dossierDemo(partiel: Partial<Dossier> & { prenomNom: string }): Dossier
     maison: null,
     baguetteBois: null,
     baguetteCoeur: null,
+    banniJusquau: null,
     journal: [],
     ...partiel,
   };
@@ -423,7 +424,12 @@ export async function deciderDossier(
  */
 export async function modifierMembre(
   id: string,
-  modifications: { age?: number; fonction?: Fonction; statutAcces?: StatutAcces },
+  modifications: {
+    age?: number;
+    fonction?: Fonction;
+    statutAcces?: StatutAcces;
+    banniJusquau?: Date | null;
+  },
   note: string | null,
 ): Promise<void> {
   if (!baseAbsente()) return base.modifierMembre(id, modifications, note);
@@ -447,6 +453,13 @@ export async function modifierMembre(
   ) {
     journaliser(membre, "ACCES_MODIFIE", membre.statutAcces, modifications.statutAcces, note);
     membre.statutAcces = modifications.statutAcces;
+  }
+
+  if (modifications.banniJusquau !== undefined) {
+    membre.banniJusquau =
+      membre.statutAcces === "EN_BANNISSEMENT"
+        ? modifications.banniJusquau?.toISOString() ?? null
+        : null;
   }
 
   enregistrer();

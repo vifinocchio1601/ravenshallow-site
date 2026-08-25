@@ -70,6 +70,7 @@ function versDossier(u: UtilisateurComplet): Dossier | null {
     maison: e.maison,
     baguetteBois: e.baguetteBois,
     baguetteCoeur: e.baguetteCoeur,
+    banniJusquau: u.banniJusquau?.toISOString() ?? null,
 
     journal: u.journal.map((entree) => ({
       id: entree.id,
@@ -361,13 +362,20 @@ export async function deciderDossier(
 
 export async function modifierMembre(
   id: string,
-  modifications: { age?: number; fonction?: Fonction; statutAcces?: StatutAcces },
+  modifications: {
+    age?: number;
+    fonction?: Fonction;
+    statutAcces?: StatutAcces;
+    /** Fin de suspension. `null` efface la date : exclusion définitive. */
+    banniJusquau?: Date | null;
+  },
   note: string | null,
 ): Promise<void> {
   const compte = await prisma.utilisateur.findUnique({
     where: { id },
     select: {
       statutAcces: true,
+      banniJusquau: true,
       eleve: { select: { id: true, age: true, fonction: true } },
     },
   });
@@ -413,7 +421,15 @@ export async function modifierMembre(
     });
   }
 
-  if (entrees.length === 0) return;
+  // La date de fin ne vaut que pendant une suspension : lever le
+  // bannissement l'efface, sans quoi elle traînerait sur un compte rétabli.
+  const accesFinal = modifications.statutAcces ?? compte.statutAcces;
+  const dateFinale =
+    accesFinal === "EN_BANNISSEMENT" ? (modifications.banniJusquau ?? null) : null;
+  const dateChange =
+    (dateFinale?.getTime() ?? null) !== (compte.banniJusquau?.getTime() ?? null);
+
+  if (entrees.length === 0 && !dateChange) return;
 
   await prisma.$transaction(async (tx) => {
     if (Object.keys(fiche).length > 0) {
@@ -423,7 +439,8 @@ export async function modifierMembre(
       where: { id },
       data: {
         ...(accesChange ? { statutAcces: modifications.statutAcces } : {}),
-        journal: { create: entrees },
+        ...(dateChange ? { banniJusquau: dateFinale } : {}),
+        ...(entrees.length > 0 ? { journal: { create: entrees } } : {}),
       },
     });
   });
