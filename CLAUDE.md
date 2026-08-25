@@ -48,13 +48,13 @@ Vercel, environnement Production — avec là-bas la chaîne Neon **pooled**.
 
 ## Les coutures uniques
 
-Quatre endroits concentrent chacun une décision. Ne pas recopier leur logique
+Six endroits concentrent chacun une décision. Ne pas recopier leur logique
 ailleurs, l'y ajouter.
 
 | Fichier | Ce qu'il décide, seul |
 | --- | --- |
-| `lib/session/acces.ts` | qui entre dans l'école, et où l'on atterrit selon l'état du dossier |
-| `lib/ecole/menu.ts` | les routes de l'école — le menu, la protection et les droits du membre suspendu s'en déduisent |
+| `lib/session/acces.ts` | qui entre dans l'école, **jusqu'où il va**, et où l'on atterrit |
+| `lib/ecole/menu.ts` | les routes de l'école — le menu, la protection, et les droits du suspendu comme du nouvel arrivant s'en déduisent |
 | `lib/dossier/depot.ts` | l'accès au stockage — aiguille entre PostgreSQL et l'échafaudage JSON |
 | `lib/dossier/schema.ts` | la validation, partagée mot pour mot entre le formulaire et la route |
 | `lib/ceremonie/questionnaire.ts` | les cinq questions **et leur barème** — `server-only`, jamais expédié au client |
@@ -130,7 +130,17 @@ affiché.
 
 **Aucun texte en dur dans un composant.** Les libellés vivent dans :
 `lib/dossier/constantes.ts`, `lib/dossier/etats.ts`, `lib/connexion/constantes.ts`,
-`lib/ecole/constantes.ts`, `lib/content.ts` (site vitrine).
+`lib/ecole/constantes.ts`, `lib/ceremonie/constantes.ts`, `lib/content.ts`
+(site vitrine).
+
+Le barème de la cérémonie fait exception : il vit dans
+`lib/ceremonie/questionnaire.ts`, avec les énoncés, **et ce fichier est
+`server-only`**. Séparer les textes des poids obligerait à les tenir
+synchronisés à la main.
+
+**Trois polices**, chargées par `next/font` (aucune requête extérieure) :
+Cinzel pour les titres et les capitales, EB Garamond pour le corps, et **Kalam
+pour la seule note manuscrite du bureau**. Ne pas en ajouter une quatrième.
 
 **Accessibilité** : le focus visible (`:focus-visible`) et
 `prefers-reduced-motion` sont déjà traités globalement dans `globals.css` — ne
@@ -170,6 +180,12 @@ n'est pas une négligence : Tailwind 3 ne sait pas injecter d'alpha dans un
 `var()`, et `bg-mist/60` cesserait silencieusement de fonctionner. Garder les
 deux listes synchronisées.
 
+**Une couleur en variable CSS se déclare en composantes séparées par des
+ESPACES.** `--brume-teinte: 214 228 242`, jamais `214, 228, 242` : la forme
+moderne `rgb(var(--x) / 0.62)` n'accepte que la première. Avec des virgules, la
+déclaration devient invalide et le navigateur la jette **en silence** — la
+brume s'est peinte en transparent une bonne demi-heure avant qu'on comprenne.
+
 **Prisma CLI lit `.env`, pas `.env.local`.** Passer `DATABASE_URL` en variable
 d'environnement à la commande.
 
@@ -198,8 +214,11 @@ développement, `main-app.js` part en 404 et **React cesse d'hydrater toute la
 page** — sans la moindre erreur explicite. Arrêter le serveur, construire,
 supprimer `.next`, relancer.
 
-**Images** — les blasons de `public/crests/` pèsent ~1 Mo pièce, servis via
-`next/image`. L'image du bureau a été convertie en JPEG (2,9 Mo → 573 Ko).
+**Images** — les blasons de `public/crests/` pèsent ~1 Mo pièce (5,7 Mo au
+total), servis via `next/image` sur toutes les pages de l'école : à alléger un
+jour. `public/ceremonie/` montre la cible — sept fichiers WebP, **232 Ko en
+tout**, photo du Miroir et textures de brume comprises. L'image du bureau a été
+convertie en JPEG (2,9 Mo → 573 Ko).
 
 ---
 
@@ -234,3 +253,9 @@ Le joueur n'est pas développeur. Le guider clic par clic dans les interfaces
 tierces (Vercel, Neon, Google), lui ouvrir les fichiers cachés à sa place
 (`open -e .env.local`), et ne jamais lui demander de coller un secret dans la
 conversation.
+
+**Lancer les commandes soi-même plutôt que les lui tendre.** Lui faire copier
+une commande le met en difficulté — il s'est perdu sur une migration Prisma
+passée trois fois de suite sous cette forme. Quand une commande doit venir de
+lui (un `git push`, qui a besoin de son trousseau), n'en donner **qu'une**,
+dire en une phrase ce qu'elle fait, et demander le résultat.
