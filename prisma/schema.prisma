@@ -52,6 +52,17 @@ model Utilisateur {
   /// courriel : le jeton porte la version qu’il avait à l’émission.
   jetonVersion Int @default(0)
 
+  /// Même principe pour les sessions ouvertes : le cookie porte la version
+  /// qu’il avait à la connexion. Incrémenté au changement de mot de passe,
+  /// il les ferme toutes d’un coup — y compris celle d’un intrus.
+  sessionVersion Int @default(0)
+
+  /// Fin de la suspension (art. 8, échelle des sanctions). Nulle pendant un
+  /// bannissement, c’est une exclusion définitive (niveau 5) ; renseignée,
+  /// c’est une suspension de 7 à 30 jours (niveau 4). Le motif, lui, vit
+  /// dans le journal du membre : c’est la note écrite en bannissant.
+  banniJusquau DateTime?
+
   /// Art. 15.4 — limites d'écriture. Facultatives, opposables à tous,
   /// affichées publiquement sur la fiche, jamais à justifier.
   limitesEcriture LimiteEcriture[] @default([])
@@ -65,6 +76,8 @@ model Utilisateur {
 
   /// Les entrées écrites PAR ce compte, quand il agit comme administrateur.
   decisionsPrises JournalMembre[] @relation("DecisionsPrises")
+
+  reinitialisations JetonReinitialisation[]
 
   creeLe DateTime @default(now())
   majLe  DateTime @updatedAt
@@ -291,6 +304,52 @@ enum EvenementMembre {
   FONCTION_MODIFIEE
   ACCES_MODIFIE
   COURRIEL_CONFIRMATION
+}
+
+// ─────────────────────────────────────────────────────────────
+//  Connexion — réinitialisation et limitation des tentatives
+// ─────────────────────────────────────────────────────────────
+
+/// Demande de réinitialisation du mot de passe.
+///
+/// Une ligne par lien envoyé. Le lien meurt au bout d’une heure, ne sert
+/// qu’une fois (`utiliseLe`), et une nouvelle demande consomme les
+/// précédentes — trois garanties qu’un jeton simplement signé, stocké nulle
+/// part, ne pourrait pas offrir.
+model JetonReinitialisation {
+  id            String      @id @default(cuid())
+  utilisateurId String
+  utilisateur   Utilisateur @relation(fields: [utilisateurId], references: [id], onDelete: Cascade)
+
+  /// SHA-256 du jeton envoyé. Le jeton en clair ne vit que dans le courriel :
+  /// une base dérobée ne permet de réinitialiser aucun compte. SHA-256 suffit
+  /// ici — le jeton est tiré au hasard sur 32 octets, il n’a rien de la faible
+  /// entropie d’un mot de passe humain, qui exige argon2.
+  jetonHash String @unique
+
+  expireLe  DateTime
+  /// Renseignée dès que le lien a servi.
+  utiliseLe DateTime?
+
+  creeLe DateTime @default(now())
+
+  @@index([utilisateurId, creeLe])
+  @@map("jetons_reinitialisation")
+}
+
+/// Échecs de connexion récents, pour ralentir puis bloquer les essais en série.
+///
+/// `cle` est une empreinte HMAC de l’adresse e-mail ou de l’adresse IP, jamais
+/// leur valeur : la table sait qu’une même origine a échoué six fois, sans
+/// savoir laquelle. Une connexion réussie efface les lignes de sa clé, et
+/// celles de plus d’une heure sont balayées au passage.
+model TentativeConnexion {
+  id     String   @id @default(cuid())
+  cle    String
+  creeLe DateTime @default(now())
+
+  @@index([cle, creeLe])
+  @@map("tentatives_connexion")
 }
 
 // ─────────────────────────────────────────────────────────────
