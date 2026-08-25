@@ -15,7 +15,6 @@
  */
 
 import type { StatutAcces, StatutDossier } from "@/lib/dossier/etats";
-import { BOUTIQUE_BJORNSTAV_OUVERTE } from "@/lib/ecole/baguette";
 import {
   ENTREES_MENU,
   ROUTES,
@@ -70,12 +69,13 @@ export function estReparti(compte: EtatAcces): boolean {
 /**
  * La baguette est-elle choisie ?
  *
- * Tant que la boutique n’existe pas, la réponse est oui pour tout le monde —
- * voir `BOUTIQUE_BJORNSTAV_OUVERTE`, la seule bascule à retirer le jour où
- * elle ouvrira.
+ * C’est la date qui fait foi, et non le bois : la base garantit que les trois
+ * colonnes vont ensemble, et une date sans bois ne pourrait pas exister.
+ *
+ * Comme la répartition, ce choix est définitif — une fois vraie, cette
+ * réponse ne redevient jamais fausse.
  */
 export function aChoisiSaBaguette(compte: EtatAcces): boolean {
-  if (!BOUTIQUE_BJORNSTAV_OUVERTE) return true;
   return compte.baguetteChoisieLe !== null;
 }
 

@@ -129,7 +129,7 @@ export const TEXTES_ETATS = {
   accepte: {
     titre: "Ton dossier est accepté",
     corps:
-      "Le château t’ouvre ses portes. La baguette de Bjornstav et le Miroir de Brume t’attendent — ils arrivent bientôt.",
+      "Le château t’ouvre ses portes. Deux choses t’attendent avant tout le reste : la baguette, chez Bjornstav à Kaldvik, puis le Miroir de Brume.",
     badge: "Accepté",
   },
   refuse: {

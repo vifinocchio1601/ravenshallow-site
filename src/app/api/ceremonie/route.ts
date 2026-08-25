@@ -2,7 +2,11 @@ import { NextResponse } from "next/server";
 import { enregistrerRepartition } from "@/lib/ceremonie/depot";
 import { calculerRepartition } from "@/lib/ceremonie/repartition";
 import { ROUTES } from "@/lib/ecole/menu";
-import { estReparti, routeAutorisee } from "@/lib/session/acces";
+import {
+  aChoisiSaBaguette,
+  estReparti,
+  routeAutorisee,
+} from "@/lib/session/acces";
 import { compteConnecte } from "@/lib/session/garde";
 
 /**
@@ -17,7 +21,7 @@ import { compteConnecte } from "@/lib/session/garde";
  * avant de l’appeler.
  *
  *   401 — pas de session
- *   403 — dossier non accepté, ou accès suspendu
+ *   403 — dossier non accepté, accès suspendu, ou **pas encore de baguette**
  *   409 — **déjà réparti** : la cérémonie ne se rejoue pas (art. 11.2)
  *   422 — cinq identifiants attendus, connus, et chacun de sa question
  */
@@ -30,6 +34,16 @@ export async function POST(request: Request) {
   // Même table de vérité que la page : accepté, non suspendu.
   if (!routeAutorisee(compte, ROUTES.ceremonie) || !compte.eleveId) {
     return NextResponse.json({ erreur: "Accès refusé." }, { status: 403 });
+  }
+
+  // La baguette d’abord. La page renvoie déjà à Kaldvik, mais une route
+  // d’API est publique : refaire la garde ici est le seul moyen qu’elle
+  // tienne pour de bon.
+  if (!aChoisiSaBaguette(compte)) {
+    return NextResponse.json(
+      { erreur: "La baguette d’abord.", destination: ROUTES.bjornstav },
+      { status: 403 },
+    );
   }
 
   // Premier verrou contre le rejeu. Le second est en base, dans la

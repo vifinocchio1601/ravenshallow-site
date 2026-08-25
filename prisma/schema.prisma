@@ -1,10 +1,13 @@
 // Ravenshallow — schéma de la base.
 //
 // Le dossier d'admission (compte joueur + fiche élève), le registre des
-// visages, la lecture des dossiers par l'administration, et la Cérémonie du
-// Miroir (répartition en maison).
-// La baguette (Bjornstav) n'est PAS construite : seules ses colonnes sont
-// réservées, nullables, pour que le lot suivant n'ait pas à migrer de nouveau.
+// visages, la lecture des dossiers par l'administration, la Cérémonie du
+// Miroir (répartition en maison) et la boutique Bjornstav (la baguette).
+//
+// Deux règles de ce schéma ne sont PAS exprimables en Prisma et vivent en SQL
+// brut, dans `20260825200000_baguette_definitive` : la cohérence des trois
+// colonnes de la baguette, et son immuabilité une fois posée. Les rejouer
+// depuis ce fichier seul les perdrait.
 
 generator client {
   provider = "prisma-client-js"
@@ -174,8 +177,15 @@ model Eleve {
 
   visagePris VisagePris?
 
-  // ── Réservé : la boutique Bjornstav ──
-  // Volontairement nullable et non renseigné par ce lot.
+  // ── La baguette de Bjornstav — définitive ──
+  /// Le bois, le cœur et le jour où l'échoppe les a inscrits. Nuls tant que
+  /// l'élève n'est pas passé à Kaldvik.
+  ///
+  /// Les trois vont ensemble ou pas du tout, et **ne changent plus une fois
+  /// posés** : ces deux règles sont portées par la base elle-même — une
+  /// contrainte `CHECK` et un déclencheur — et non par une condition écrite
+  /// dans le code, qui ne vaudrait que pour les chemins qui pensent à
+  /// l'écrire. Voir la migration `20260825200000_baguette_definitive`.
   baguetteBois      BaguetteBois?
   baguetteCoeur     BaguetteCoeur?
   baguetteChoisieLe DateTime?
@@ -414,8 +424,12 @@ enum Maison {
 }
 
 // ─────────────────────────────────────────────────────────────
-//  Réservé — la boutique Bjornstav (bible du lore, §5)
+//  La boutique Bjornstav (bible du lore, §5)
 // ─────────────────────────────────────────────────────────────
+
+/// Cinq bois, cinq cœurs, vingt-cinq baguettes possibles. Aucun n'apporte le
+/// moindre avantage : la magie courante n'a ni coût ni risque dans ce lore,
+/// un sort marche ou rate. La baguette est un signe, pas un équipement.
 
 enum BaguetteBois {
   FRENE

@@ -1,4 +1,5 @@
 import "server-only";
+import { libelleBaguette } from "@/lib/ecole/baguette";
 import { TEXTES_ECOLE } from "@/lib/ecole/constantes";
 import { ROUTES } from "@/lib/ecole/menu";
 import {
@@ -42,6 +43,13 @@ export type Progression = {
   pointsMaison: number | null;
   fonction: string;
   genre: string;
+  /**
+   * « Chêne des tempêtes, cœur de griffe d’ours des cavernes », ou `null`
+   * tant que l’élève n’est pas passé à Kaldvik. La ligne reste alors masquée :
+   * la note des premiers pas dit déjà ce qu’il lui reste à faire, et
+   * l’annoncer deux fois ne l’aiderait pas.
+   */
+  baguette: string | null;
   prochainesEpreuves: string | null;
 };
 
@@ -78,6 +86,7 @@ export async function progression(compte: CompteConnecte): Promise<Progression> 
     pointsMaison: compte.maison ? 0 : null,
     fonction: compte.fonction,
     genre: compte.genre,
+    baguette: libelleBaguette(compte.baguetteBois, compte.baguetteCoeur),
     prochainesEpreuves: null,
   };
 }
@@ -126,8 +135,8 @@ export async function premiersPas(
       id: "baguette",
       libelle: t.baguette,
       fait: baguette,
-      // La boutique n’est pas construite : aucune adresse où envoyer.
-      href: null,
+      // Le premier pas n’est jamais verrouillé : rien ne le précède.
+      href: baguette ? null : ROUTES.bjornstav,
       verrou: null,
     },
     {

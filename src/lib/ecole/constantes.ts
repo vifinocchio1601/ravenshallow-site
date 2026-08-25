@@ -50,6 +50,7 @@ export const TEXTES_ECOLE = {
       pointsPersonnels: "Points personnels",
       pointsMaison: "Points de la maison",
       annee: "Année",
+      baguette: "Baguette",
       prochainesEpreuves: "Prochaines épreuves",
       /** Masqué tant que la répartition n’a pas eu lieu — art. 10.2. */
       maisonInconnue: "Le compteur de maison s’ouvrira à la répartition.",
@@ -76,7 +77,8 @@ export const TEXTES_ECOLE = {
       maison: "Maison",
       famille: "Famille",
       baguette: "Baguette",
-      baguetteAVenir: "La boutique Bjornstav n’a pas encore ouvert.",
+      /** Affiché tant que l’élève n’est pas passé à Kaldvik. */
+      baguetteAVenir: "À choisir chez Bjornstav, à Kaldvik.",
       limites: "Limites d’écriture",
       limitesAucune: "Aucune limite indiquée.",
     },

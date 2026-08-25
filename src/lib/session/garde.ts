@@ -32,6 +32,13 @@ export type CompteConnecte = EtatAcces & {
   jetonVersion: number;
   /** Le mot laissé par l’administration : motif de refus, ou correction. */
   noteAdmin: string | null;
+  /**
+   * La baguette, pour l’afficher — l’accès, lui, ne regarde que la date, et
+   * c’est `EtatAcces` qui la porte. Nuls tant que l’élève n’est pas passé à
+   * Kaldvik ; la base garantit que les trois vont ensemble.
+   */
+  baguetteBois: string | null;
+  baguetteCoeur: string | null;
   prenomNom: string;
   genre: Genre;
   fonction: Fonction;
@@ -61,6 +68,8 @@ export async function compteConnecte(): Promise<CompteConnecte | null> {
           fonction: true,
           age: true,
           maison: true,
+          baguetteBois: true,
+          baguetteCoeur: true,
           baguetteChoisieLe: true,
         },
       },
@@ -86,6 +95,8 @@ export async function compteConnecte(): Promise<CompteConnecte | null> {
     // il est traité comme une demande jamais envoyée plutôt qu’ouvert.
     statut: (eleve?.statut ?? "BROUILLON") as StatutDossier,
     maison: eleve?.maison ?? null,
+    baguetteBois: eleve?.baguetteBois ?? null,
+    baguetteCoeur: eleve?.baguetteCoeur ?? null,
     baguetteChoisieLe: eleve?.baguetteChoisieLe ?? null,
     prenomNom: eleve?.prenomNom ?? "",
     genre: (eleve?.genre ?? "AUTRE") as Genre,

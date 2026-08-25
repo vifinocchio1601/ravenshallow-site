@@ -148,6 +148,12 @@ export default async function BureauPage() {
                   avancee.genre as Genre,
                 )}
               />
+              {/* Masquée tant que l’élève n’est pas passé à Kaldvik : la note
+                  des premiers pas l’y envoie déjà, et le dire deux fois
+                  n’aiderait personne. */}
+              {avancee.baguette ? (
+                <Mesure terme={t.progression.baguette} valeur={avancee.baguette} />
+              ) : null}
               <Mesure
                 terme={t.progression.prochainesEpreuves}
                 valeur={avancee.prochainesEpreuves ?? t.progression.sansDate}

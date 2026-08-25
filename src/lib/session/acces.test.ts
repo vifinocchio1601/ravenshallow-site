@@ -36,10 +36,20 @@ function compte(modifications: Partial<EtatAcces> = {}): EtatAcces {
   };
 }
 
+const LA_BAGUETTE = new Date("2026-08-25T18:00:00.000Z");
+
+/** Ni baguette ni maison : il arrive, et les deux pas lui restent. */
 const NOUVEL_ARRIVANT = compte();
-const REPARTI = compte({ maison: "NATTORM" });
+/** Le premier pas est fait, le Miroir l’attend. */
+const AVEC_BAGUETTE = compte({ baguetteChoisieLe: LA_BAGUETTE });
+/** Les deux pas faits — c’est ce qui ouvre le reste du château. */
+const REPARTI = compte({ baguetteChoisieLe: LA_BAGUETTE, maison: "NATTORM" });
 const BANNI = compte({ statutAcces: "EN_BANNISSEMENT" });
-const BANNI_REPARTI = compte({ statutAcces: "EN_BANNISSEMENT", maison: "TIDEAL" });
+const BANNI_REPARTI = compte({
+  statutAcces: "EN_BANNISSEMENT",
+  baguetteChoisieLe: LA_BAGUETTE,
+  maison: "TIDEAL",
+});
 const EN_ATTENTE = compte({ statut: "EN_ATTENTE", statutAcces: "EN_ATTENTE" });
 
 describe("les deux étages de l’accès", () => {
@@ -62,17 +72,29 @@ describe("les deux étages de l’accès", () => {
     expect(routeAutorisee(NOUVEL_ARRIVANT, ROUTES.bureau)).toBe(true);
   });
 
-  it("ne compte les premiers pas finis qu’une fois la maison connue", () => {
-    expect(estReparti(NOUVEL_ARRIVANT)).toBe(false);
-    expect(estReparti(REPARTI)).toBe(true);
+  /**
+   * **Les deux pas comptent, et il en faut deux.** Ni la baguette seule ni la
+   * maison seule ne suffisent : ce test interdit qu’on en oublie un en
+   * réécrivant un jour la condition.
+   */
+  it("n’ouvre le reste du château qu’une fois les deux pas faits", () => {
     expect(aFiniLesPremiersPas(NOUVEL_ARRIVANT)).toBe(false);
+    expect(aFiniLesPremiersPas(AVEC_BAGUETTE)).toBe(false);
+    expect(aFiniLesPremiersPas(compte({ maison: "NATTORM" }))).toBe(false);
     expect(aFiniLesPremiersPas(REPARTI)).toBe(true);
   });
 
-  /** Tant que la boutique n’existe pas, l’étape est réputée franchie. */
-  it("tient la baguette pour acquise pendant que Bjornstav est fermée", () => {
-    expect(aChoisiSaBaguette(NOUVEL_ARRIVANT)).toBe(true);
-    expect(aChoisiSaBaguette(compte({ baguetteChoisieLe: new Date() }))).toBe(true);
+  it("lit la maison pour savoir si le Miroir a parlé", () => {
+    expect(estReparti(NOUVEL_ARRIVANT)).toBe(false);
+    expect(estReparti(AVEC_BAGUETTE)).toBe(false);
+    expect(estReparti(REPARTI)).toBe(true);
+  });
+
+  /** C’est la date de la boutique qui fait foi, et rien d’autre. */
+  it("ne tient la baguette pour choisie qu’une fois la date posée", () => {
+    expect(aChoisiSaBaguette(NOUVEL_ARRIVANT)).toBe(false);
+    expect(aChoisiSaBaguette(AVEC_BAGUETTE)).toBe(true);
+    expect(aChoisiSaBaguette(REPARTI)).toBe(true);
   });
 
   it("reconnaît le bannissement, dossier accepté seulement", () => {
@@ -105,8 +127,12 @@ describe("le nouvel arrivant", () => {
     ]);
   });
 
-  it("peut se présenter devant le Miroir", () => {
-    expect(routeAutorisee(NOUVEL_ARRIVANT, ROUTES.ceremonie)).toBe(true);
+  it("peut pousser la porte de Bjornstav", () => {
+    expect(routeAutorisee(NOUVEL_ARRIVANT, ROUTES.bjornstav)).toBe(true);
+  });
+
+  it("peut se présenter devant le Miroir une fois sa baguette prise", () => {
+    expect(routeAutorisee(AVEC_BAGUETTE, ROUTES.ceremonie)).toBe(true);
   });
 
   it("ne peut ouvrir ni les cours ni l’école", () => {
@@ -137,6 +163,12 @@ describe("l’élève réparti", () => {
     expect(routeAutorisee(REPARTI, ROUTES.ceremonie)).toBe(true);
     expect(estReparti(REPARTI)).toBe(true);
   });
+
+  /** Même mécanique pour la boutique : `aChoisiSaBaguette` la referme. */
+  it("ne repasse pas chez Bjornstav : la page se referme sur aChoisiSaBaguette", () => {
+    expect(routeAutorisee(REPARTI, ROUTES.bjornstav)).toBe(true);
+    expect(aChoisiSaBaguette(REPARTI)).toBe(true);
+  });
 });
 
 describe("le membre banni", () => {
@@ -149,7 +181,8 @@ describe("le membre banni", () => {
     }
   });
 
-  it("n’atteint jamais le Miroir, même sans maison", () => {
+  it("n’atteint ni la boutique ni le Miroir, même sans baguette ni maison", () => {
+    expect(routeAutorisee(BANNI, ROUTES.bjornstav)).toBe(false);
     expect(routeAutorisee(BANNI, ROUTES.ceremonie)).toBe(false);
   });
 
@@ -199,15 +232,20 @@ describe("les propriétés que le jour d’après ne doit pas casser", () => {
     expect(routeAutorisee(REPARTI, "/salle-sur-mesure")).toBe(true);
   });
 
-  /** La cérémonie est gardée par le middleware sans figurer au bandeau. */
-  it("garde la cérémonie sans jamais l’afficher au menu", () => {
-    expect(PREFIXES_ECOLE).toContain(ROUTES.ceremonie);
-    expect(ENTREES_MENU.map((e) => e.href)).not.toContain(ROUTES.ceremonie);
+  /**
+   * La boutique et la cérémonie sont gardées par le middleware sans figurer
+   * au bandeau. Les oublier dans `ROUTES_HORS_MENU`, ce serait les laisser
+   * sans garde du tout.
+   */
+  it.each([
+    ["la boutique", ROUTES.bjornstav],
+    ["la cérémonie", ROUTES.ceremonie],
+  ])("garde %s sans jamais l’afficher au menu", (_cas, chemin) => {
+    expect(PREFIXES_ECOLE).toContain(chemin);
+    expect(ENTREES_MENU.map((e) => e.href)).not.toContain(chemin);
 
-    for (const etat of [NOUVEL_ARRIVANT, REPARTI, BANNI]) {
-      expect(entreesVisibles(etat).map((e) => e.href)).not.toContain(
-        ROUTES.ceremonie,
-      );
+    for (const etat of [NOUVEL_ARRIVANT, AVEC_BAGUETTE, REPARTI, BANNI]) {
+      expect(entreesVisibles(etat).map((e) => e.href)).not.toContain(chemin);
     }
   });
 

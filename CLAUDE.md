@@ -32,7 +32,7 @@ joueur, pas des choix d'implémentation. Ne pas les réécrire sans demander.
 
 ```bash
 npm run dev              # http://localhost:3000
-npm test                 # vitest, 168 tests
+npm test                 # vitest, 308 tests
 npm run lint
 npx tsc --noEmit
 npm run build            # à passer avant tout déploiement
@@ -48,7 +48,7 @@ Vercel, environnement Production — avec là-bas la chaîne Neon **pooled**.
 
 ## Les coutures uniques
 
-Six endroits concentrent chacun une décision. Ne pas recopier leur logique
+Huit endroits concentrent chacun une décision. Ne pas recopier leur logique
 ailleurs, l'y ajouter.
 
 | Fichier | Ce qu'il décide, seul |
@@ -59,6 +59,8 @@ ailleurs, l'y ajouter.
 | `lib/dossier/schema.ts` | la validation, partagée mot pour mot entre le formulaire et la route |
 | `lib/ceremonie/questionnaire.ts` | les cinq questions **et leur barème** — `server-only`, jamais expédié au client |
 | `lib/ceremonie/repartition.ts` | le calcul de la maison et le départage, reproductibles |
+| `lib/bjornstav/constantes.ts` | toute la scène de la boutique **et les vingt-cinq réactions** — `server-only` |
+| `lib/ecole/baguette.ts` | les dix codes, les dix noms, et la validation de ce qu'envoie le navigateur |
 
 **L'accès se joue à deux étages**, tous deux dans `acces.ts` :
 
@@ -75,13 +77,20 @@ et l'oubli de l'un comme de l'autre va dans le sens de la fermeture :
 - `avantPremiersPas` — ouverte au nouvel arrivant
 
 Une route de l'école **sans entrée au bandeau** se déclare dans
-`ROUTES_HORS_MENU` — c'est le cas de la Cérémonie. L'oublier, c'est la laisser
-sans garde côté middleware.
+`ROUTES_HORS_MENU` — c'est le cas de la boutique et de la Cérémonie.
+L'oublier, c'est la laisser sans garde côté middleware.
 
-**La bascule Bjornstav** est une constante unique,
-`BOUTIQUE_BJORNSTAV_OUVERTE` dans `lib/ecole/baguette.ts`. Tant qu'elle vaut
-`false`, l'étape de la baguette est réputée franchie. C'est la seule chose à
-retirer le jour où la boutique ouvrira.
+**Les deux premiers pas ont chacun leur page hors bandeau**, et chacune se
+referme sur son propre prédicat plutôt que sur une fermeture de route — qui
+produirait une redirection en boucle :
+
+- `/bjornstav` se referme sur `aChoisiSaBaguette` → renvoi au bureau
+- `/ceremonie` se referme sur `estReparti` → renvoi au bureau, **et** exige
+  `aChoisiSaBaguette` → renvoi à Kaldvik
+
+Ces deux gardes-là sont refaites **en entier** dans les routes d'API
+correspondantes. Une adresse de page se contourne en la tapant ; une route
+d'API se contourne en l'appelant.
 
 ---
 
@@ -146,6 +155,13 @@ pour la seule note manuscrite du bureau**. Ne pas en ajouter une quatrième.
 `prefers-reduced-motion` sont déjà traités globalement dans `globals.css` — ne
 pas les refaire. Un état ne se signale jamais par la seule couleur.
 
+**Sur un choix définitif, les flèches ne choisissent pas.** Dans un groupe de
+boutons radio ordinaire, une flèche sélectionne en même temps qu'elle déplace :
+un joueur au clavier verrouillerait son bois à la première touche, sans avoir
+lu les autres cartes. `bjornstav/EtapeChoix.tsx` sépare les deux gestes — les
+flèches parcourent, Espace ou Entrée décide. **La Cérémonie du Miroir n'a pas
+encore ce traitement**, et c'est le seul écart connu entre les deux scènes.
+
 **Composants réutilisables** : `dossier/Champ.tsx` (libellé lié, message en
 `role="alert"`, hauteur réservée), `dossier/ReglesMotDePasse.tsx`,
 `dossier/EcranEtat.tsx`, `ecole/Panneau.tsx`.
@@ -169,6 +185,18 @@ pas les refaire. Un état ne se signale jamais par la seule couleur.
   contre le rejeu est en base : `updateMany` conditionné à `maison: null`.
 - **La ligne de Nattorm affichée à la révélation parle du silence, pas de la
   malédiction** (art. 11.4). Ne pas la réécrire en « maison maudite ».
+- **La baguette n'a aucun effet mécanique.** Pas de bonus, pas de statistique,
+  aucun avantage en duel ni en cours : la magie courante n'a ni coût ni risque
+  dans ce lore, un sort marche ou rate. Si un bois avantageait, tout le monde
+  prendrait le même et le choix mourrait. Aucun texte ne doit laisser croire
+  le contraire — `reaction.test.ts` interdit le vocabulaire d'équipement.
+- **La boutique et le Miroir sont indépendants.** Aucun texte de Bjornstav ne
+  nomme une maison, ni la répartition — un test le vérifie sur l'ensemble de
+  la scène. La bible du lore (§5) évoque un « indice discret sur sa future
+  maison » : c'est le joueur qui a tranché contre, et c'est lui qui prime.
+- **Le choix de la baguette est définitif**, comme la maison. Deux verrous
+  applicatifs (`updateMany` conditionné, garde de page et de route) **et**
+  deux verrous en base — voir ci-dessous.
 
 ---
 
@@ -188,6 +216,19 @@ brume s'est peinte en transparent une bonne demi-heure avant qu'on comprenne.
 
 **Prisma CLI lit `.env`, pas `.env.local`.** Passer `DATABASE_URL` en variable
 d'environnement à la commande.
+
+**Deux règles de la base ne sont pas dans `schema.prisma`** et ne s'en
+déduiraient jamais : la cohérence des trois colonnes de la baguette
+(contrainte `CHECK`) et son immuabilité une fois posée (déclencheur). Elles
+vivent en SQL brut dans `20260825200000_baguette_definitive`. Régénérer le
+schéma depuis Prisma seul les perdrait. Pour corriger une baguette écrite par
+erreur, il faut lever le déclencheur explicitement — la commande est en
+commentaire dans la migration.
+
+**La lettrine se recopie sur tous les blocs si on l'y laisse.** La règle est
+écrite `.recit > .recit__narration:first-of-type::first-letter` : sans le
+`>`, elle attrape le premier paragraphe de n'importe quel conteneur, et chaque
+suite du récit de Bjornstav en gagnait une.
 
 **Modules natifs** — `@node-rs/argon2` et `@prisma/client` sont déclarés dans
 `serverComponentsExternalPackages` : empaquetés par webpack, ils cherchent
@@ -216,9 +257,15 @@ supprimer `.next`, relancer.
 
 **Images** — les blasons de `public/crests/` pèsent ~1 Mo pièce (5,7 Mo au
 total), servis via `next/image` sur toutes les pages de l'école : à alléger un
-jour. `public/ceremonie/` montre la cible — sept fichiers WebP, **232 Ko en
-tout**, photo du Miroir et textures de brume comprises. L'image du bureau a été
-convertie en JPEG (2,9 Mo → 573 Ko).
+jour. `public/ceremonie/` (232 Ko) et `public/bjornstav/` (224 Ko) montrent la
+cible. L'image du bureau a été convertie en JPEG (2,9 Mo → 573 Ko).
+
+Le fond de Bjornstav a été **aplani, assombri et refroidi** avant d'entrer
+dans le dépôt : c'est ce qui permet au texte de rester lisible pendant tout le
+défilement. Ne pas le retraiter. Les réglages des couches (opacités,
+positions, durées) viennent de la maquette et ont été équilibrés à l'écran —
+les remplacer par « ce qui semble juste » fait repasser le mur devant le
+texte.
 
 ---
 
@@ -228,13 +275,20 @@ convertie en JPEG (2,9 Mo → 573 Ko).
 (recadrage 9:16, registre des visages, courriel de confirmation), zone
 d'administration (lecture des dossiers, liste des membres, journal),
 connexion, mot de passe oublié, protection des routes, bandeau-parchemin,
-Ma fiche, Mon bureau, **la Cérémonie du Miroir** (récit, brume, questionnaire,
-révélation, enregistrement) et la note des premiers pas sur le bureau.
+Ma fiche, Mon bureau, la note des premiers pas, **la boutique Bjornstav**
+(récit, mur d'étagères, bois, cœur, réaction assemblée côté serveur,
+enregistrement définitif) et **la Cérémonie du Miroir** (récit, brume,
+questionnaire, révélation, enregistrement).
 
-**Pas encore** : la boutique Bjornstav (baguettes), les scènes, la messagerie,
-les points et les annonces du Grand Hall. Les quatre panneaux du bureau lisent
-`lib/bureau/donnees.ts`, dont les fonctions rendent des listes vides — chaque
-lot en remplacera **une seule**.
+**Les deux premiers pas sont dans l'ordre** : la baguette d'abord, le Miroir
+ensuite, et le second est fermé côté serveur tant que le premier n'est pas
+fait.
+
+**Pas encore** : les scènes, la messagerie, les points et les annonces du
+Grand Hall. Les quatre panneaux du bureau lisent `lib/bureau/donnees.ts`, dont
+les fonctions rendent des listes vides — chaque lot en remplacera **une
+seule**. `progression()` est la première à rendre autre chose : elle porte
+déjà l'année et la baguette.
 
 **Limite connue** : le format `prenomNom` refuse les prénoms composés
 (Jean-Luc) et les noms à apostrophe (O'Brien). `schema.test.ts:91-98` fige ces

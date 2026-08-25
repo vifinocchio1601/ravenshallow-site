@@ -684,7 +684,12 @@
   border-left: 1px solid rgb(201 123 61 / 0.5);
 }
 
-.recit__narration:first-of-type::first-letter {
+/* Une seule lettrine par page, et sur la première ligne du récit.
+
+   Le `>` n'est pas décoratif : sans lui, la règle attrape le premier
+   paragraphe de N'IMPORTE quel bloc — et chaque suite du récit de Bjornstav,
+   qui paraît après un choix, en gagnait une. */
+.recit > .recit__narration:first-of-type::first-letter {
   font-family: var(--font-display), Georgia, serif;
   font-style: normal;
   float: left;
@@ -694,7 +699,9 @@
   color: var(--ember);
 }
 
-.filet-ceremonie {
+/* Un filet cuivré barré d'un losange. Partagé par la Cérémonie et par la
+   boutique : c'est la même respiration entre deux moments d'une scène. */
+.filet {
   display: flex;
   align-items: center;
   gap: 1rem;
@@ -703,8 +710,8 @@
   opacity: 0.55;
 }
 
-.filet-ceremonie::before,
-.filet-ceremonie::after {
+.filet::before,
+.filet::after {
   content: "";
   height: 1px;
   flex: 1;
@@ -1056,4 +1063,399 @@
   font-style: italic;
   font-size: 0.86rem;
   opacity: 0.85;
+}
+
+/* ————————————————————————————————
+   La boutique Bjornstav
+
+   Une pièce, pas une interface. Six couches se superposent au-dessus du mur
+   d'étagères, et chacune sert la lecture avant de servir l'ambiance :
+
+     .mur              la photographie, en fond fixe, qui glisse un peu
+     .poudre .fenetre  les lueurs froides du carreau givré
+     .lampe            la seule lumière chaude, qui vacille
+     .poussiere        les grains qui montent dans cette lumière
+     .crasse .vignette les coins mangés d'ombre
+     .voile-echoppe    le voile de lecture, sans lequel rien ne se lit
+
+   Les valeurs — opacités, tailles, positions, durées — sont celles de la
+   maquette, équilibrées à l'écran. Les remplacer par « ce qui semble juste »
+   défait cet équilibre : la brume claire du mur repasse devant le texte.
+
+   Les couleurs, elles, sont celles du site : Cinzel et EB Garamond, la
+   palette de Ravenshallow. La maquette avait les siennes ; le site a déjà
+   les siennes, et deux systèmes valent moins qu'un.
+   ———————————————————————————————— */
+
+/* La colonne de texte, et tout ce qui doit passer devant le décor. */
+.echoppe {
+  position: relative;
+  z-index: 2;
+  margin: 0 auto;
+  max-width: 47rem;
+  padding: 0 clamp(1rem, 3vw, 2rem) 8rem;
+}
+
+/* — Le mur de boîtes —
+   L'image a été aplanie, assombrie et refroidie avant d'entrer ici : c'est
+   ce qui permet au texte de rester lisible pendant tout le défilement. Ne pas
+   la retraiter. La réserve de -26 % / -6 % laisse la place au glissement,
+   sans quoi on verrait le bord franc de la photographie apparaître. */
+.mur {
+  position: fixed;
+  inset: -26% -6%;
+  z-index: 0;
+  pointer-events: none;
+  will-change: transform;
+  background-image: url("/bjornstav/fond.webp");
+  background-size: cover;
+  background-position: center;
+}
+
+/* — La lampe à huile —
+   Posée en bas à droite, débordant largement du cadre : on ne voit que le
+   bord de sa lueur, comme si elle brûlait juste hors champ. `screen` pour
+   qu'elle éclaire le mur au lieu de le recouvrir. */
+.lampe {
+  position: fixed;
+  right: 6%;
+  bottom: 14%;
+  width: 70vmax;
+  height: 70vmax;
+  z-index: 0;
+  transform: translate(35%, 35%);
+  pointer-events: none;
+  mix-blend-mode: screen;
+  background: radial-gradient(
+    circle,
+    rgb(240 184 108 / 0.22) 0%,
+    rgb(205 138 60 / 0.09) 32%,
+    transparent 62%
+  );
+  animation: lampe-vacille 7s ease-in-out infinite;
+}
+
+/* Le vacillement est volontairement irrégulier : des paliers inégaux, à des
+   moments qui ne tombent pas rond. Une pulsation régulière se lirait comme
+   une animation d'interface, pas comme une flamme. */
+@keyframes lampe-vacille {
+  0%,
+  100% {
+    opacity: 0.92;
+  }
+  18% {
+    opacity: 1;
+  }
+  31% {
+    opacity: 0.84;
+  }
+  47% {
+    opacity: 0.97;
+  }
+  58% {
+    opacity: 0.88;
+  }
+  72% {
+    opacity: 1;
+  }
+  86% {
+    opacity: 0.9;
+  }
+}
+
+/* — Le carreau givré, à gauche — le jour qui tourne au bleu. */
+.fenetre {
+  position: fixed;
+  left: -10%;
+  top: 6%;
+  width: 52vmax;
+  height: 62vmax;
+  z-index: 0;
+  pointer-events: none;
+  mix-blend-mode: screen;
+  background: radial-gradient(
+    ellipse at 30% 40%,
+    rgb(150 185 220 / 0.2) 0%,
+    rgb(110 145 185 / 0.07) 40%,
+    transparent 70%
+  );
+}
+
+/* — Les coins mangés d'ombre —
+   Cinq taches sombres irrégulières : ce sont elles qui éteignent les zones
+   claires du mur là où le texte passe, et non un voile uniforme qui
+   aplatirait toute la photographie. */
+.crasse {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse 60% 40% at 8% 12%, rgb(0 0 0 / 0.75), transparent 70%),
+    radial-gradient(ellipse 50% 55% at 92% 22%, rgb(0 0 0 / 0.7), transparent 68%),
+    radial-gradient(ellipse 70% 35% at 30% 92%, rgb(0 0 0 / 0.72), transparent 70%),
+    radial-gradient(ellipse 45% 50% at 66% 44%, rgb(0 0 0 / 0.42), transparent 72%),
+    radial-gradient(ellipse 40% 60% at 4% 62%, rgb(0 0 0 / 0.6), transparent 70%);
+}
+
+/* Quatre halos de poussière en suspension, très faibles : ils donnent au mur
+   sa profondeur d'air. */
+.poudre {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  mix-blend-mode: screen;
+  background:
+    radial-gradient(ellipse at 22% 18%, rgb(206 192 166 / 0.13), transparent 46%),
+    radial-gradient(ellipse at 74% 34%, rgb(206 192 166 / 0.055), transparent 42%),
+    radial-gradient(ellipse at 46% 76%, rgb(206 192 166 / 0.11), transparent 48%),
+    radial-gradient(ellipse at 88% 84%, rgb(206 192 166 / 0.045), transparent 40%);
+}
+
+/* — Les grains qui montent dans la lumière — */
+.poussiere {
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.poussiere span {
+  position: absolute;
+  display: block;
+  width: 2px;
+  height: 2px;
+  border-radius: 50%;
+  background: rgb(255 225 180 / 0.55);
+  animation: poussiere-monte linear infinite;
+}
+
+/* Chaque grain traverse tout l'écran de bas en haut, en dérivant de côté, et
+   s'efface aux deux bouts : on ne le voit jamais apparaître ni disparaître. */
+@keyframes poussiere-monte {
+  from {
+    transform: translate3d(0, 110vh, 0);
+    opacity: 0;
+  }
+  10% {
+    opacity: 0.7;
+  }
+  90% {
+    opacity: 0.5;
+  }
+  to {
+    transform: translate3d(var(--dx), -12vh, 0);
+    opacity: 0;
+  }
+}
+
+.vignette-echoppe {
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background: radial-gradient(
+    ellipse at 55% 55%,
+    transparent 34%,
+    rgb(4 5 7 / 0.5) 88%
+  );
+}
+
+/* Le voile de lecture — indispensable, et pas décoratif.
+   Ses bords sont fondus pour qu'on ne voie jamais un rectangle : c'est une
+   zone d'ombre, pas un encadré. Sur téléphone il couvre toute la largeur,
+   d'où le `104%`. */
+.voile-echoppe {
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(58rem, 104%);
+  z-index: 1;
+  pointer-events: none;
+  background: linear-gradient(
+    to right,
+    transparent 0%,
+    rgb(6 4 3 / 0.8) 8%,
+    rgb(6 4 3 / 0.955) 20%,
+    rgb(6 4 3 / 0.955) 80%,
+    rgb(6 4 3 / 0.8) 92%,
+    transparent 100%
+  );
+}
+
+/* — L'enseigne —
+   `drop-shadow` et non `box-shadow` : la pancarte est détourée, et une ombre
+   de boîte lui dessinerait un rectangle autour. Deux ombres superposées, une
+   portée large et une rapprochée, pour qu'elle paraisse décollée du mur.
+   Le léger dévers est celui de la maquette : une pancarte clouée droit aurait
+   l'air d'un logo. */
+.enseigne {
+  display: block;
+  width: min(100%, 34rem);
+  height: auto;
+  margin: 3.4rem auto;
+  transform: rotate(-0.6deg);
+  filter: drop-shadow(0 22px 40px rgb(0 0 0 / 0.9))
+    drop-shadow(0 4px 10px rgb(0 0 0 / 0.75));
+}
+
+/* — Les cartes du bois et du cœur —
+   Mêmes gestes que les réponses du Miroir : le libellé porte tout, la case
+   radio reste invisible mais présente, et le focus se reporte sur le
+   libellé. La pièce, elle, est chaude et non lunaire — d'où ces bruns. */
+.choix {
+  border: 0;
+  padding: 0;
+  margin: 2.4rem 0 1rem;
+  opacity: 0;
+  transform: translateY(14px);
+  transition:
+    opacity 0.9s ease,
+    transform 0.9s ease;
+}
+
+.choix[data-visible="true"] {
+  opacity: 1;
+  transform: none;
+}
+
+.choix__legende {
+  padding: 0;
+  margin-bottom: 0.9rem;
+}
+
+.carte {
+  position: relative;
+}
+
+.carte input {
+  position: absolute;
+  opacity: 0;
+  width: 1px;
+  height: 1px;
+}
+
+.carte label {
+  display: block;
+  cursor: pointer;
+  padding: 1rem 1.2rem;
+  background: rgb(28 20 14 / 0.9);
+  border: 1px solid rgb(180 150 115 / 0.2);
+  transition:
+    background 0.35s ease,
+    border-color 0.35s ease,
+    transform 0.35s ease;
+}
+
+.carte label:hover {
+  background: rgb(42 30 20 / 0.95);
+  border-color: rgb(201 123 61 / 0.5);
+}
+
+/* Le focus vit sur la case radio, qui est invisible : on le reporte sur son
+   libellé, sans quoi la navigation au clavier se ferait à l'aveugle. */
+.carte input:focus-visible + label {
+  outline: 2px solid var(--ember);
+  outline-offset: 3px;
+}
+
+/* Le choix ne se signale pas par la seule couleur : le libellé se décale et
+   son cadre s'allume. */
+.carte input:checked + label {
+  background: rgb(56 40 26 / 0.96);
+  border-color: rgb(201 123 61 / 0.85);
+  transform: translateX(5px);
+}
+
+.carte__nom {
+  display: block;
+  font-family: var(--font-display), Georgia, serif;
+  font-weight: 400;
+  letter-spacing: 0.14em;
+  color: var(--parchment);
+  margin-bottom: 0.25rem;
+  font-size: 1.02rem;
+}
+
+.carte__note {
+  display: block;
+  font-size: 0.95rem;
+  line-height: 1.62;
+  color: var(--parchment-dim);
+  font-style: italic;
+}
+
+/* Une étape close : les cartes s'éteignent, sauf celle qu'on a prise. */
+.choix[data-verrouillee="true"] .carte label {
+  cursor: default;
+  opacity: 0.42;
+}
+
+.choix[data-verrouillee="true"] .carte input:checked + label {
+  opacity: 1;
+}
+
+/* La suite du récit, qui paraît après un choix.
+
+   Même largeur que la colonne de récit, mais SANS la classe `.recit` : la
+   lettrine y est posée sur le premier paragraphe de son bloc, et chaque suite
+   en gagnerait une. Une seule lettrine par page, à la toute première ligne. */
+.suite-echoppe {
+  margin: 0 auto;
+  max-width: 38rem;
+  opacity: 0;
+  transition: opacity 1.1s ease;
+}
+
+.suite-echoppe[data-visible="true"] {
+  opacity: 1;
+}
+
+/* — prefers-reduced-motion —
+   La lampe cesse de vaciller et la poussière retombe : ce sont les deux
+   seules choses qui bougent en continu. Le décor reste, les apparitions
+   deviennent instantanées. */
+@media (prefers-reduced-motion: reduce) {
+  .lampe,
+  .poussiere span {
+    animation: none !important;
+  }
+
+  /* Sans mouvement, la poussière n'est plus qu'une pluie de points figés :
+     mieux vaut ne pas la montrer du tout. */
+  .poussiere {
+    display: none;
+  }
+
+  .choix,
+  .suite-echoppe {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* — La fin de la scène : le nom de la baguette, et le sentier —
+   Centrée, détachée, sans rien d'autre autour : c'est le seul moment de la
+   page où le joueur a quelque chose à emporter. */
+.fin-echoppe {
+  text-align: center;
+  margin-top: 3.4rem;
+}
+
+.fin-echoppe__baguette {
+  font-family: var(--font-display), Georgia, serif;
+  letter-spacing: 0.2em;
+  font-size: clamp(1.3rem, 5vw, 2rem);
+  color: var(--parchment);
+  margin: 0 0 0.6rem;
+}
+
+.fin-echoppe__mention {
+  color: var(--parchment-dim);
+  font-style: italic;
+  margin: 0 0 2.4rem;
 }

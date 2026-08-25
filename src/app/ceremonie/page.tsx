@@ -7,7 +7,7 @@ import { TEXTES_CEREMONIE, type Paragraphe } from "@/lib/ceremonie/constantes";
 import { ouvrirCeremonie } from "@/lib/ceremonie/depot";
 import { pourLAffichage } from "@/lib/ceremonie/questionnaire";
 import { ROUTES } from "@/lib/ecole/menu";
-import { estReparti } from "@/lib/session/acces";
+import { aChoisiSaBaguette, estReparti } from "@/lib/session/acces";
 import { exigerAcces } from "@/lib/session/garde";
 
 export const metadata: Metadata = {
@@ -20,14 +20,22 @@ export const dynamic = "force-dynamic";
 /**
  * La Cérémonie du Miroir.
  *
- * Trois gardes, dans cet ordre, et toutes côté serveur :
+ * Quatre gardes, dans cet ordre, et toutes côté serveur :
  *
  *   1. `exigerAcces` — dossier accepté et accès non suspendu, sinon renvoi
  *      vers l’écran que réserve l’état du compte. C’est la même table de
  *      vérité que partout ailleurs, aucune condition n’est réécrite ici.
  *   2. `estReparti` — **la cérémonie ne se joue qu’une fois** (art. 11.2).
  *      Un élève déjà réparti qui revient sur l’adresse repart à son bureau.
- *   3. La fiche doit exister : un compte sans élève n’a rien à faire ici.
+ *   3. `aChoisiSaBaguette` — **la baguette d’abord.** On ne se présente pas
+ *      devant le Miroir les mains vides ; l’élève est renvoyé à Kaldvik.
+ *      Le lien grisé sur le bureau ne suffirait pas : l’adresse se tape.
+ *   4. La fiche doit exister : un compte sans élève n’a rien à faire ici.
+ *
+ * L’ordre des deux du milieu n’est pas indifférent. `estReparti` passe en
+ * premier : à un élève que le Miroir a déjà lu, la vraie réponse est « c’est
+ * fait », et non « va chercher une baguette » — même s’il lui en manque une.
+ * Sa note des premiers pas l’enverra à la boutique depuis son bureau.
  *
  * Le mélange des réponses est tiré et rangé au premier passage seulement :
  * recharger la page relit le même ordre.
@@ -38,6 +46,7 @@ export const dynamic = "force-dynamic";
 export default async function CeremoniePage() {
   const compte = await exigerAcces(ROUTES.ceremonie);
   if (estReparti(compte)) redirect(ROUTES.bureau);
+  if (!aChoisiSaBaguette(compte)) redirect(ROUTES.bjornstav);
   if (!compte.eleveId) notFound();
 
   const melange = await ouvrirCeremonie(compte.eleveId);
@@ -91,7 +100,7 @@ export default async function CeremoniePage() {
           ))}
         </section>
 
-        <div className="filet-ceremonie" aria-hidden="true">
+        <div className="filet" aria-hidden="true">
           <span className="text-[0.8rem] tracking-[0.3em]">◆</span>
         </div>
 

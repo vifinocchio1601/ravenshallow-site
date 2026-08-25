@@ -24,6 +24,7 @@ export const ROUTES = {
   ecole: "/ecole",
 
   // L’école, hors bandeau
+  bjornstav: "/bjornstav",
   ceremonie: "/ceremonie",
 } as const;
 
@@ -80,9 +81,13 @@ export type RouteEcole = {
 };
 
 export const ROUTES_HORS_MENU: readonly RouteEcole[] = [
-  // La cérémonie est précisément l’un des premiers pas : elle s’ouvre avant
-  // qu’ils soient faits, et la page se referme d’elle-même une fois la
-  // répartition passée.
+  // La boutique et la cérémonie sont précisément les deux premiers pas :
+  // elles s’ouvrent avant qu’ils soient faits, et chaque page se referme
+  // d’elle-même une fois le sien franchi.
+  //
+  // Ni l’une ni l’autre n’est ouverte pendant un bannissement : un membre
+  // suspendu garde son bureau et sa fiche, rien d’autre.
+  { href: ROUTES.bjornstav, avantPremiersPas: true },
   { href: ROUTES.ceremonie, avantPremiersPas: true },
 ];
 

@@ -28,7 +28,13 @@ vi.mock("@/lib/ceremonie/depot", () => ({
 
 const { POST } = await import("./route");
 
-/** Un compte accepté, non suspendu, que le Miroir n’a pas encore lu. */
+/**
+ * Un compte accepté, non suspendu, **déjà passé chez Bjornstav**, et que le
+ * Miroir n’a pas encore lu.
+ *
+ * La baguette fait partie du point de départ depuis que la boutique existe :
+ * on ne se présente pas devant le Miroir les mains vides.
+ */
 function compte(modifications: Record<string, unknown> = {}) {
   return {
     id: "compte-1",
@@ -41,7 +47,9 @@ function compte(modifications: Record<string, unknown> = {}) {
     statutAcces: "VALIDE",
     banniJusquau: null,
     maison: null,
-    baguetteChoisieLe: null,
+    baguetteBois: "FRENE",
+    baguetteCoeur: "PLUME_DE_CORBEAU",
+    baguetteChoisieLe: new Date("2026-08-25T18:00:00.000Z"),
     prenomNom: "Sigrid Vale",
     genre: "FEMININ",
     fonction: "PREMIERE_ANNEE",
@@ -227,5 +235,38 @@ describe("ce que le Miroir répond", () => {
       expect(statut, attendue).toBe(200);
       expect(corps.maison).toBe(attendue);
     }
+  });
+});
+
+describe("la baguette d’abord", () => {
+  /**
+   * Art. 11 et ordre des premiers pas : on ne se présente pas devant le
+   * Miroir les mains vides. La page renvoie déjà à Kaldvik — mais une route
+   * d’API est publique, et c’est ici que la règle tient pour de bon.
+   */
+  it("refuse un élève qui n’est pas passé chez Bjornstav", async () => {
+    simule.compteConnecte.mockResolvedValue(
+      compte({
+        baguetteBois: null,
+        baguetteCoeur: null,
+        baguetteChoisieLe: null,
+      }),
+    );
+
+    const { statut, corps } = await envoyer({ reponses: VERS_BRYGGELD });
+
+    expect(statut).toBe(403);
+    expect(corps.destination).toBe(ROUTES.bjornstav);
+    // Aucune maison n’a été calculée, et rien n’a été écrit.
+    expect(corps.maison).toBeUndefined();
+    expect(simule.enregistrerRepartition).not.toHaveBeenCalled();
+  });
+
+  it("refuse même avec des réponses parfaitement valides", async () => {
+    simule.compteConnecte.mockResolvedValue(
+      compte({ baguetteChoisieLe: null, baguetteBois: null, baguetteCoeur: null }),
+    );
+    const { statut } = await envoyer({ reponses: VERS_BRYGGELD });
+    expect(statut).toBe(403);
   });
 });
