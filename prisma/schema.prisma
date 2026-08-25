@@ -270,6 +270,11 @@ model JournalMembre {
   parUtilisateurId String?
   parUtilisateur   Utilisateur? @relation("DecisionsPrises", fields: [parUtilisateurId], references: [id], onDelete: SetNull)
 
+  /// Nom affiché de l'auteur, quand il n'a pas de compte : l'administration
+  /// entre par simple mot de passe, et le site lui-même écrit certaines
+  /// entrées (accusé de réception). Nul quand l'auteur est le joueur.
+  parNom String?
+
   creeLe DateTime @default(now())
 
   @@index([utilisateurId, creeLe])
@@ -285,6 +290,7 @@ enum EvenementMembre {
   AGE_MODIFIE
   FONCTION_MODIFIEE
   ACCES_MODIFIE
+  COURRIEL_CONFIRMATION
 }
 
 // ─────────────────────────────────────────────────────────────

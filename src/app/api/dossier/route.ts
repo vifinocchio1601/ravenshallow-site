@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { MESSAGES } from "@/lib/dossier/constantes";
-import { creerDossier, journaliserCourriel } from "@/lib/dossier/depot";
+import { ConflitDossier, creerDossier, journaliserCourriel } from "@/lib/dossier/depot";
 import { schemaDossier } from "@/lib/dossier/schema";
 import { envoyerConfirmationDossier } from "@/lib/mail/envoyer";
 import type { Genre } from "@/lib/dossier/etats";
@@ -43,7 +43,9 @@ export async function POST(request: Request) {
   try {
     dossier = await creerDossier({
       email: donnees.email,
+      motDePasse: donnees.motDePasse,
       majeur16,
+      reglementAccepteLe: donnees.reglementAccepteLe,
       limitesEcriture: donnees.limitesEcriture,
       limitesAutres: donnees.limitesAutres || null,
       prenomNom: donnees.prenomNom,
@@ -57,7 +59,28 @@ export async function POST(request: Request) {
       defauts: donnees.defauts,
       plusGrandePeur: donnees.plusGrandePeur,
     });
-  } catch {
+  } catch (erreur) {
+    // Une adresse déjà inscrite ou un visage déjà porté ne sont pas des
+    // pannes : le joueur peut les corriger, et le formulaire sait les montrer.
+    if (erreur instanceof ConflitDossier) {
+      return NextResponse.json(
+        {
+          erreur:
+            erreur.champ === "email" ? MESSAGES.emailPris : MESSAGES.acteurPris,
+          details: [
+            {
+              champ: erreur.champ,
+              message:
+                erreur.champ === "email"
+                  ? MESSAGES.emailPris
+                  : MESSAGES.acteurPris,
+            },
+          ],
+        },
+        { status: 409 },
+      );
+    }
+    console.error("[dossier] création impossible", erreur);
     return NextResponse.json(
       { erreur: MESSAGES.baseIndisponible },
       { status: 503 },

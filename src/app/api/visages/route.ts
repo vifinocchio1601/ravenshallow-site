@@ -1,17 +1,19 @@
 import { NextResponse } from "next/server";
+import { visageEstPris } from "@/lib/dossier/depot-base";
+import { verifierJeton } from "@/lib/dossier/jeton";
 
 /**
- * Registre des visages — art. 6.3 : un visage, un seul personnage à la fois.
+ * Registre des visages — art. 6.3.
  *
- * Interrogée en direct pendant la saisie du nom d’acteur. Le nom arrive déjà
- * normalisé par `normaliserVisage`, la même fonction que celle qui alimente
- * `visages_pris.nomNormalise`.
+ * Interrogé au fil de la saisie : le nom arrive déjà normalisé par le client,
+ * avec la même fonction que celle utilisée à l’écriture.
  *
- * Tant que la base n’est pas branchée : en développement, un registre de
- * démonstration ; en production, un 503 — jamais un « disponible » par défaut,
- * qui laisserait passer des doublons.
+ * Faillit fermé : si le registre ne peut pas répondre, il répond 503 plutôt
+ * que « libre ». Un visage attribué deux fois se répare beaucoup moins bien
+ * qu’une vérification remise à plus tard.
  */
 
+/** Le registre du mode démonstration, tant qu’aucune base n’est branchée. */
 const REGISTRE_DEMO = new Set([
   "anya taylor joy",
   "timothee chalamet",
@@ -19,28 +21,30 @@ const REGISTRE_DEMO = new Set([
 ]);
 
 export async function GET(request: Request) {
-  const nom = new URL(request.url).searchParams.get("nom")?.trim();
-  if (!nom) {
-    return NextResponse.json({ pris: false });
-  }
+  const url = new URL(request.url);
+  const nom = url.searchParams.get("nom")?.trim();
+  if (!nom) return NextResponse.json({ pris: false });
 
   if (!process.env.DATABASE_URL) {
     if (process.env.NODE_ENV === "production") {
-      return NextResponse.json(
-        { erreur: "Registre indisponible" },
-        { status: 503 },
-      );
+      return NextResponse.json({ erreur: "Registre indisponible" }, { status: 503 });
     }
     return NextResponse.json({ pris: REGISTRE_DEMO.has(nom), demo: true });
   }
 
-  // TODO (lot base de données) :
-  // const visage = await prisma.visagePris.findUnique({
-  //   where: { nomNormalise: nom },
-  // });
-  // return NextResponse.json({ pris: Boolean(visage) });
-  return NextResponse.json(
-    { erreur: "Registre indisponible" },
-    { status: 503 },
-  );
+  // Le joueur qui reprend sa fiche porte son jeton : son propre visage ne
+  // doit pas lui être opposé.
+  const jeton = url.searchParams.get("jeton");
+  let saufCompteId: string | undefined;
+  if (jeton) {
+    const verification = await verifierJeton(jeton);
+    if (verification.valide) saufCompteId = verification.contenu.id;
+  }
+
+  try {
+    return NextResponse.json({ pris: await visageEstPris(nom, saufCompteId) });
+  } catch (erreur) {
+    console.error("[visages] registre injoignable", erreur);
+    return NextResponse.json({ erreur: "Registre indisponible" }, { status: 503 });
+  }
 }

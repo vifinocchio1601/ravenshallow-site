@@ -245,6 +245,40 @@ export default function DossierForm() {
     return <div className="min-h-[40vh]" aria-hidden="true" />;
   }
 
+  // Dossier déjà transmis : on ne remontre jamais un formulaire vide, qui
+  // laisserait croire que rien n’est parti — c’est exactement ce que voit un
+  // joueur qui revient sur ses pas après l’envoi, brouillon effacé.
+  // Seul « à corriger » rouvre la saisie, juste en dessous.
+  if (
+    etatDossier?.statut === "EN_ATTENTE" ||
+    etatDossier?.statut === "ACCEPTE" ||
+    etatDossier?.statut === "REFUSE"
+  ) {
+    const { texte, ton } =
+      etatDossier.statut === "ACCEPTE"
+        ? { texte: TEXTES_ETATS.accepte, ton: "accepte" as const }
+        : etatDossier.statut === "REFUSE"
+          ? { texte: TEXTES_ETATS.refuse, ton: "correction" as const }
+          : { texte: TEXTES_ETATS.envoye, ton: "attente" as const };
+
+    return (
+      <EcranEtat
+        ton={ton}
+        titre={texte.titre}
+        corps={texte.corps}
+        badge={texte.badge}
+      >
+        {etatDossier.noteAdmin ? (
+          <blockquote className="mx-auto mt-8 max-w-[46ch] border-l-2 border-ember/60 pl-5 text-left">
+            <p className="font-body italic leading-relaxed text-parchment-dim">
+              «&nbsp;{etatDossier.noteAdmin}&nbsp;»
+            </p>
+          </blockquote>
+        ) : null}
+      </EcranEtat>
+    );
+  }
+
   // Dossier renvoyé en correction : la note d’abord, la saisie intacte
   // derrière — le joueur ne retape rien.
   if (etatDossier?.statut === "A_CORRIGER") {

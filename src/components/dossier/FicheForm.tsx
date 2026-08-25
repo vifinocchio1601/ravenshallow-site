@@ -85,9 +85,11 @@ export default function FicheForm({
     setEtatVisage("verification");
     const controleur = new AbortController();
     const minuterie = setTimeout(() => {
-      fetch(`/api/visages?nom=${encodeURIComponent(normaliserVisage(nom))}`, {
-        signal: controleur.signal,
-      })
+      fetch(
+        `/api/visages?nom=${encodeURIComponent(normaliserVisage(nom))}` +
+          `&jeton=${encodeURIComponent(jeton)}`,
+        { signal: controleur.signal },
+      )
         .then((r) =>
           r.ok ? r.json() : Promise.reject(new Error("indisponible")),
         )
@@ -101,7 +103,7 @@ export default function FicheForm({
       controleur.abort();
       clearTimeout(minuterie);
     };
-  }, [valeurs.acteurNom, valeurs.portraitType, acteurInchange]);
+  }, [valeurs.acteurNom, valeurs.portraitType, acteurInchange, jeton]);
 
   const validation = useMemo(
     () => schemaFiche.safeParse({ ...valeurs, certification104: true }),

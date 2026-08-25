@@ -1,12 +1,15 @@
 import "server-only";
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
+import * as base from "./depot-base";
 import type {
-  Fonction,
-  Genre,
-  StatutAcces,
-  StatutDossier,
-} from "./etats";
+  ChampsFiche,
+  Decision,
+  Dossier,
+  EvenementMembre,
+  NouveauDossier,
+} from "./modele";
+import type { Fonction, StatutAcces } from "./etats";
 
 /**
  * Accès aux dossiers et aux membres.
@@ -21,55 +24,15 @@ import type {
  * qu’un joueur a envoyé.
  */
 
-export type EvenementMembre =
-  | "DOSSIER_SOUMIS"
-  | "FICHE_MODIFIEE"
-  | "DOSSIER_ACCEPTE"
-  | "DOSSIER_RENVOYE_EN_CORRECTION"
-  | "DOSSIER_REFUSE"
-  | "AGE_MODIFIE"
-  | "FONCTION_MODIFIEE"
-  | "ACCES_MODIFIE"
-  | "COURRIEL_CONFIRMATION";
-
-export type EntreeJournal = {
-  id: string;
-  type: EvenementMembre;
-  valeurAvant: string | null;
-  valeurApres: string | null;
-  note: string | null;
-  parNom: string | null;
-  creeLe: string;
-};
-
-export type Dossier = {
-  id: string;
-  email: string;
-  statut: StatutDossier;
-  statutAcces: StatutAcces;
-  /** Voir `jetonVersion` : incrémentée, elle périme tous les liens émis. */
-  jetonVersion: number;
-  soumisLe: string | null;
-  noteAdmin: string | null;
-
-  prenomNom: string;
-  age: number;
-  fonction: Fonction;
-  genre: Genre;
-  famille: string;
-  portraitType: string;
-  acteurNom: string | null;
-  portraitUrl: string | null;
-  biographie: string;
-  qualites: [string, string, string];
-  defauts: [string, string, string];
-  plusGrandePeur: string;
-  certification104Le: string | null;
-  limitesEcriture: string[];
-  limitesAutres: string | null;
-
-  journal: EntreeJournal[];
-};
+export type {
+  ChampsFiche,
+  Decision,
+  Dossier,
+  EntreeJournal,
+  EvenementMembre,
+  NouveauDossier,
+} from "./modele";
+export { ConflitDossier } from "./modele";
 
 // ─────────────────────────────────────────────────────────────
 //  Jeu de démonstration
@@ -299,8 +262,7 @@ export async function listerDossiersEnAttente(): Promise<Dossier[]> {
       (a.soumisLe ?? "").localeCompare(b.soumisLe ?? ""),
     );
   }
-  // TODO (lot base) : prisma.eleve.findMany({ where: { statut: "EN_ATTENTE" } })
-  return [];
+  return base.listerDossiersEnAttente();
 }
 
 export async function listerMembres(): Promise<Dossier[]> {
@@ -309,47 +271,25 @@ export async function listerMembres(): Promise<Dossier[]> {
       a.prenomNom.localeCompare(b.prenomNom, "fr"),
     );
   }
-  // TODO (lot base) : prisma.eleve.findMany({ where: { statut: "ACCEPTE" } })
-  return [];
+  return base.listerMembres();
 }
 
 export async function lireDossier(id: string): Promise<Dossier | null> {
   if (baseAbsente()) return demo().find((d) => d.id === id) ?? null;
-  // TODO (lot base) : prisma.eleve.findUnique({ where: { id } })
-  return null;
+  return base.lireDossier(id);
 }
 
 // ─────────────────────────────────────────────────────────────
 //  Écriture
 // ─────────────────────────────────────────────────────────────
 
-/** Ce que le joueur peut reprendre après coup : la partie II, et elle seule. */
-export type ChampsFiche = {
-  limitesEcriture: string[];
-  limitesAutres: string | null;
-  prenomNom: string;
-  genre: Genre;
-  famille: string;
-  portraitType: string;
-  acteurNom: string | null;
-  portrait: string;
-  biographie: string;
-  qualites: [string, string, string];
-  defauts: [string, string, string];
-  plusGrandePeur: string;
-};
-
 /** Dépôt d’un dossier : le compte et la fiche naissent ensemble. */
 export async function creerDossier(
-  donnees: ChampsFiche & { email: string; majeur16: boolean },
+  donnees: NouveauDossier,
 ): Promise<{ id: string; email: string }> {
-  const maintenant = new Date().toISOString();
+  if (!baseAbsente()) return base.creerDossier(donnees);
 
-  if (!baseAbsente()) {
-    // TODO (lot base) : hachage argon2, portrait sur Blob, création du compte
-    // et de la fiche, réservation du visage, journal — le tout en transaction.
-    throw new Error("Base non branchée");
-  }
+  const maintenant = new Date().toISOString();
 
   const dossier = dossierDemo({
     prenomNom: donnees.prenomNom,
@@ -373,6 +313,7 @@ export async function creerDossier(
     certification104Le: maintenant,
   });
   void donnees.majeur16; // l’âge réel s’arrête ici : seul le booléen compte
+  void donnees.motDePasse; // sans base, aucun compte n’est créé
 
   dossier.journal = [
     {
@@ -400,7 +341,7 @@ export async function modifierFiche(
   id: string,
   champs: ChampsFiche,
 ): Promise<void> {
-  if (!baseAbsente()) return; // TODO (lot base)
+  if (!baseAbsente()) return base.modifierFiche(id, champs);
 
   const dossier = demo().find((d) => d.id === id);
   if (!dossier) return;
@@ -435,15 +376,13 @@ export async function modifierFiche(
   enregistrer();
 }
 
-export type Decision = "ACCEPTER" | "CORRIGER" | "REFUSER";
-
 /** Accepter délie aussi l’accès : c’est le seul couplage entre les deux. */
 export async function deciderDossier(
   id: string,
   decision: Decision,
   note: string | null,
 ): Promise<void> {
-  if (!baseAbsente()) return; // TODO (lot base)
+  if (!baseAbsente()) return base.deciderDossier(id, decision, note);
 
   const dossier = demo().find((d) => d.id === id);
   if (!dossier) return;
@@ -484,7 +423,7 @@ export async function modifierMembre(
   modifications: { age?: number; fonction?: Fonction; statutAcces?: StatutAcces },
   note: string | null,
 ): Promise<void> {
-  if (!baseAbsente()) return; // TODO (lot base)
+  if (!baseAbsente()) return base.modifierMembre(id, modifications, note);
 
   const membre = demo().find((d) => d.id === id);
   if (!membre) return;
@@ -518,7 +457,7 @@ export async function modifierMembre(
  * de les emporter — pour l’instant il n’y en a aucune.
  */
 export async function supprimerMembre(id: string): Promise<boolean> {
-  if (!baseAbsente()) return false; // TODO (lot base)
+  if (!baseAbsente()) return base.supprimerMembre(id);
 
   const magasin = demo();
   const index = magasin.findIndex((d) => d.id === id);
@@ -540,7 +479,7 @@ export async function journaliserCourriel(
   id: string,
   resultat: { envoye: boolean; raison?: string; detail?: string },
 ): Promise<void> {
-  if (!baseAbsente()) return; // TODO (lot base)
+  if (!baseAbsente()) return base.journaliserCourriel(id, resultat);
 
   const dossier = demo().find((d) => d.id === id);
   if (!dossier) return;
