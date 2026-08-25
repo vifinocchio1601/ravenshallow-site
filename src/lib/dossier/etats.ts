@@ -97,7 +97,7 @@ export const TEXTES_ETATS = {
   envoye: {
     titre: "Ton dossier est parti",
     corps:
-      "Il attend maintenant la lecture de l’administration. Tu peux déjà entrer dans la Grande Salle et écrire aux autres élèves ; les scènes et les cours s’ouvriront à l’acceptation.",
+      "Il attend maintenant la lecture de l’administration. Rien ne s’ouvre avant : ni la Grande Salle, ni les scènes, ni les cours. Tu recevras un courriel dès que la décision sera prise.",
     badge: "En attente de lecture",
   },
   correction: {

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { MESSAGES } from "@/lib/dossier/constantes";
-import { creerDossier } from "@/lib/dossier/depot";
+import { creerDossier, journaliserCourriel } from "@/lib/dossier/depot";
 import { schemaDossier } from "@/lib/dossier/schema";
 import { envoyerConfirmationDossier } from "@/lib/mail/envoyer";
 import type { Genre } from "@/lib/dossier/etats";
@@ -65,8 +65,13 @@ export async function POST(request: Request) {
   }
 
   // Un courriel qui ne part pas ne doit pas faire échouer le dépôt : le
-  // dossier est enregistré, le joueur en est informé à l’écran.
+  // dossier est enregistré, le joueur en est informé à l’écran — et
+  // l’administration retrouve le sort de l’envoi dans le journal du dossier.
   const courriel = await envoyerConfirmationDossier(dossier.email, dossier.id);
+  await journaliserCourriel(dossier.id, {
+    envoye: courriel.envoye,
+    ...(courriel.envoye ? {} : { raison: courriel.raison, detail: courriel.detail }),
+  });
 
   return NextResponse.json({ ok: true, courrielEnvoye: courriel.envoye });
 }

@@ -219,7 +219,7 @@ describe("registre des visages", () => {
     );
   });
 
-  it("exige le nom de l’acteur quand le portrait est une photographie", () => {
+  it("exige le nom de la célébrité quand le portrait est une photographie", () => {
     const valeurs = dossierValide({ portraitType: "ACTEUR", acteurNom: "" });
     expect(erreursDe(valeurs, "acteurNom")).toContain(MESSAGES.acteurRequis);
   });
@@ -271,13 +271,13 @@ describe("blocage de l’envoi — champs manquants", () => {
     expect(champsManquants(valeurs)).toContain("confirmation");
   });
 
-  it("signale le nom de l’acteur même si un autre champ est déjà invalide", () => {
+  it("signale le nom de la célébrité même si un autre champ est déjà invalide", () => {
     const valeurs = dossierValide({
       email: "pas-un-email",
       portraitType: "ACTEUR",
       acteurNom: "",
     });
-    expect(champsManquants(valeurs)).toContain("nom de l’acteur");
+    expect(champsManquants(valeurs)).toContain("nom de la célébrité");
   });
 
   it("bloque l’envoi quand le visage est déjà pris, dossier complet par ailleurs", () => {
@@ -287,7 +287,7 @@ describe("blocage de l’envoi — champs manquants", () => {
     });
     expect(champsManquants(valeurs)).toEqual([]);
     expect(champsManquants(valeurs, { visagePris: true })).toEqual([
-      "nom de l’acteur",
+      "nom de la célébrité",
     ]);
   });
 

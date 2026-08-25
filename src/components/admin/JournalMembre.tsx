@@ -19,6 +19,7 @@ const LIBELLES: Record<EntreeJournal["type"], string> = {
   AGE_MODIFIE: "Âge modifié",
   FONCTION_MODIFIEE: "Fonction modifiée",
   ACCES_MODIFIE: "Accès modifié",
+  COURRIEL_CONFIRMATION: "Accusé de réception",
 };
 
 /**
@@ -34,6 +35,8 @@ function lisible(
   if (type === "AGE_MODIFIE") return `${valeur} ans`;
   // Liste de champs, déjà lisible telle quelle.
   if (type === "FICHE_MODIFIEE") return valeur;
+  // « envoyé » ou « échec », déjà écrits en toutes lettres.
+  if (type === "COURRIEL_CONFIRMATION") return valeur;
   if (type === "FONCTION_MODIFIEE") {
     return libelleFonction(valeur as Fonction, genre);
   }

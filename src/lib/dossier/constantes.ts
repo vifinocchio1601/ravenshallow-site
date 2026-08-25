@@ -48,7 +48,7 @@ export const FAMILLES = [
 export const TYPES_PORTRAIT = [
   {
     valeur: "ACTEUR",
-    libelle: "Photographie d’un acteur",
+    libelle: "Photographie d’une célébrité",
     detail: "Personne majeure, cohérente avec 13 ans",
   },
   {
@@ -148,7 +148,7 @@ export const TEXTES = {
     famille: { label: "Famille" },
     portrait: {
       label: "Portrait",
-      acteurLabel: "Nom de l’acteur ou de l’actrice",
+      acteurLabel: "Nom de la célébrité",
       acteurPlaceholder: "Vérifié dans le registre des visages",
       importLabel: "Importer le portrait au format 9:16",
       aide: "Format unique pour tout le château : 9:16, portrait vertical. Une image d’un autre format sera recadrée dans ce cadre avant l’envoi — ce que tu vois ici est ce que les autres joueurs verront de ton élève.",
@@ -235,12 +235,12 @@ export const MESSAGES = {
   genre: "Choisis un genre",
   famille: "Choisis une famille",
   portraitType: "Choisis un type de portrait",
-  acteurRequis: "Indique le nom de l’acteur ou de l’actrice",
+  acteurRequis: "Indique le nom de la célébrité",
   acteurPris: "Ce visage est déjà porté par un autre élève",
   acteurLibre: "Visage disponible",
   acteurVerification: "Vérification…",
   acteurIndisponible:
-    "Le registre des visages est momentanément injoignable — réessaie dans un instant",
+    "Le registre des visages est momentanément injoignable — envoie quand même, l’administration vérifiera le visage à la lecture",
   portraitRequis: "Le portrait est obligatoire",
   portraitFormat: "Ce fichier n’est pas une image",
   portraitPoids: "Image trop lourde — 12 Mo maximum",
@@ -269,7 +269,7 @@ export const NOMS_COURTS: Record<string, string> = {
   genre: "genre",
   famille: "famille",
   portraitType: "type de portrait",
-  acteurNom: "nom de l’acteur",
+  acteurNom: "nom de la célébrité",
   portrait: "portrait",
   biographie: "biographie",
   qualites: "qualités",

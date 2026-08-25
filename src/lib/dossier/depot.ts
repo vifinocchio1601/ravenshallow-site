@@ -1,4 +1,6 @@
 import "server-only";
+import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
+import { dirname, join } from "node:path";
 import type {
   Fonction,
   Genre,
@@ -12,9 +14,11 @@ import type {
  * C’est **la seule couture** entre l’interface et le stockage : quand la base
  * arrivera, seul ce fichier change — les pages, elles, ne bougent pas.
  *
- * Tant que `DATABASE_URL` est absent, un jeu de démonstration en mémoire
- * permet de parcourir et de tester les écrans. Il se réinitialise à chaque
- * redémarrage du serveur : c’est un échafaudage, pas un stockage.
+ * Tant que `DATABASE_URL` est absent, les dossiers vivent en mémoire et sont
+ * recopiés dans `.donnees/dossiers.json` après chaque écriture, afin qu’ils
+ * survivent au redémarrage du serveur. C’est un échafaudage, pas une base :
+ * ni transactions, ni index, ni accès concurrent — mais on ne perd plus ce
+ * qu’un joueur a envoyé.
  */
 
 export type EvenementMembre =
@@ -25,7 +29,8 @@ export type EvenementMembre =
   | "DOSSIER_REFUSE"
   | "AGE_MODIFIE"
   | "FONCTION_MODIFIEE"
-  | "ACCES_MODIFIE";
+  | "ACCES_MODIFIE"
+  | "COURRIEL_CONFIRMATION";
 
 export type EntreeJournal = {
   id: string;
@@ -206,9 +211,55 @@ const CLE_DEMO = Symbol.for("ravenshallow.depot.demonstration");
 
 type GlobalDemo = typeof globalThis & { [CLE_DEMO]?: Dossier[] };
 
+/**
+ * Recopie sur disque, hors dépôt Git : `globalThis` ne survit pas au
+ * redémarrage du serveur, et un dossier envoyé par un joueur ne peut pas
+ * disparaître parce qu’un fichier a été enregistré pendant le développement.
+ */
+const FICHIER_DONNEES = join(process.cwd(), ".donnees", "dossiers.json");
+
+/** Les tests travaillent en mémoire : ils ne doivent rien écrire. */
+const persistanceActive = process.env.NODE_ENV !== "test";
+
+function charger(): Dossier[] | null {
+  if (!persistanceActive || !existsSync(FICHIER_DONNEES)) return null;
+  try {
+    const lu: unknown = JSON.parse(readFileSync(FICHIER_DONNEES, "utf8"));
+    return Array.isArray(lu) ? (lu as Dossier[]) : null;
+  } catch (erreur) {
+    // Fichier illisible : on repart du jeu de démonstration plutôt que de
+    // laisser le site refuser de démarrer.
+    console.error("[depot] fichier illisible, jeu de démonstration repris", erreur);
+    return null;
+  }
+}
+
+/**
+ * Écriture atomique : fichier temporaire puis renommage, pour qu’une coupure
+ * en plein enregistrement ne laisse pas un JSON tronqué.
+ */
+function enregistrer(): void {
+  const magasin = (globalThis as GlobalDemo)[CLE_DEMO];
+  if (!persistanceActive || !magasin) return;
+  try {
+    mkdirSync(dirname(FICHIER_DONNEES), { recursive: true });
+    const temporaire = `${FICHIER_DONNEES}.tmp`;
+    writeFileSync(temporaire, JSON.stringify(magasin, null, 2), "utf8");
+    renameSync(temporaire, FICHIER_DONNEES);
+  } catch (erreur) {
+    console.error("[depot] enregistrement impossible", erreur);
+  }
+}
+
 function demo(): Dossier[] {
   const global = globalThis as GlobalDemo;
-  global[CLE_DEMO] ??= creerJeuDemo();
+  if (!global[CLE_DEMO]) {
+    const repris = charger();
+    global[CLE_DEMO] = repris ?? creerJeuDemo();
+    // Premier démarrage : on fige tout de suite les identifiants du jeu de
+    // démonstration, sinon ils changeraient à chaque relance.
+    if (!repris) enregistrer();
+  }
   return global[CLE_DEMO];
 }
 
@@ -336,6 +387,7 @@ export async function creerDossier(
   ];
 
   demo().push(dossier);
+  enregistrer();
   return { id: dossier.id, email: dossier.email };
 }
 
@@ -380,6 +432,7 @@ export async function modifierFiche(
   Object.assign(dossier, reste, { portraitUrl: portrait });
 
   journaliser(dossier, "FICHE_MODIFIEE", null, modifies.join(", "), null, null);
+  enregistrer();
 }
 
 export type Decision = "ACCEPTER" | "CORRIGER" | "REFUSER";
@@ -402,6 +455,7 @@ export async function deciderDossier(
     dossier.statutAcces = "VALIDE";
     dossier.noteAdmin = null;
     journaliser(dossier, "DOSSIER_ACCEPTE", avant, "ACCEPTE", note);
+    enregistrer();
     return;
   }
 
@@ -409,6 +463,7 @@ export async function deciderDossier(
     dossier.statut = "A_CORRIGER";
     dossier.noteAdmin = note;
     journaliser(dossier, "DOSSIER_RENVOYE_EN_CORRECTION", avant, "A_CORRIGER", note);
+    enregistrer();
     return;
   }
 
@@ -416,6 +471,7 @@ export async function deciderDossier(
   dossier.statutAcces = "EN_ATTENTE";
   dossier.noteAdmin = note;
   journaliser(dossier, "DOSSIER_REFUSE", avant, "REFUSE", note);
+  enregistrer();
 }
 
 /**
@@ -450,6 +506,8 @@ export async function modifierMembre(
     journaliser(membre, "ACCES_MODIFIE", membre.statutAcces, modifications.statutAcces, note);
     membre.statutAcces = modifications.statutAcces;
   }
+
+  enregistrer();
 }
 
 /**
@@ -467,7 +525,38 @@ export async function supprimerMembre(id: string): Promise<boolean> {
   if (index === -1) return false;
 
   magasin.splice(index, 1);
+  enregistrer();
   return true;
+}
+
+/**
+ * Trace l’accusé de réception : parti ou non, et pourquoi.
+ *
+ * Un envoi raté ne fait jamais échouer le dépôt du dossier — mais il ne doit
+ * pas non plus disparaître sans laisser de trace, sans quoi l’administration
+ * croit qu’un joueur a reçu un courriel qui n’est jamais parti.
+ */
+export async function journaliserCourriel(
+  id: string,
+  resultat: { envoye: boolean; raison?: string; detail?: string },
+): Promise<void> {
+  if (!baseAbsente()) return; // TODO (lot base)
+
+  const dossier = demo().find((d) => d.id === id);
+  if (!dossier) return;
+
+  journaliser(
+    dossier,
+    "COURRIEL_CONFIRMATION",
+    null,
+    resultat.envoye ? "envoyé" : "échec",
+    // En cas d’échec, la raison est la seule chose qui permette de le réparer.
+    resultat.envoye
+      ? null
+      : [resultat.raison, resultat.detail].filter(Boolean).join(" — ") || null,
+    "Ravenshallow",
+  );
+  enregistrer();
 }
 
 /** Signale aux écrans qu’ils travaillent sur des données de démonstration. */

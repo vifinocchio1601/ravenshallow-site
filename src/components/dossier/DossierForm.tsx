@@ -179,7 +179,7 @@ export default function DossierForm() {
   const manquants = useMemo(
     () =>
       champsManquants(pourValidation(valeurs, reglementAccepteLe), {
-        visagePris: etatVisage === "pris" || etatVisage === "indisponible",
+        visagePris: etatVisage === "pris",
       }),
     [valeurs, reglementAccepteLe, etatVisage],
   );

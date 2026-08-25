@@ -185,7 +185,7 @@ export const REGLEMENT_PARTS: Part[] = [
           },
           {
             num: "6.2",
-            text: "L'avatar d'un personnage peut être : la photographie d'un acteur ou d'une actrice, à condition qu'elle soit cohérente avec l'âge du personnage et que la personne représentée soit majeure ; un avatar généré par IA ; une illustration ou un dessin, libre de droits ou réalisé par le membre. Pour les personnages les plus jeunes (13-15 ans), l'IA ou l'illustration sont à privilégier : les photographies d'acteurs mineurs ne sont pas acceptées. Un acteur majeur photographié plus jeune sur un rôle ancien reste utilisable.",
+            text: "L'avatar d'un personnage peut être : la photographie d'une célébrité, à condition qu'elle soit cohérente avec l'âge du personnage et que la personne représentée soit majeure ; un avatar généré par IA ; une illustration ou un dessin, libre de droits ou réalisé par le membre. Pour les personnages les plus jeunes (13-15 ans), l'IA ou l'illustration sont à privilégier : les photographies de célébrités mineures ne sont pas acceptées. Une célébrité majeure photographiée plus jeune sur un rôle ancien reste utilisable.",
           },
           {
             num: "6.3",
