@@ -19,6 +19,7 @@ import type {
 
 export type EvenementMembre =
   | "DOSSIER_SOUMIS"
+  | "FICHE_MODIFIEE"
   | "DOSSIER_ACCEPTE"
   | "DOSSIER_RENVOYE_EN_CORRECTION"
   | "DOSSIER_REFUSE"
@@ -41,6 +42,8 @@ export type Dossier = {
   email: string;
   statut: StatutDossier;
   statutAcces: StatutAcces;
+  /** Voir `jetonVersion` : incrémentée, elle périme tous les liens émis. */
+  jetonVersion: number;
   soumisLe: string | null;
   noteAdmin: string | null;
 
@@ -67,8 +70,12 @@ export type Dossier = {
 //  Jeu de démonstration
 // ─────────────────────────────────────────────────────────────
 
-let compteur = 0;
-const identifiant = () => `demo-${++compteur}`;
+/**
+ * Identifiants aléatoires, et non un compteur : celui-ci vivrait dans le
+ * module, donc en double exemplaire (composants serveur / Server Actions), et
+ * deux dossiers finiraient par porter le même identifiant.
+ */
+const identifiant = () => `demo-${crypto.randomUUID().slice(0, 8)}`;
 
 function dossierDemo(partiel: Partial<Dossier> & { prenomNom: string }): Dossier {
   const id = identifiant();
@@ -77,6 +84,7 @@ function dossierDemo(partiel: Partial<Dossier> & { prenomNom: string }): Dossier
     email: `${partiel.prenomNom.toLowerCase().replace(/\s+/g, ".")}@exemple.fr`,
     statut: "EN_ATTENTE",
     statutAcces: "EN_ATTENTE",
+    jetonVersion: 0,
     soumisLe: null,
     noteAdmin: null,
     age: 13,
@@ -214,6 +222,7 @@ function journaliser(
   valeurAvant: string | null,
   valeurApres: string | null,
   note: string | null,
+  parNom: string | null = "Administration",
 ) {
   dossier.journal = [
     {
@@ -222,7 +231,7 @@ function journaliser(
       valeurAvant,
       valeurApres,
       note,
-      parNom: "Administration",
+      parNom,
       creeLe: new Date().toISOString(),
     },
     ...dossier.journal,
@@ -262,6 +271,116 @@ export async function lireDossier(id: string): Promise<Dossier | null> {
 // ─────────────────────────────────────────────────────────────
 //  Écriture
 // ─────────────────────────────────────────────────────────────
+
+/** Ce que le joueur peut reprendre après coup : la partie II, et elle seule. */
+export type ChampsFiche = {
+  limitesEcriture: string[];
+  limitesAutres: string | null;
+  prenomNom: string;
+  genre: Genre;
+  famille: string;
+  portraitType: string;
+  acteurNom: string | null;
+  portrait: string;
+  biographie: string;
+  qualites: [string, string, string];
+  defauts: [string, string, string];
+  plusGrandePeur: string;
+};
+
+/** Dépôt d’un dossier : le compte et la fiche naissent ensemble. */
+export async function creerDossier(
+  donnees: ChampsFiche & { email: string; majeur16: boolean },
+): Promise<{ id: string; email: string }> {
+  const maintenant = new Date().toISOString();
+
+  if (!baseAbsente()) {
+    // TODO (lot base) : hachage argon2, portrait sur Blob, création du compte
+    // et de la fiche, réservation du visage, journal — le tout en transaction.
+    throw new Error("Base non branchée");
+  }
+
+  const dossier = dossierDemo({
+    prenomNom: donnees.prenomNom,
+    email: donnees.email,
+    genre: donnees.genre,
+    famille: donnees.famille,
+    portraitType: donnees.portraitType,
+    acteurNom: donnees.acteurNom,
+    // La fiche transporte l’image ; le modèle stocke une adresse. Sans Blob,
+    // la data URL en tient lieu.
+    portraitUrl: donnees.portrait,
+    biographie: donnees.biographie,
+    qualites: donnees.qualites,
+    defauts: donnees.defauts,
+    plusGrandePeur: donnees.plusGrandePeur,
+    limitesEcriture: donnees.limitesEcriture,
+    limitesAutres: donnees.limitesAutres,
+    statut: "EN_ATTENTE",
+    statutAcces: "EN_ATTENTE",
+    soumisLe: maintenant,
+    certification104Le: maintenant,
+  });
+  void donnees.majeur16; // l’âge réel s’arrête ici : seul le booléen compte
+
+  dossier.journal = [
+    {
+      id: identifiant(),
+      type: "DOSSIER_SOUMIS",
+      valeurAvant: null,
+      valeurApres: "EN_ATTENTE",
+      note: null,
+      parNom: null,
+      creeLe: maintenant,
+    },
+  ];
+
+  demo().push(dossier);
+  return { id: dossier.id, email: dossier.email };
+}
+
+/**
+ * Reprise de la fiche par le joueur lui-même.
+ * Chaque champ modifié laisse sa trace : après acceptation, un changement de
+ * nom ou de portrait se voit dans les scènes des autres.
+ */
+export async function modifierFiche(
+  id: string,
+  champs: ChampsFiche,
+): Promise<void> {
+  if (!baseAbsente()) return; // TODO (lot base)
+
+  const dossier = demo().find((d) => d.id === id);
+  if (!dossier) return;
+
+  const modifies: string[] = [];
+  if (dossier.prenomNom !== champs.prenomNom) modifies.push("nom");
+  if (dossier.portraitUrl !== champs.portrait) modifies.push("portrait");
+  if (dossier.acteurNom !== champs.acteurNom) modifies.push("visage");
+  if (dossier.biographie !== champs.biographie) modifies.push("biographie");
+  if (dossier.genre !== champs.genre) modifies.push("genre");
+  if (dossier.famille !== champs.famille) modifies.push("famille");
+  if (dossier.plusGrandePeur !== champs.plusGrandePeur) modifies.push("peur");
+  if (dossier.qualites.join("|") !== champs.qualites.join("|")) {
+    modifies.push("qualités");
+  }
+  if (dossier.defauts.join("|") !== champs.defauts.join("|")) {
+    modifies.push("défauts");
+  }
+  if (
+    dossier.limitesEcriture.join("|") !== champs.limitesEcriture.join("|") ||
+    (dossier.limitesAutres ?? "") !== (champs.limitesAutres ?? "")
+  ) {
+    modifies.push("limites d’écriture");
+  }
+
+  if (modifies.length === 0) return;
+
+  const { portrait, ...reste } = champs;
+  Object.assign(dossier, reste, { portraitUrl: portrait });
+
+  journaliser(dossier, "FICHE_MODIFIEE", null, modifies.join(", "), null, null);
+}
 
 export type Decision = "ACCEPTER" | "CORRIGER" | "REFUSER";
 
@@ -315,27 +434,12 @@ export async function modifierMembre(
   if (!membre) return;
 
   if (modifications.age !== undefined && modifications.age !== membre.age) {
-    journaliser(
-      membre,
-      "AGE_MODIFIE",
-      String(membre.age),
-      String(modifications.age),
-      note,
-    );
+    journaliser(membre, "AGE_MODIFIE", String(membre.age), String(modifications.age), note);
     membre.age = modifications.age;
   }
 
-  if (
-    modifications.fonction !== undefined &&
-    modifications.fonction !== membre.fonction
-  ) {
-    journaliser(
-      membre,
-      "FONCTION_MODIFIEE",
-      membre.fonction,
-      modifications.fonction,
-      note,
-    );
+  if (modifications.fonction !== undefined && modifications.fonction !== membre.fonction) {
+    journaliser(membre, "FONCTION_MODIFIEE", membre.fonction, modifications.fonction, note);
     membre.fonction = modifications.fonction;
   }
 
@@ -343,15 +447,27 @@ export async function modifierMembre(
     modifications.statutAcces !== undefined &&
     modifications.statutAcces !== membre.statutAcces
   ) {
-    journaliser(
-      membre,
-      "ACCES_MODIFIE",
-      membre.statutAcces,
-      modifications.statutAcces,
-      note,
-    );
+    journaliser(membre, "ACCES_MODIFIE", membre.statutAcces, modifications.statutAcces, note);
     membre.statutAcces = modifications.statutAcces;
   }
+}
+
+/**
+ * Suppression d’un membre.
+ *
+ * Emporte la fiche, le journal et la réservation du visage. Art. 2.4 : le jour
+ * où des scènes partagées existeront, il faudra détacher les écrits plutôt que
+ * de les emporter — pour l’instant il n’y en a aucune.
+ */
+export async function supprimerMembre(id: string): Promise<boolean> {
+  if (!baseAbsente()) return false; // TODO (lot base)
+
+  const magasin = demo();
+  const index = magasin.findIndex((d) => d.id === id);
+  if (index === -1) return false;
+
+  magasin.splice(index, 1);
+  return true;
 }
 
 /** Signale aux écrans qu’ils travaillent sur des données de démonstration. */

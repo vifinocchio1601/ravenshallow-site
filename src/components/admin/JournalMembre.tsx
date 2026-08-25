@@ -12,6 +12,7 @@ import {
 
 const LIBELLES: Record<EntreeJournal["type"], string> = {
   DOSSIER_SOUMIS: "Dossier déposé",
+  FICHE_MODIFIEE: "Fiche reprise par le joueur",
   DOSSIER_ACCEPTE: "Dossier accepté",
   DOSSIER_RENVOYE_EN_CORRECTION: "Renvoyé en correction",
   DOSSIER_REFUSE: "Dossier refusé",
@@ -31,6 +32,8 @@ function lisible(
 ): string | null {
   if (!valeur) return null;
   if (type === "AGE_MODIFIE") return `${valeur} ans`;
+  // Liste de champs, déjà lisible telle quelle.
+  if (type === "FICHE_MODIFIEE") return valeur;
   if (type === "FONCTION_MODIFIEE") {
     return libelleFonction(valeur as Fonction, genre);
   }
@@ -69,10 +72,10 @@ export default function JournalMembre({
             <li key={entree.id}>
               <p className="font-display text-[0.68rem] uppercase tracking-[0.14em] text-parchment-dim">
                 {LIBELLES[entree.type]}
-                {avant && apres ? (
+                {apres ? (
                   <span className="text-silver">
                     {" "}
-                    · {avant} → {apres}
+                    · {avant ? `${avant} → ${apres}` : apres}
                   </span>
                 ) : null}
               </p>

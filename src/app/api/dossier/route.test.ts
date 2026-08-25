@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 import { POST } from "./route";
 import { BIOGRAPHIE_MINIMUM, MESSAGES } from "@/lib/dossier/constantes";
 
@@ -40,6 +40,10 @@ async function envoyer(corps: unknown) {
 function champsEnErreur(details: { champ: string }[]) {
   return details.map((d) => d.champ.split(".")[0]);
 }
+
+beforeEach(() => {
+  process.env.AUTH_SECRET = "secret-de-test-ravenshallow";
+});
 
 describe("envoi du dossier — revalidation côté serveur", () => {
   it("refuse un corps illisible", async () => {
@@ -88,11 +92,30 @@ describe("envoi du dossier — revalidation côté serveur", () => {
     expect(messages).toContain(MESSAGES.ageReel);
   });
 
-  it("n’enregistre rien tant que la base est absente, dossier valide compris", async () => {
-    // Le dossier passe la validation : c’est bien le stockage qui manque,
-    // et le joueur doit l’apprendre plutôt que de croire son envoi parti.
+  it("enregistre un dossier valide et tente le courriel", async () => {
     const { statut, corps } = await envoyer(dossierValide());
-    expect(statut).toBe(503);
-    expect(corps.erreur).toBe(MESSAGES.baseIndisponible);
+    expect(statut).toBe(200);
+    expect(corps.ok).toBe(true);
+    // Sans MAIL_APP_PASSWORD, le courriel est écrit en console, pas envoyé —
+    // et la réponse le dit plutôt que de laisser croire qu’il est parti.
+    expect(corps.courrielEnvoye).toBe(false);
+  });
+
+  it("enregistre quand même le dossier si le courriel ne peut pas partir", async () => {
+    // Sans AUTH_SECRET, le lien de retour est infabricable. Le dossier est
+    // pourtant déjà pris : la requête ne doit pas échouer pour autant.
+    delete process.env.AUTH_SECRET;
+    const { statut, corps } = await envoyer(
+      dossierValide({ email: "sans-secret@exemple.fr" }),
+    );
+    expect(statut).toBe(200);
+    expect(corps.courrielEnvoye).toBe(false);
+  });
+
+  it("n’exige rien du client pour l’envoi : deux dépôts ne se marchent pas dessus", async () => {
+    const premier = await envoyer(dossierValide({ email: "a@exemple.fr" }));
+    const second = await envoyer(dossierValide({ email: "b@exemple.fr" }));
+    expect(premier.statut).toBe(200);
+    expect(second.statut).toBe(200);
   });
 });

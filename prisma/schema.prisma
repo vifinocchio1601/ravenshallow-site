@@ -48,6 +48,10 @@ model Utilisateur {
   ///   EN_BANNISSEMENT — pas d'accès au forum, mais accès au bureau
   statutAcces StatutAcces @default(EN_ATTENTE)
 
+  /// Incrémenté pour invalider d’un coup tous les liens d’accès envoyés par
+  /// courriel : le jeton porte la version qu’il avait à l’émission.
+  jetonVersion Int @default(0)
+
   /// Art. 15.4 — limites d'écriture. Facultatives, opposables à tous,
   /// affichées publiquement sur la fiche, jamais à justifier.
   limitesEcriture LimiteEcriture[] @default([])
@@ -274,6 +278,7 @@ model JournalMembre {
 
 enum EvenementMembre {
   DOSSIER_SOUMIS
+  FICHE_MODIFIEE
   DOSSIER_ACCEPTE
   DOSSIER_RENVOYE_EN_CORRECTION
   DOSSIER_REFUSE

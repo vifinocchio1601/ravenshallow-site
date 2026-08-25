@@ -138,6 +138,16 @@ export const TEXTES_ETATS = {
       enregistrer: "Enregistrer",
       enregistre: "Modifications enregistrées",
     },
+    suppression: {
+      bouton: "Supprimer ce membre",
+      titre: "Supprimer {nom} ?",
+      corps:
+        "Son compte, sa fiche, son journal et sa réservation de visage seront effacés. Cette action est définitive.",
+      confirmer: "Supprimer définitivement",
+      annuler: "Annuler",
+      faite: "Membre supprimé.",
+    },
+
     actions: {
       accepter: "Accepter",
       corriger: "Renvoyer en correction",

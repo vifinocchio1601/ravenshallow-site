@@ -2,7 +2,14 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { deciderDossier, modifierMembre, type Decision } from "@/lib/dossier/depot";
+import {
+  deciderDossier,
+  lireDossier,
+  modifierMembre,
+  supprimerMembre,
+  type Decision,
+} from "@/lib/dossier/depot";
+import { envoyerRenvoiEnCorrection } from "@/lib/mail/envoyer";
 import { FONCTIONS, STATUTS_ACCES, type Fonction, type StatutAcces } from "@/lib/dossier/etats";
 
 /**
@@ -25,6 +32,21 @@ export async function deciderDossierAction(donnees: FormData) {
   if (decision !== "ACCEPTER" && !note) return;
 
   await deciderDossier(id, decision, note || null);
+
+  // « Ils seront recontactés » : sans courriel, un dossier renvoyé attend un
+  // joueur qui ne sait pas qu’on l’attend.
+  if (decision === "CORRIGER") {
+    const dossier = await lireDossier(id);
+    if (dossier) {
+      await envoyerRenvoiEnCorrection(
+        dossier.email,
+        id,
+        note,
+        dossier.jetonVersion,
+      );
+    }
+  }
+
   revalidatePath("/admin/inscriptions");
   revalidatePath("/admin/membres");
   redirect("/admin/inscriptions");
@@ -53,4 +75,17 @@ export async function modifierMembreAction(donnees: FormData) {
   );
 
   revalidatePath("/admin/membres");
+}
+
+/**
+ * Suppression d’un membre depuis la liste.
+ * La confirmation est demandée à l’écran ; ici on ne fait qu’exécuter.
+ */
+export async function supprimerMembreAction(donnees: FormData) {
+  const id = String(donnees.get("id") ?? "");
+  if (!id) return;
+
+  await supprimerMembre(id);
+  revalidatePath("/admin/membres");
+  revalidatePath("/admin/inscriptions");
 }

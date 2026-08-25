@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { modifierMembreAction } from "@/app/admin/actions";
+import BoutonSupprimerMembre from "@/components/admin/BoutonSupprimerMembre";
 import EnTeteAdmin from "@/components/admin/EnTeteAdmin";
 import { listerMembres, modeDemonstration } from "@/lib/dossier/depot";
 import {
@@ -46,10 +47,18 @@ export default async function MembresPage() {
                 key={membre.id}
                 className="rounded-sm border border-silver/12 bg-mist/50 p-6"
               >
-                <div className="flex flex-wrap items-baseline justify-between gap-3">
-                  <p className="font-display text-lg font-semibold tracking-[0.03em] text-parchment">
-                    {membre.prenomNom}
-                  </p>
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  {/* Le dialogue de confirmation est du contenu de flux : il ne
+                      peut pas vivre dans le <p> du nom. */}
+                  <div className="flex items-center gap-3">
+                    <BoutonSupprimerMembre
+                      id={membre.id}
+                      nom={membre.prenomNom}
+                    />
+                    <p className="font-display text-lg font-semibold tracking-[0.03em] text-parchment">
+                      {membre.prenomNom}
+                    </p>
+                  </div>
                   <p className="font-body text-sm text-silver">
                     {membre.email} ·{" "}
                     {libelleFonction(membre.fonction, membre.genre)} ·{" "}

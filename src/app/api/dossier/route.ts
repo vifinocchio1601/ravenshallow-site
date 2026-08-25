@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 import { MESSAGES } from "@/lib/dossier/constantes";
+import { creerDossier } from "@/lib/dossier/depot";
 import { schemaDossier } from "@/lib/dossier/schema";
+import { envoyerConfirmationDossier } from "@/lib/mail/envoyer";
+import type { Genre } from "@/lib/dossier/etats";
 
 /**
  * Envoi du dossier d’admission.
@@ -31,22 +34,39 @@ export async function POST(request: Request) {
     );
   }
 
-  // L’âge réel s’arrête ici : seul le booléen poursuit sa route (art. 2.3).
-  const { ageReel } = resultat.data;
-  const majeur16 = ageReel >= 16;
-  void majeur16;
+  const donnees = resultat.data;
 
-  if (!process.env.DATABASE_URL) {
+  // L’âge réel s’arrête ici : seul le booléen poursuit sa route (art. 2.3).
+  const majeur16 = donnees.ageReel >= 16;
+
+  let dossier: { id: string; email: string };
+  try {
+    dossier = await creerDossier({
+      email: donnees.email,
+      majeur16,
+      limitesEcriture: donnees.limitesEcriture,
+      limitesAutres: donnees.limitesAutres || null,
+      prenomNom: donnees.prenomNom,
+      genre: donnees.genre as Genre,
+      famille: donnees.famille,
+      portraitType: donnees.portraitType,
+      acteurNom: donnees.acteurNom || null,
+      portrait: donnees.portrait,
+      biographie: donnees.biographie,
+      qualites: donnees.qualites,
+      defauts: donnees.defauts,
+      plusGrandePeur: donnees.plusGrandePeur,
+    });
+  } catch {
     return NextResponse.json(
       { erreur: MESSAGES.baseIndisponible },
       { status: 503 },
     );
   }
 
-  // TODO (lot base de données) : hachage argon2, envoi du portrait sur Blob,
-  // création du compte + de la fiche, réservation du visage, journal.
-  return NextResponse.json(
-    { erreur: MESSAGES.baseIndisponible },
-    { status: 503 },
-  );
+  // Un courriel qui ne part pas ne doit pas faire échouer le dépôt : le
+  // dossier est enregistré, le joueur en est informé à l’écran.
+  const courriel = await envoyerConfirmationDossier(dossier.email, dossier.id);
+
+  return NextResponse.json({ ok: true, courrielEnvoye: courriel.envoye });
 }

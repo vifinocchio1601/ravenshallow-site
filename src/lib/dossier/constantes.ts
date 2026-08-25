@@ -194,6 +194,26 @@ export const TEXTES = {
     resteNombre: "Il reste {n} champs à compléter.",
   },
 
+  fiche: {
+    titre: "Ma fiche",
+    chapeau:
+      "Tu peux reprendre ta fiche à tout moment : un prénom mal orthographié, un portrait à remplacer, une biographie à compléter. Ton adresse et ton mot de passe, eux, ne se modifient pas ici.",
+    enregistrer: "Enregistrer ma fiche",
+    enregistrement: "Enregistrement…",
+    enregistree: "Ta fiche est enregistrée.",
+    incomplete: "Il reste des champs à compléter avant d’enregistrer.",
+    lienInvalide: {
+      titre: "Ce lien n’est plus valable",
+      corps:
+        "Il a peut-être expiré, ou été tronqué par ton client de messagerie. Écris-nous et nous t’en renverrons un.",
+    },
+    verrouillee: {
+      titre: "Ta fiche n’est plus modifiable",
+      corps:
+        "Ce dossier n’est plus ouvert à la reprise. Si quelque chose doit être corrigé, écris à l’administration.",
+    },
+  },
+
   brouillon: {
     enregistre: "Brouillon enregistré",
     restaure: "Brouillon restauré — reprends où tu t’étais arrêté.",
