@@ -5,12 +5,20 @@ import { redirect } from "next/navigation";
 import {
   deciderDossier,
   lireDossier,
+  modifierEtatEtape,
   modifierMembre,
   supprimerMembre,
   type Decision,
 } from "@/lib/dossier/depot";
 import { envoyerRenvoiEnCorrection } from "@/lib/mail/envoyer";
-import { FONCTIONS, STATUTS_ACCES, type Fonction, type StatutAcces } from "@/lib/dossier/etats";
+import {
+  FONCTIONS,
+  STATUTS_ACCES,
+  type ActionEtape,
+  type Etape,
+  type Fonction,
+  type StatutAcces,
+} from "@/lib/dossier/etats";
 import { validerRoleAffiche } from "@/lib/dossier/role-affiche";
 
 /**
@@ -103,6 +111,35 @@ export async function modifierMembreAction(donnees: FormData) {
     noteComplete || null,
   );
 
+  revalidatePath("/admin/membres");
+}
+
+/**
+ * Retirer la maison ou la baguette d’un compte, ou la lui rendre.
+ *
+ * Deux commandes indépendantes, et **indépendantes du rôle affiché** : on
+ * retire une maison sans saisir de rôle, et l’inverse. Rien ne se déclenche
+ * en cascade.
+ *
+ * L’écran ne demande jamais un état : il demande `RETIRER` ou `RETABLIR`, et
+ * c’est le dépôt qui en déduit l’état — celui que la valeur commande. Une
+ * requête forgée ne peut donc pas poser un état bancal, quand bien même elle
+ * essaierait : elle n’a pas de mot pour le dire.
+ *
+ * Rien n’est effacé : la maison et la baguette restent en base.
+ */
+export async function modifierEtatEtapeAction(donnees: FormData) {
+  const id = String(donnees.get("id") ?? "");
+  const etape = String(donnees.get("etape") ?? "") as Etape;
+  const action = String(donnees.get("action") ?? "") as ActionEtape;
+
+  if (!id) return;
+  if (etape !== "maison" && etape !== "baguette") return;
+  if (action !== "RETIRER" && action !== "RETABLIR") return;
+
+  await modifierEtatEtape(id, etape, action);
+
+  revalidatePath(`/admin/dossiers/${id}`);
   revalidatePath("/admin/membres");
 }
 

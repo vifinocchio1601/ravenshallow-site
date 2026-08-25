@@ -65,7 +65,7 @@ export async function ouvrirCeremonie(eleveId: string): Promise<string[][]> {
  * Inscrit la répartition. **C’est l’instant où elle devient définitive.**
  *
  * L’écriture de la maison passe par un `updateMany` conditionné à
- * `maison: null`, et non par un `update` : la base ne modifie la ligne que si
+ * `etatMaison: "NON_FAIT"`, et non par un `update` : la base ne modifie la ligne que si
  * elle est encore vierge, et rend le nombre de lignes touchées. Deux requêtes
  * lancées en même temps — deux onglets, un double clic, une requête forgée —
  * ne peuvent donc pas se succéder : la première écrit, la seconde compte zéro
@@ -83,11 +83,21 @@ export async function enregistrerRepartition(
 ): Promise<{ enregistree: boolean }> {
   return prisma.$transaction(async (tx) => {
     const ecrit = await tx.eleve.updateMany({
-      where: { id: eleveId, maison: null },
-      data: { maison: repartition.maison as Maison, repartiLe: new Date() },
+      // La condition porte sur l'ÉTAT, et non sur la maison vide. Un compte
+      // que la répartition ne concerne pas peut très bien n'avoir aucune
+      // maison : la condition d'avant l'aurait laissé écrire.
+      where: { id: eleveId, etatMaison: "NON_FAIT" },
+      data: {
+        maison: repartition.maison as Maison,
+        repartiLe: new Date(),
+        // L'état suit la maison dans la même écriture : la base refuserait
+        // une maison posée sous un état « attendu ».
+        etatMaison: "FAIT",
+      },
     });
 
-    // Déjà réparti : on ne touche à rien, surtout pas à la trace existante.
+    // Déjà réparti, ou compte non concerné : on ne touche à rien, surtout pas
+    // à la trace existante.
     if (ecrit.count !== 1) return { enregistree: false };
 
     const trace = {

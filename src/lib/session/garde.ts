@@ -3,7 +3,13 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { ROUTES } from "@/lib/ecole/menu";
-import type { Fonction, Genre, StatutAcces, StatutDossier } from "@/lib/dossier/etats";
+import type {
+  EtatEtape,
+  Fonction,
+  Genre,
+  StatutAcces,
+  StatutDossier,
+} from "@/lib/dossier/etats";
 import { destinationApres, routeAutorisee, type EtatAcces } from "./acces";
 import { COOKIE_SESSION, lireSession } from "./session";
 
@@ -78,6 +84,8 @@ export async function compteConnecte(): Promise<CompteConnecte | null> {
           roleAffiche: true,
           age: true,
           maison: true,
+          etatMaison: true,
+          etatBaguette: true,
           baguetteBois: true,
           baguetteCoeur: true,
           baguetteChoisieLe: true,
@@ -105,6 +113,10 @@ export async function compteConnecte(): Promise<CompteConnecte | null> {
     // il est traité comme une demande jamais envoyée plutôt qu’ouvert.
     statut: (eleve?.statut ?? "BROUILLON") as StatutDossier,
     maison: eleve?.maison ?? null,
+    // Un compte sans fiche est traité comme une demande jamais envoyée : ses
+    // deux étapes sont donc « attendues », le sens qui n'ouvre rien.
+    etatMaison: (eleve?.etatMaison ?? "NON_FAIT") as EtatEtape,
+    etatBaguette: (eleve?.etatBaguette ?? "NON_FAIT") as EtatEtape,
     baguetteBois: eleve?.baguetteBois ?? null,
     baguetteCoeur: eleve?.baguetteCoeur ?? null,
     baguetteChoisieLe: eleve?.baguetteChoisieLe ?? null,

@@ -14,7 +14,7 @@
  * soit rejouée : c’est pourquoi les deux ne se confondent pas.
  */
 
-import type { StatutAcces, StatutDossier } from "@/lib/dossier/etats";
+import type { EtatEtape, StatutAcces, StatutDossier } from "@/lib/dossier/etats";
 import {
   ENTREES_MENU,
   ROUTES,
@@ -27,11 +27,66 @@ export type EtatAcces = {
   statut: StatutDossier;
   statutAcces: StatutAcces;
   banniJusquau: Date | string | null;
-  /** La maison, ou `null` tant que le Miroir n’a pas parlé. */
+  /**
+   * La maison, ou `null`. **Elle ne dit pas où en est le compte** : c’est
+   * `etatMaison` qui le dit, et une maison écrite peut très bien accompagner
+   * un état `SANS_OBJET` — c’est ainsi qu’une directrice garde la sienne.
+   */
   maison: string | null;
-  /** Nulle tant que la baguette n’a pas été choisie chez Bjornstav. */
+  /** Même remarque : la date n’est plus la question, l’état l’est. */
   baguetteChoisieLe: Date | string | null;
+
+  /**
+   * **Où en est chacune des deux étapes.** Toute la circulation en découle,
+   * et rien d’autre : ni la maison ni la date de baguette ne décident plus de
+   * quoi que ce soit.
+   */
+  etatMaison: EtatEtape;
+  etatBaguette: EtatEtape;
 };
+
+/**
+ * **Les six questions qu’on a le droit de poser sur une étape.**
+ *
+ * Trois par étape, une par état — et c’est ici, et nulle part ailleurs, qu’on
+ * compare un état à une valeur. Une page qui écrirait
+ * `etatMaison === "SANS_OBJET"` dans son coin recopierait la règle, et c’est
+ * la copie qu’on oublierait de corriger le jour où elle bouge.
+ *
+ * Elles ne prennent que la case dont elles ont besoin : la fiche d’un membre
+ * comme le compte connecté y répondent, sans qu’on ait à convertir l’un en
+ * l’autre.
+ */
+
+/** La maison s’affiche-t-elle ? `FAIT`, et rien d’autre. */
+export function aUneMaison(compte: { etatMaison: EtatEtape }): boolean {
+  return compte.etatMaison === "FAIT";
+}
+
+/** Même règle pour la baguette. */
+export function aUneBaguette(compte: { etatBaguette: EtatEtape }): boolean {
+  return compte.etatBaguette === "FAIT";
+}
+
+/**
+ * La répartition concerne-t-elle ce compte, d’une manière ou d’une autre ?
+ *
+ * Vraie pour un élève réparti comme pour celui qu’on attend ; fausse pour une
+ * directrice. C’est cette question-là — et non « a-t-il une maison ? » — qui
+ * décide si l’on montre un compteur, une promesse de compteur, ou rien.
+ */
+export function estConcerneParLeMiroir(compte: {
+  etatMaison: EtatEtape;
+}): boolean {
+  return compte.etatMaison !== "SANS_OBJET";
+}
+
+/** Même question pour la boutique. */
+export function estConcerneParLaBoutique(compte: {
+  etatBaguette: EtatEtape;
+}): boolean {
+  return compte.etatBaguette !== "SANS_OBJET";
+}
 
 /**
  * **La condition d’entrée dans l’école.**
@@ -55,28 +110,30 @@ export function estBanni(compte: EtatAcces): boolean {
 }
 
 /**
- * Le Miroir a-t-il parlé ?
+ * **Le Miroir attend-il ce compte ?**
  *
- * C’est la maison qui fait foi, et non `repartiLe` : elle est ce que le site
- * affiche partout, et une date sans maison ne voudrait rien dire. La
- * répartition est définitive (art. 11.2) — une fois vraie, cette réponse ne
- * redevient jamais fausse.
+ * `NON_FAIT` et rien d’autre. C’est la question que se posent la to-do du
+ * bureau, la page de la cérémonie et sa route d’API — et c’est la seule des
+ * trois formulations qui distingue les deux situations que le site
+ * confondait :
+ *
+ *   NON_FAIT   — un élève accepté : on l’envoie au Miroir
+ *   FAIT       — c’est passé, et cela ne se rejoue pas (art. 11.2)
+ *   SANS_OBJET — une directrice : on ne l’y envoie **surtout pas**
+ *
+ * Remplacer `estReparti`, dont le nom ne savait répondre que par oui ou non,
+ * était le point de tout ce lot : la question à trois réponses ne pouvait pas
+ * s’écrire avec un prédicat qui en avait deux.
  */
-export function estReparti(compte: EtatAcces): boolean {
-  return compte.maison !== null;
+export function doitPasserAuMiroir(compte: { etatMaison: EtatEtape }): boolean {
+  return compte.etatMaison === "NON_FAIT";
 }
 
-/**
- * La baguette est-elle choisie ?
- *
- * C’est la date qui fait foi, et non le bois : la base garantit que les trois
- * colonnes vont ensemble, et une date sans bois ne pourrait pas exister.
- *
- * Comme la répartition, ce choix est définitif — une fois vraie, cette
- * réponse ne redevient jamais fausse.
- */
-export function aChoisiSaBaguette(compte: EtatAcces): boolean {
-  return compte.baguetteChoisieLe !== null;
+/** Même question pour la boutique de Kaldvik. */
+export function doitPasserAKaldvik(compte: {
+  etatBaguette: EtatEtape;
+}): boolean {
+  return compte.etatBaguette === "NON_FAIT";
 }
 
 /**
@@ -84,10 +141,15 @@ export function aChoisiSaBaguette(compte: EtatAcces): boolean {
  *
  * `peutEntrerDansLEcole` ouvre la porte du château ; celui-ci décide jusqu’où
  * l’on va. Le nouvel arrivant a son bureau et sa fiche, et rien d’autre, tant
- * qu’il n’a pas franchi ses deux premiers pas : la baguette, puis le Miroir.
+ * qu’il n’a pas franchi ses deux premiers pas.
+ *
+ * **« Fini » veut dire « plus rien à faire », et non « fait ».** Une étape
+ * sans objet est finie elle aussi : sans cela, la directrice resterait
+ * enfermée dans son bureau, au régime exact d’un membre suspendu, faute
+ * d’une cérémonie qu’elle n’a pas à passer.
  */
 export function aFiniLesPremiersPas(compte: EtatAcces): boolean {
-  return aChoisiSaBaguette(compte) && estReparti(compte);
+  return !doitPasserAKaldvik(compte) && !doitPasserAuMiroir(compte);
 }
 
 /**

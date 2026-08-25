@@ -47,6 +47,10 @@ function compte(modifications: Record<string, unknown> = {}) {
     statutAcces: "VALIDE",
     banniJusquau: null,
     maison: null,
+    // L'élève type de ce fichier : sa baguette est prise, le Miroir l'attend.
+    // Les deux états comptent désormais autant que les valeurs.
+    etatMaison: "NON_FAIT",
+    etatBaguette: "FAIT",
     baguetteBois: "FRENE",
     baguetteCoeur: "PLUME_DE_CORBEAU",
     baguetteChoisieLe: new Date("2026-08-25T18:00:00.000Z"),
@@ -114,7 +118,9 @@ describe("qui a le droit de consulter le Miroir", () => {
 
 describe("la cérémonie ne se rejoue pas", () => {
   it("renvoie un élève déjà réparti à son bureau, sans rien recalculer", async () => {
-    simule.compteConnecte.mockResolvedValue(compte({ maison: "KALDRAFN" }));
+    simule.compteConnecte.mockResolvedValue(
+      compte({ maison: "KALDRAFN", etatMaison: "FAIT" }),
+    );
 
     const { statut, corps } = await envoyer({ reponses: VERS_BRYGGELD });
 
@@ -250,6 +256,7 @@ describe("la baguette d’abord", () => {
         baguetteBois: null,
         baguetteCoeur: null,
         baguetteChoisieLe: null,
+        etatBaguette: "NON_FAIT",
       }),
     );
 
@@ -262,9 +269,62 @@ describe("la baguette d’abord", () => {
     expect(simule.enregistrerRepartition).not.toHaveBeenCalled();
   });
 
+  /**
+   * **Un compte que la répartition ne concerne pas.**
+   *
+   * Distinct du rejeu, et distinct dans la réponse : « le Miroir a déjà
+   * parlé » serait faux pour une directrice qu'il n'a jamais lue, et lui
+   * laisserait croire qu'elle a une maison quelque part.
+   *
+   * La page la renvoie déjà au bureau — mais une route d'API est publique, et
+   * c'est ici que la règle tient pour de bon.
+   */
+  it("refuse un compte sans objet, et ne calcule aucune maison", async () => {
+    simule.compteConnecte.mockResolvedValue(
+      compte({
+        // Elle garde sa maison en base : c'est précisément le cas que
+        // l'ancienne condition « pas de maison » laissait passer à l'envers.
+        maison: "TIDEAL",
+        etatMaison: "SANS_OBJET",
+      }),
+    );
+
+    const { statut, corps } = await envoyer({ reponses: VERS_BRYGGELD });
+
+    expect(statut).toBe(403);
+    expect(corps.destination).toBe(ROUTES.bureau);
+    expect(corps.maison).toBeUndefined();
+    expect(simule.enregistrerRepartition).not.toHaveBeenCalled();
+  });
+
+  it("refuse un compte sans objet qui n'a jamais eu de maison", async () => {
+    // Le professeur venu de l'extérieur : ses colonnes sont vides, comme
+    // celles d'un nouvel élève. Seul l'état les distingue.
+    simule.compteConnecte.mockResolvedValue(
+      compte({ maison: null, etatMaison: "SANS_OBJET" }),
+    );
+
+    const { statut } = await envoyer({ reponses: VERS_BRYGGELD });
+    expect(statut).toBe(403);
+    expect(simule.enregistrerRepartition).not.toHaveBeenCalled();
+  });
+
+  it("laisse passer un nouvel élève, lui, exactement comme avant", async () => {
+    simule.compteConnecte.mockResolvedValue(compte());
+    const { statut, corps } = await envoyer({ reponses: VERS_BRYGGELD });
+
+    expect(statut).toBe(200);
+    expect(corps.maison).toBe("BRYGGELD");
+  });
+
   it("refuse même avec des réponses parfaitement valides", async () => {
     simule.compteConnecte.mockResolvedValue(
-      compte({ baguetteChoisieLe: null, baguetteBois: null, baguetteCoeur: null }),
+      compte({
+        baguetteChoisieLe: null,
+        baguetteBois: null,
+        baguetteCoeur: null,
+        etatBaguette: "NON_FAIT",
+      }),
     );
     const { statut } = await envoyer({ reponses: VERS_BRYGGELD });
     expect(statut).toBe(403);

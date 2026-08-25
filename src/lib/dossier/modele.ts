@@ -6,7 +6,7 @@
  * remonte jamais jusqu’à elles. `depot.ts` en est la seule couture.
  */
 
-import type { Fonction, Genre, StatutAcces, StatutDossier } from "./etats";
+import type { EtatEtape, Fonction, Genre, StatutAcces, StatutDossier } from "./etats";
 
 export type EvenementMembre =
   | "DOSSIER_SOUMIS"
@@ -17,6 +17,8 @@ export type EvenementMembre =
   | "AGE_MODIFIE"
   | "FONCTION_MODIFIEE"
   | "ROLE_AFFICHE_MODIFIE"
+  | "ETAT_MAISON_MODIFIE"
+  | "ETAT_BAGUETTE_MODIFIE"
   | "ACCES_MODIFIE"
   | "COURRIEL_CONFIRMATION";
 
@@ -78,6 +80,18 @@ export type Dossier = {
   maison: string | null;
   baguetteBois: string | null;
   baguetteCoeur: string | null;
+
+  /**
+   * **Où en est chaque étape — et c’est cela qui fait foi**, jamais la
+   * présence de la valeur au-dessus. Une maison absente ne dit pas la même
+   * chose selon l’état : `NON_FAIT` envoie au Miroir, `SANS_OBJET` n’y envoie
+   * surtout pas.
+   *
+   * `SANS_OBJET` n’efface rien : la maison et la baguette restent écrites, et
+   * se rétablissent intactes.
+   */
+  etatMaison: EtatEtape;
+  etatBaguette: EtatEtape;
 
   /**
    * Fin de la suspension. Nulle pendant un bannissement, c’est une exclusion

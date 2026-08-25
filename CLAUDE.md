@@ -52,12 +52,12 @@ Vercel, environnement Production — avec là-bas la chaîne Neon **pooled**.
 
 ## Les coutures uniques
 
-Neuf endroits concentrent chacun une décision. Ne pas recopier leur logique
+Dix endroits concentrent chacun une décision. Ne pas recopier leur logique
 ailleurs, l'y ajouter.
 
 | Fichier | Ce qu'il décide, seul |
 | --- | --- |
-| `lib/session/acces.ts` | qui entre dans l'école, **jusqu'où il va**, et où l'on atterrit |
+| `lib/session/acces.ts` | qui entre dans l'école, **jusqu'où il va**, où l'on atterrit — **et les six questions qu'on a le droit de poser sur une étape** |
 | `lib/ecole/menu.ts` | les routes de l'école — le menu, la protection, et les droits du suspendu comme du nouvel arrivant s'en déduisent |
 | `lib/dossier/depot.ts` | l'accès au stockage — aiguille entre PostgreSQL et l'échafaudage JSON |
 | `lib/dossier/schema.ts` | la validation, partagée mot pour mot entre le formulaire et la route |
@@ -66,14 +66,50 @@ ailleurs, l'y ajouter.
 | `lib/bjornstav/constantes.ts` | toute la scène de la boutique **et les vingt-cinq réactions** — `server-only` |
 | `lib/ecole/baguette.ts` | les dix codes, les dix noms, et la validation de ce qu'envoie le navigateur |
 | `lib/dossier/role-affiche.ts` | ce qu'on peut écrire dans le rôle particulier — **partagé mot pour mot** entre le champ de saisie et l'action serveur |
+| `lib/ecole/tournoi.ts` | **qui marque pour sa maison**, et le compteur des quatre. Ne compte rien aujourd'hui : la règle est posée avant le premier total |
 
 **L'accès se joue à deux étages**, tous deux dans `acces.ts` :
 
 - `peutEntrerDansLEcole` — dossier accepté et accès non suspendu. Elle ouvre
   la porte du château. **Ne pas y ajouter « et réparti »** : cela fermerait le
   bureau au nouvel arrivant, donc la note qui l'envoie au Miroir.
-- `aFiniLesPremiersPas` — baguette choisie **et** réparti. Elle décide
-  jusqu'où l'on va. Le nouvel arrivant n'a que son bureau et sa fiche.
+- `aFiniLesPremiersPas` — **plus rien à faire**, et non « tout fait ». Elle
+  décide jusqu'où l'on va. Le nouvel arrivant n'a que son bureau et sa fiche.
+  Une étape *sans objet* est finie elle aussi : sans cette lecture, la
+  directrice resterait enfermée dans son bureau, au régime exact d'un membre
+  suspendu, faute d'une cérémonie qu'elle n'a pas à passer.
+
+---
+
+**Une case vide ne dit rien.** La maison et la baguette portent chacune un
+**état** — `NON_FAIT` / `FAIT` / `SANS_OBJET` — et c'est lui qui tranche,
+jamais la présence de la valeur. Deux situations opposées se ressemblaient :
+
+| | Ce que ça veut dire | Ce que le site fait |
+| --- | --- | --- |
+| `NON_FAIT` | un élève accepté | l'y envoyer : to-do, adresse ouverte |
+| `FAIT` | c'est passé | afficher, et compter au tournoi |
+| `SANS_OBJET` | une directrice, un professeur | **surtout pas** l'y envoyer |
+
+`SANS_OBJET` **n'efface rien** : la maison et la baguette restent écrites, et
+se rétablissent intactes. C'est ce qui permet à une joueuse de Bryggeld
+nommée professeure de retrouver sa maison le jour où elle quitte le poste.
+
+**Six questions, trois par étape, et `acces.ts` est le seul endroit qui
+compare un état à une valeur.** Une page qui écrirait
+`etatMaison === "SANS_OBJET"` dans son coin recopierait la règle :
+
+| | Vraie quand |
+| --- | --- |
+| `aUneMaison` / `aUneBaguette` | ça s'affiche, et ça compte |
+| `doitPasserAuMiroir` / `doitPasserAKaldvik` | on l'y envoie |
+| `estConcerneParLeMiroir` / `estConcerneParLaBoutique` | ça le concerne, d'une façon ou d'une autre |
+
+Retirer ou rendre une étape se fait par `modifierEtatEtape`, depuis la fiche
+du membre. **`RETABLIR` ne rend jamais un état choisi** : il rend celui que la
+valeur commande — une maison écrite revient à `FAIT`, une case vide à
+`NON_FAIT`. Aucun état bancal ne peut donc sortir de l'écran, et la base le
+refuserait de toute façon.
 
 **Ajouter une entrée au menu** = une ligne dans `ENTREES_MENU`. Deux drapeaux,
 et l'oubli de l'un comme de l'autre va dans le sens de la fermeture :
@@ -106,9 +142,15 @@ et non « Année — Directrice », qui se contredirait.
 referme sur son propre prédicat plutôt que sur une fermeture de route — qui
 produirait une redirection en boucle :
 
-- `/bjornstav` se referme sur `aChoisiSaBaguette` → renvoi au bureau
-- `/ceremonie` se referme sur `estReparti` → renvoi au bureau, **et** exige
-  `aChoisiSaBaguette` → renvoi à Kaldvik
+- `/bjornstav` se referme sur `doitPasserAKaldvik` → renvoi au bureau
+- `/ceremonie` se referme sur `doitPasserAuMiroir` → renvoi au bureau, **et**
+  exige que la baguette ne soit plus attendue → renvoi à Kaldvik
+
+Ces prédicats-là referment l'adresse pour **deux raisons opposées** : c'est
+déjà fait, ou ça ne concerne pas le compte. Les routes d'API distinguent les
+deux dans leur réponse — **409** pour un rejeu, **403** pour un compte non
+concerné. Répondre « le Miroir a déjà parlé » à une directrice qu'il n'a
+jamais lue serait faux, et lui laisserait croire qu'elle a une maison.
 
 Ces deux gardes-là sont refaites **en entier** dans les routes d'API
 correspondantes. Une adresse de page se contourne en la tapant ; une route
@@ -226,6 +268,18 @@ encore ce traitement**, et c'est le seul écart connu entre les deux scènes.
   source des quatre fichiers qui décident d'un accès, et par une directive
   `@ts-expect-error` qui casse la compilation le jour où le champ entrerait
   dans `EtatAcces`. **Ne jamais y toucher pour « simplifier ».**
+- **Rien n'est jamais effacé pour marquer « sans objet ».** La maison et la
+  baguette restent en base sous `SANS_OBJET`, et se rétablissent à
+  l'identique. Un joueur de Bryggeld nommé professeur les garde au chaud.
+- **Un compte sans maison ne rapporte aucun point à son ancienne maison.**
+  C'est le piège du lot : la colonne `maison` est toujours écrite, et toute
+  somme naïve la ramasserait. `lib/ecole/tournoi.ts` est le seul endroit qui
+  répond à « pour qui ce compte marque-t-il ? », et `totauxParMaison` prend la
+  liste **brute** pour faire le tri lui-même — une liste pré-filtrée
+  reposerait sur l'appelant, et c'est ce qu'on veut lui retirer.
+- **Les deux commandes — retirer la maison, retirer la baguette — sont
+  indépendantes l'une de l'autre et du rôle affiché.** Aucune ne déclenche
+  l'autre.
 - **L'année reste stockée et modifiable même sous un rôle** — masquée, pas
   effacée. Effacer le rôle la fait réapparaître, et l'administration la voit
   en permanence dans le détail du membre.
@@ -252,7 +306,7 @@ brume s'est peinte en transparent une bonne demi-heure avant qu'on comprenne.
 **Prisma CLI lit `.env`, pas `.env.local`.** Passer `DATABASE_URL` en variable
 d'environnement à la commande.
 
-**Quatre règles de la base ne sont pas dans `schema.prisma`** et ne s'en
+**Sept règles de la base ne sont pas dans `schema.prisma`** et ne s'en
 déduiraient jamais. Régénérer le schéma depuis Prisma seul les perdrait.
 
 Dans `20260825200000_baguette_definitive` : la cohérence des trois colonnes de
@@ -268,6 +322,20 @@ schéma Zod : le format fin — lettres, espaces, apostrophes, tirets, points �
 vit dans `lib/dossier/role-affiche.ts`, seule source de vérité. La base
 n'arrête que ce qui casserait l'affichage, et le fait pour tous les chemins :
 le site, un script, une commande tapée à la main.
+
+Dans `20260825220000_etat_maison_baguette` : l'accord entre chaque état et sa
+valeur — `NON_FAIT` exige une case vide, `FAIT` exige une valeur,
+`SANS_OBJET` n'exige rien, et c'est ce troisième cas qui garde Tideål au
+chaud. Plus une ligne ajoutée au déclencheur de la baguette : **on n'en
+inscrit pas une à un compte marqué sans objet**. Sans elle, un professeur venu
+de l'extérieur — colonnes vides, comme un nouvel élève — restait écrivable par
+une requête forgée.
+
+**Les deux verrous anti-rejeu portent sur l'ÉTAT, pas sur la case vide.**
+`enregistrerRepartition` et `inscrireBaguette` conditionnent leur `updateMany`
+à `NON_FAIT`, et écrivent l'état dans la même requête — la base refuserait une
+maison posée sous un état « attendu ». Revenir à `where: { maison: null }`
+rouvrirait la porte à tout compte sans objet qui n'a jamais eu de maison.
 
 **`Fonction` ne porte plus que les sept années.** `PROFESSEUR` et `DIRECTION`
 en ont été retirés par cette même migration — Postgres ne sachant pas ôter une
@@ -291,6 +359,15 @@ effacement à l'aveugle.
 
 **Le dépôt vit dans Dropbox.** `node_modules` et `.next` y sont synchronisés en
 continu, ce qui a déjà corrompu un cache webpack.
+
+Le même mécanisme **fait échouer `npm run build`**, et sous des messages qui
+n'y font pas penser : `Cannot find module for page: /_document`, ou
+`ENOENT … .next/server/pages-manifest.json`. La construction compile, puis ne
+retrouve plus les fichiers qu'elle vient d'écrire — Dropbox les a déplacés
+entre-temps. Le signe qui ne trompe pas : `rm -rf .next` répond
+`Directory not empty`, parce que la synchronisation en recrée pendant
+l'effacement. **Ce n'est pas une erreur de code** : effacer `.next`, laisser
+quelques secondes, recommencer. Deuxième ou troisième essai, ça passe.
 
 **La base Neon se met en veille.** Après quelques minutes sans requête, la
 formule gratuite suspend le calcul. La visite suivante doit le réveiller, et si
@@ -335,8 +412,14 @@ questionnaire, révélation, enregistrement).
 ensuite, et le second est fermé côté serveur tant que le premier n'est pas
 fait.
 
+Les comptes qui ne sont pas des élèves — directrice, professeurs — se
+déclarent depuis la fiche du membre : **maison et baguette retirées, sans rien
+effacer**, chacune réversible et tracée au journal.
+
 **Pas encore** : les scènes, la messagerie, les points et les annonces du
-Grand Hall. Les quatre panneaux du bureau lisent `lib/bureau/donnees.ts`, dont
+Grand Hall. Le tournoi inter-maisons n'existe pas non plus — mais la règle qui
+dira **qui compte** est déjà posée et testée dans `lib/ecole/tournoi.ts` : le
+lot des points remplacera la valeur, pas la condition. Les quatre panneaux du bureau lisent `lib/bureau/donnees.ts`, dont
 les fonctions rendent des listes vides — chaque lot en remplacera **une
 seule**. `progression()` est la première à rendre autre chose : elle porte
 déjà l'année et la baguette.

@@ -10,7 +10,15 @@ import type {
   EvenementMembre,
   NouveauDossier,
 } from "./modele";
-import type { Fonction, Genre, StatutAcces, StatutDossier } from "./etats";
+import type {
+  ActionEtape,
+  Etape,
+  EtatEtape,
+  Fonction,
+  Genre,
+  StatutAcces,
+  StatutDossier,
+} from "./etats";
 
 /**
  * Le dépôt, adossé à PostgreSQL.
@@ -73,6 +81,8 @@ function versDossier(u: UtilisateurComplet): Dossier | null {
     maison: e.maison,
     baguetteBois: e.baguetteBois,
     baguetteCoeur: e.baguetteCoeur,
+    etatMaison: e.etatMaison as EtatEtape,
+    etatBaguette: e.etatBaguette as EtatEtape,
     banniJusquau: u.banniJusquau?.toISOString() ?? null,
 
     journal: u.journal.map((entree) => ({
@@ -496,6 +506,87 @@ export async function modifierMembre(
       },
     });
   });
+}
+
+/**
+ * Retirer une étape à un compte, ou la lui rendre.
+ *
+ * **Rien n’est effacé.** `RETIRER` ne touche qu’à l’état : la maison et la
+ * baguette restent dans leurs colonnes, et se retrouvent intactes au
+ * rétablissement — ce que la base garantit d’ailleurs pour la baguette, qu’un
+ * déclencheur rend immuable.
+ *
+ * `RETABLIR` ne rend pas un état choisi par l’appelant : il rend **celui que
+ * la valeur commande**. Une maison écrite revient à `FAIT`, une case vide à
+ * `NON_FAIT` — et le compte repart au Miroir, ce qui est le sens juste pour
+ * un professeur qui redevient élève sans avoir jamais été réparti. Aucun
+ * état bancal ne peut sortir d’ici, et la base refuserait de toute façon.
+ *
+ * Les deux étapes sont indépendantes : cette fonction n’en touche qu’une, et
+ * jamais le rôle affiché.
+ */
+export async function modifierEtatEtape(
+  id: string,
+  etape: Etape,
+  action: ActionEtape,
+  parNom = "Administration",
+): Promise<void> {
+  const compte = await prisma.utilisateur.findUnique({
+    where: { id },
+    select: {
+      eleve: {
+        select: {
+          id: true,
+          maison: true,
+          baguetteChoisieLe: true,
+          etatMaison: true,
+          etatBaguette: true,
+        },
+      },
+    },
+  });
+  const eleve = compte?.eleve;
+  if (!eleve) return;
+
+  const avant = (
+    etape === "maison" ? eleve.etatMaison : eleve.etatBaguette
+  ) as EtatEtape;
+
+  const aUneValeur =
+    etape === "maison"
+      ? eleve.maison !== null
+      : eleve.baguetteChoisieLe !== null;
+
+  const apres: EtatEtape =
+    action === "RETIRER" ? "SANS_OBJET" : aUneValeur ? "FAIT" : "NON_FAIT";
+
+  // Rien à dire au journal si rien ne change : un second clic sur le même
+  // bouton ne doit pas allonger le fil du membre.
+  if (avant === apres) return;
+
+  await prisma.$transaction([
+    prisma.eleve.update({
+      where: { id: eleve.id },
+      data:
+        etape === "maison"
+          ? { etatMaison: apres as Prisma.EleveUpdateInput["etatMaison"] }
+          : { etatBaguette: apres as Prisma.EleveUpdateInput["etatBaguette"] },
+    }),
+    prisma.utilisateur.update({
+      where: { id },
+      data: {
+        journal: {
+          create: {
+            type:
+              etape === "maison" ? "ETAT_MAISON_MODIFIE" : "ETAT_BAGUETTE_MODIFIE",
+            valeurAvant: avant,
+            valeurApres: apres,
+            parNom,
+          },
+        },
+      },
+    }),
+  ]);
 }
 
 /**

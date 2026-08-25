@@ -29,14 +29,21 @@ export async function inscrireBaguette(
   coeur: CodeCoeur,
 ): Promise<{ inscrite: boolean }> {
   const ecrit = await prisma.eleve.updateMany({
-    where: { id: eleveId, baguetteChoisieLe: null },
+    // La condition porte sur l'ÉTAT, et non sur la case vide. Un compte que
+    // la boutique ne concerne pas a lui aussi les colonnes vides : la
+    // condition d'avant l'aurait laissé écrire.
+    where: { id: eleveId, etatBaguette: "NON_FAIT" },
     data: {
       baguetteBois: bois as BaguetteBois,
       baguetteCoeur: coeur as BaguetteCoeur,
       baguetteChoisieLe: new Date(),
+      // L'état suit la valeur dans la même écriture : la base refuserait une
+      // baguette posée sous un état « attendu ».
+      etatBaguette: "FAIT",
     },
   });
 
-  // Déjà une baguette : on ne touche à rien. Surtout pas à celle qui est là.
+  // Déjà une baguette, ou compte non concerné : on ne touche à rien. Surtout
+  // pas à celle qui est là.
   return { inscrite: ecrit.count === 1 };
 }

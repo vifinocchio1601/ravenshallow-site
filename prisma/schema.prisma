@@ -10,6 +10,8 @@
 //       la baguette, et son immuabilité une fois posée
 //   `20260825210000_role_affiche`        — la cohérence des trois colonnes du
 //       rôle affiché, et la propreté de son texte
+//   `20260825220000_etat_maison_baguette` — l'accord entre chaque état et sa
+//       valeur, et le refus d'inscrire une baguette à un compte non concerné
 
 generator client {
   provider = "prisma-client-js"
@@ -208,6 +210,29 @@ model Eleve {
 
   visagePris VisagePris?
 
+  // ── Les deux premiers pas : où ils en sont ──
+
+  /// Où en est la répartition de ce compte.
+  ///
+  /// **Ne jamais déduire cet état de la présence d'une maison.** Une case
+  /// vide ne dit pas la même chose selon les comptes : un nouvel élève doit
+  /// être envoyé au Miroir, la directrice ne doit surtout pas l'être. C'est
+  /// cette colonne qui tranche, et elle seule.
+  ///
+  ///   NON_FAIT   — le Miroir l'attend : to-do au bureau, adresse ouverte
+  ///   FAIT       — il a parlé : la maison s'affiche et compte au tournoi
+  ///   SANS_OBJET — ce compte n'est pas concerné : ni to-do, ni adresse, ni
+  ///                blason, ni point de maison
+  ///
+  /// `SANS_OBJET` **n'efface rien** : la maison reste écrite dans sa colonne.
+  /// Une joueuse de Tideål nommée directrice la retrouve intacte le jour où
+  /// elle quitte le poste, sans repasser devant le Miroir.
+  etatMaison EtatEtape @default(NON_FAIT)
+
+  /// Même chose pour la boutique. Les deux états sont **indépendants** : on
+  /// peut retirer la maison sans toucher à la baguette, et l'inverse.
+  etatBaguette EtatEtape @default(NON_FAIT)
+
   // ── La baguette de Bjornstav — définitive ──
   /// Le bois, le cœur et le jour où l'échoppe les a inscrits. Nuls tant que
   /// l'élève n'est pas passé à Kaldvik.
@@ -235,6 +260,17 @@ model Eleve {
   @@index([statut, soumisLe])
   @@index([fonction])
   @@map("eleves")
+}
+
+/// Où en est une étape des premiers pas — ou si elle ne concerne pas ce compte.
+///
+/// Trois états et non deux, parce qu'une case vide est ambiguë : elle veut
+/// dire « pas encore » pour un élève et « sans objet » pour un professeur, et
+/// le site doit faire l'inverse dans les deux cas.
+enum EtatEtape {
+  NON_FAIT
+  FAIT
+  SANS_OBJET
 }
 
 enum Genre {
@@ -397,6 +433,8 @@ enum EvenementMembre {
   AGE_MODIFIE
   FONCTION_MODIFIEE
   ROLE_AFFICHE_MODIFIE
+  ETAT_MAISON_MODIFIE
+  ETAT_BAGUETTE_MODIFIE
   ACCES_MODIFIE
   COURRIEL_CONFIRMATION
 }

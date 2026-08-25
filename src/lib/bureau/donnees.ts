@@ -2,11 +2,16 @@ import "server-only";
 import { libelleBaguette } from "@/lib/ecole/baguette";
 import { TEXTES_ECOLE } from "@/lib/ecole/constantes";
 import { ROUTES } from "@/lib/ecole/menu";
+import { compteAuTournoi } from "@/lib/ecole/tournoi";
 import {
-  aChoisiSaBaguette,
   aFiniLesPremiersPas,
-  estReparti,
+  aUneBaguette,
+  doitPasserAKaldvik,
+  doitPasserAuMiroir,
+  estConcerneParLaBoutique,
+  estConcerneParLeMiroir,
 } from "@/lib/session/acces";
+import type { EtatEtape } from "@/lib/dossier/etats";
 import type { CompteConnecte } from "@/lib/session/garde";
 
 /**
@@ -41,6 +46,12 @@ export type Progression = {
   pointsPersonnels: number;
   /** Nul tant que l’élève n’a pas de maison — le compteur reste masqué. */
   pointsMaison: number | null;
+  /**
+   * Où en est la répartition, transporté tel quel : le panneau doit
+   * distinguer « le compteur s’ouvrira au Miroir » d’un compte que la
+   * répartition ne concerne pas, qui n’affiche rien du tout.
+   */
+  etatMaison: EtatEtape;
   fonction: string;
   /**
    * Le titre au château, ou `null`. Transporté à côté de l’année plutôt qu’à
@@ -88,10 +99,17 @@ export async function courrierNonLu(
 export async function progression(compte: CompteConnecte): Promise<Progression> {
   return {
     pointsPersonnels: 0,
-    pointsMaison: compte.maison ? 0 : null,
+    // Le compteur du bureau EST celui du tournoi : il passe donc par la même
+    // couture, `lib/ecole/tournoi.ts`, et jamais par la colonne `maison`.
+    // Zéro pour l'instant — le lot des points remplacera la valeur, pas la
+    // condition.
+    pointsMaison: compteAuTournoi(compte) ? 0 : null,
+    etatMaison: compte.etatMaison,
     fonction: compte.fonction,
     roleAffiche: compte.roleAffiche,
-    baguette: libelleBaguette(compte.baguetteBois, compte.baguetteCoeur),
+    baguette: aUneBaguette(compte)
+      ? libelleBaguette(compte.baguetteBois, compte.baguetteCoeur)
+      : null,
     prochainesEpreuves: null,
   };
 }
@@ -132,24 +150,37 @@ export async function premiersPas(
   if (aFiniLesPremiersPas(compte)) return null;
 
   const t = TEXTES_ECOLE.bureau.premiersPas;
-  const baguette = aChoisiSaBaguette(compte);
-  const reparti = estReparti(compte);
+  const versKaldvik = doitPasserAKaldvik(compte);
+  const versLeMiroir = doitPasserAuMiroir(compte);
 
-  return [
-    {
+  const pas: PremierPas[] = [];
+
+  // Une étape sans objet ne figure pas dans la note — et surtout pas cochée.
+  // Une case cochée dit « c’est fait » ; pour une directrice, il n’y a jamais
+  // rien eu à faire, et lui montrer une liste de ses non-devoirs n’aurait
+  // aucun sens. La ligne n’existe pas, voilà tout.
+  if (estConcerneParLaBoutique(compte)) {
+    pas.push({
       id: "baguette",
       libelle: t.baguette,
-      fait: baguette,
+      fait: !versKaldvik,
       // Le premier pas n’est jamais verrouillé : rien ne le précède.
-      href: baguette ? null : ROUTES.bjornstav,
+      href: versKaldvik ? ROUTES.bjornstav : null,
       verrou: null,
-    },
-    {
+    });
+  }
+
+  if (estConcerneParLeMiroir(compte)) {
+    pas.push({
       id: "ceremonie",
       libelle: t.ceremonie,
-      fait: reparti,
-      href: baguette && !reparti ? ROUTES.ceremonie : null,
-      verrou: baguette ? null : t.verrou,
-    },
-  ];
+      fait: !versLeMiroir,
+      href: !versKaldvik && versLeMiroir ? ROUTES.ceremonie : null,
+      // Le verrou ne tombe que sur une boutique encore attendue : un compte
+      // qu’elle ne concerne pas n’a rien à aller y chercher d’abord.
+      verrou: versKaldvik ? t.verrou : null,
+    });
+  }
+
+  return pas;
 }

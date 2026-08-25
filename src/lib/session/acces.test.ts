@@ -1,12 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { ENTREES_MENU, PREFIXES_ECOLE, ROUTES, ROUTES_HORS_MENU } from "@/lib/ecole/menu";
 import {
-  aChoisiSaBaguette,
   aFiniLesPremiersPas,
   destinationApres,
   entreesVisibles,
   estBanni,
-  estReparti,
+  doitPasserAKaldvik,
+  doitPasserAuMiroir,
   peutEntrerDansLEcole,
   routeAutorisee,
   type EtatAcces,
@@ -32,6 +32,8 @@ function compte(modifications: Partial<EtatAcces> = {}): EtatAcces {
     banniJusquau: null,
     maison: null,
     baguetteChoisieLe: null,
+    etatMaison: "NON_FAIT",
+    etatBaguette: "NON_FAIT",
     ...modifications,
   };
 }
@@ -41,14 +43,35 @@ const LA_BAGUETTE = new Date("2026-08-25T18:00:00.000Z");
 /** Ni baguette ni maison : il arrive, et les deux pas lui restent. */
 const NOUVEL_ARRIVANT = compte();
 /** Le premier pas est fait, le Miroir l’attend. */
-const AVEC_BAGUETTE = compte({ baguetteChoisieLe: LA_BAGUETTE });
+const AVEC_BAGUETTE = compte({
+  baguetteChoisieLe: LA_BAGUETTE,
+  etatBaguette: "FAIT",
+});
 /** Les deux pas faits — c’est ce qui ouvre le reste du château. */
-const REPARTI = compte({ baguetteChoisieLe: LA_BAGUETTE, maison: "NATTORM" });
+const REPARTI = compte({
+  baguetteChoisieLe: LA_BAGUETTE,
+  etatBaguette: "FAIT",
+  maison: "NATTORM",
+  etatMaison: "FAIT",
+});
+/**
+ * Ni l’un ni l’autre ne la concerne : elle n’a rien à faire, et le château
+ * doit pourtant s’ouvrir en entier. C’est le cas que le site confondait avec
+ * le nouvel arrivant.
+ */
+const DIRECTRICE = compte({
+  maison: "TIDEAL",
+  etatMaison: "SANS_OBJET",
+  baguetteChoisieLe: LA_BAGUETTE,
+  etatBaguette: "SANS_OBJET",
+});
 const BANNI = compte({ statutAcces: "EN_BANNISSEMENT" });
 const BANNI_REPARTI = compte({
   statutAcces: "EN_BANNISSEMENT",
   baguetteChoisieLe: LA_BAGUETTE,
+  etatBaguette: "FAIT",
   maison: "TIDEAL",
+  etatMaison: "FAIT",
 });
 const EN_ATTENTE = compte({ statut: "EN_ATTENTE", statutAcces: "EN_ATTENTE" });
 
@@ -80,21 +103,39 @@ describe("les deux étages de l’accès", () => {
   it("n’ouvre le reste du château qu’une fois les deux pas faits", () => {
     expect(aFiniLesPremiersPas(NOUVEL_ARRIVANT)).toBe(false);
     expect(aFiniLesPremiersPas(AVEC_BAGUETTE)).toBe(false);
-    expect(aFiniLesPremiersPas(compte({ maison: "NATTORM" }))).toBe(false);
+    expect(
+      aFiniLesPremiersPas(compte({ maison: "NATTORM", etatMaison: "FAIT" })),
+    ).toBe(false);
     expect(aFiniLesPremiersPas(REPARTI)).toBe(true);
   });
 
-  it("lit la maison pour savoir si le Miroir a parlé", () => {
-    expect(estReparti(NOUVEL_ARRIVANT)).toBe(false);
-    expect(estReparti(AVEC_BAGUETTE)).toBe(false);
-    expect(estReparti(REPARTI)).toBe(true);
+  /**
+   * **Le piège du lot.** « Fini » veut dire « plus rien à faire », et non
+   * « fait ». Sans cette lecture, la directrice reste enfermée dans son
+   * bureau, au régime exact d’un membre suspendu — faute d’une cérémonie
+   * qu’elle n’a pas à passer.
+   */
+  it("tient pour finie une étape qui ne concerne pas le compte", () => {
+    expect(aFiniLesPremiersPas(DIRECTRICE)).toBe(true);
+    expect(routeAutorisee(DIRECTRICE, ROUTES.cours)).toBe(true);
+    expect(routeAutorisee(DIRECTRICE, ROUTES.ecole)).toBe(true);
   });
 
-  /** C’est la date de la boutique qui fait foi, et rien d’autre. */
-  it("ne tient la baguette pour choisie qu’une fois la date posée", () => {
-    expect(aChoisiSaBaguette(NOUVEL_ARRIVANT)).toBe(false);
-    expect(aChoisiSaBaguette(AVEC_BAGUETTE)).toBe(true);
-    expect(aChoisiSaBaguette(REPARTI)).toBe(true);
+  it("distingue « le Miroir l’attend » de « il n’est pas concerné »", () => {
+    expect(doitPasserAuMiroir(NOUVEL_ARRIVANT)).toBe(true);
+    expect(doitPasserAuMiroir(AVEC_BAGUETTE)).toBe(true);
+    // Réparti : c’est fait.
+    expect(doitPasserAuMiroir(REPARTI)).toBe(false);
+    // Sans objet : ce n’est pas fait, et cela ne le sera jamais — la question
+    // « a-t-il une maison ? » rendait ces deux-là identiques.
+    expect(doitPasserAuMiroir(DIRECTRICE)).toBe(false);
+  });
+
+  it("distingue de même pour la boutique", () => {
+    expect(doitPasserAKaldvik(NOUVEL_ARRIVANT)).toBe(true);
+    expect(doitPasserAKaldvik(AVEC_BAGUETTE)).toBe(false);
+    expect(doitPasserAKaldvik(REPARTI)).toBe(false);
+    expect(doitPasserAKaldvik(DIRECTRICE)).toBe(false);
   });
 
   it("reconnaît le bannissement, dossier accepté seulement", () => {
@@ -155,19 +196,29 @@ describe("l’élève réparti", () => {
 
   /**
    * **L’accès direct par URL une fois réparti.** La route reste autorisée —
-   * il a tous les droits — mais la page le renvoie au bureau sur `estReparti`.
-   * C’est bien ce prédicat-là qui referme la cérémonie derrière lui, et non
-   * une fermeture de route qui produirait une redirection en boucle.
+   * il a tous les droits — mais la page le renvoie au bureau sur
+   * `doitPasserAuMiroir`. C’est bien ce prédicat-là qui referme la cérémonie
+   * derrière lui, et non une fermeture de route qui produirait une
+   * redirection en boucle.
    */
-  it("ne rejoue pas la cérémonie : la page se referme sur estReparti", () => {
+  it("ne rejoue pas la cérémonie : la page se referme sur doitPasserAuMiroir", () => {
     expect(routeAutorisee(REPARTI, ROUTES.ceremonie)).toBe(true);
-    expect(estReparti(REPARTI)).toBe(true);
+    expect(doitPasserAuMiroir(REPARTI)).toBe(false);
   });
 
-  /** Même mécanique pour la boutique : `aChoisiSaBaguette` la referme. */
-  it("ne repasse pas chez Bjornstav : la page se referme sur aChoisiSaBaguette", () => {
+  /** Même mécanique pour la boutique. */
+  it("ne repasse pas chez Bjornstav : la page se referme sur doitPasserAKaldvik", () => {
     expect(routeAutorisee(REPARTI, ROUTES.bjornstav)).toBe(true);
-    expect(aChoisiSaBaguette(REPARTI)).toBe(true);
+    expect(doitPasserAKaldvik(REPARTI)).toBe(false);
+  });
+
+  /**
+   * Et la même mécanique referme les deux adresses devant la directrice —
+   * par le même prédicat, sans qu’aucune route ait été fermée.
+   */
+  it("referme les deux adresses devant un compte non concerné", () => {
+    expect(doitPasserAuMiroir(DIRECTRICE)).toBe(false);
+    expect(doitPasserAKaldvik(DIRECTRICE)).toBe(false);
   });
 });
 

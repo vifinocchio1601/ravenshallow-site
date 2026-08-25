@@ -10,6 +10,7 @@ import {
   scenesEnCours,
 } from "@/lib/bureau/donnees";
 import { libellePlace } from "@/lib/dossier/etats";
+import { estConcerneParLeMiroir } from "@/lib/session/acces";
 import { TEXTES_ECOLE } from "@/lib/ecole/constantes";
 import { ROUTES } from "@/lib/ecole/menu";
 import { exigerAcces } from "@/lib/session/garde";
@@ -129,9 +130,13 @@ export default async function BureauPage() {
                 terme={t.progression.pointsPersonnels}
                 valeur={String(avancee.pointsPersonnels)}
               />
-              {/* Compteur de maison masqué avant la répartition, plutôt
-                  qu’affiché à zéro : un zéro se lit comme un échec. */}
-              {avancee.pointsMaison === null ? (
+              {/* Trois cas, et non deux :
+                  — sans objet  : rien du tout. Ce compte n’a pas de maison à
+                    suivre, et lui promettre un compteur serait absurde.
+                  — pas réparti : la promesse du compteur, plutôt qu’un zéro —
+                    un zéro se lit comme un échec.
+                  — réparti     : le compteur. */}
+              {!estConcerneParLeMiroir(avancee) ? null : avancee.pointsMaison === null ? (
                 <p className="font-body text-sm italic leading-relaxed text-silver">
                   {t.progression.maisonInconnue}
                 </p>

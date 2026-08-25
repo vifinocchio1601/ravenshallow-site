@@ -2,13 +2,18 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import { notFound } from "next/navigation";
 import { libelleBaguette } from "@/lib/ecole/baguette";
-import { blasonDe, NOMS_MAISON, REPARTITION_A_VENIR } from "@/lib/ecole/blasons";
+import { blasonAffiche, mentionMaison } from "@/lib/ecole/blasons";
 import { TEXTES_ECOLE } from "@/lib/ecole/constantes";
 import { ROUTES } from "@/lib/ecole/menu";
 import { FAMILLES, LIMITES_ECRITURE } from "@/lib/dossier/constantes";
 import { lireDossier } from "@/lib/dossier/depot";
 import { libellePlace } from "@/lib/dossier/etats";
-import { estBanni, finDuBannissement } from "@/lib/session/acces";
+import {
+  aUneBaguette,
+  doitPasserAKaldvik,
+  estBanni,
+  finDuBannissement,
+} from "@/lib/session/acces";
 import { exigerAcces } from "@/lib/session/garde";
 
 export const metadata: Metadata = {
@@ -31,8 +36,16 @@ export default async function FicheElevePage() {
   if (!dossier) notFound();
 
   const t = TEXTES_ECOLE.fiche;
-  const blason = blasonDe(dossier.maison);
-  const baguette = libelleBaguette(dossier.baguetteBois, dossier.baguetteCoeur);
+  // Rien ne se déduit plus d'une case vide : l'état tranche, et lui seul.
+  const blason = blasonAffiche(dossier);
+  const mention = mentionMaison(dossier);
+
+  // Un compte que la boutique ne concerne pas n'affiche pas de baguette, et
+  // surtout pas un « aucune baguette » qui ferait croire à un manque.
+  const baguette = aUneBaguette(dossier)
+    ? libelleBaguette(dossier.baguetteBois, dossier.baguetteCoeur)
+    : null;
+  const baguetteAttendue = doitPasserAKaldvik(dossier);
 
   const banni = estBanni(compte);
   const fin = finDuBannissement(compte);
@@ -105,16 +118,17 @@ export default async function FicheElevePage() {
               height={blason.hauteur}
               className="h-14 w-auto"
             />
-            <div>
-              <p className="font-display text-[0.66rem] uppercase tracking-[0.14em] text-silver">
-                {t.ligne.maison}
-              </p>
-              <p className="font-body text-parchment">
-                {dossier.maison
-                  ? NOMS_MAISON[dossier.maison] ?? dossier.maison
-                  : REPARTITION_A_VENIR}
-              </p>
-            </div>
+            {/* Le blason de l'école reste, pour ne pas laisser un trou —
+                mais aucune mention de maison n'accompagne un compte que la
+                répartition ne concerne pas. */}
+            {mention ? (
+              <div>
+                <p className="font-display text-[0.66rem] uppercase tracking-[0.14em] text-silver">
+                  {t.ligne.maison}
+                </p>
+                <p className="font-body text-parchment">{mention}</p>
+              </div>
+            ) : null}
           </div>
         </div>
 
@@ -133,11 +147,13 @@ export default async function FicheElevePage() {
               terme={t.ligne.famille}
               valeur={libelle(FAMILLES, dossier.famille)}
             />
-            <Ligne
-              terme={t.ligne.baguette}
-              valeur={baguette ?? t.ligne.baguetteAVenir}
-              attente={!baguette}
-            />
+            {baguette || baguetteAttendue ? (
+              <Ligne
+                terme={t.ligne.baguette}
+                valeur={baguette ?? t.ligne.baguetteAVenir}
+                attente={!baguette}
+              />
+            ) : null}
             <Ligne
               terme={t.ligne.limites}
               valeur={

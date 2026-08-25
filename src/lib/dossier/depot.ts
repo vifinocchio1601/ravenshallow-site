@@ -9,7 +9,13 @@ import type {
   EvenementMembre,
   NouveauDossier,
 } from "./modele";
-import type { Fonction, StatutAcces } from "./etats";
+import type {
+  ActionEtape,
+  Etape,
+  EtatEtape,
+  Fonction,
+  StatutAcces,
+} from "./etats";
 
 /**
  * Accès aux dossiers et aux membres.
@@ -75,6 +81,8 @@ function dossierDemo(partiel: Partial<Dossier> & { prenomNom: string }): Dossier
     maison: null,
     baguetteBois: null,
     baguetteCoeur: null,
+    etatMaison: "NON_FAIT",
+    etatBaguette: "NON_FAIT",
     banniJusquau: null,
     journal: [],
     ...partiel,
@@ -507,6 +515,45 @@ export async function modifierMembre(
         ? modifications.banniJusquau?.toISOString() ?? null
         : null;
   }
+
+  enregistrer();
+}
+
+/**
+ * Retirer une étape à un compte, ou la lui rendre. Voir `depot-base.ts` :
+ * même règle, même refus d’effacer quoi que ce soit.
+ */
+export async function modifierEtatEtape(
+  id: string,
+  etape: Etape,
+  action: ActionEtape,
+  parNom = "Administration",
+): Promise<void> {
+  if (!baseAbsente()) return base.modifierEtatEtape(id, etape, action, parNom);
+
+  const membre = demo().find((d) => d.id === id);
+  if (!membre) return;
+
+  const avant = etape === "maison" ? membre.etatMaison : membre.etatBaguette;
+  const aUneValeur =
+    etape === "maison" ? membre.maison !== null : membre.baguetteCoeur !== null;
+
+  const apres: EtatEtape =
+    action === "RETIRER" ? "SANS_OBJET" : aUneValeur ? "FAIT" : "NON_FAIT";
+
+  if (avant === apres) return;
+
+  journaliser(
+    membre,
+    etape === "maison" ? "ETAT_MAISON_MODIFIE" : "ETAT_BAGUETTE_MODIFIE",
+    avant,
+    apres,
+    null,
+    parNom,
+  );
+
+  if (etape === "maison") membre.etatMaison = apres;
+  else membre.etatBaguette = apres;
 
   enregistrer();
 }

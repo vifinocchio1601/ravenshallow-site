@@ -264,6 +264,8 @@ function compte(modifications: Partial<CompteConnecte> = {}): CompteConnecte {
     statutAcces: "VALIDE",
     banniJusquau: null,
     maison: null,
+    etatMaison: "NON_FAIT",
+    etatBaguette: "NON_FAIT",
     baguetteBois: null,
     baguetteCoeur: null,
     baguetteChoisieLe: null,

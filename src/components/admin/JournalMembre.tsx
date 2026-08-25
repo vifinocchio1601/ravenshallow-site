@@ -1,9 +1,12 @@
 import type { EntreeJournal } from "@/lib/dossier/depot";
 import {
   libelleAnnee,
+  LIBELLES_ETAT_ETAPE,
   LIBELLES_STATUT_ACCES,
   LIBELLES_STATUT_DOSSIER,
   TEXTES_ETATS,
+  type Etape,
+  type EtatEtape,
   type Fonction,
   type StatutAcces,
   type StatutDossier,
@@ -18,6 +21,8 @@ const LIBELLES: Record<EntreeJournal["type"], string> = {
   AGE_MODIFIE: "Âge modifié",
   FONCTION_MODIFIEE: "Année modifiée",
   ROLE_AFFICHE_MODIFIE: "Rôle particulier modifié",
+  ETAT_MAISON_MODIFIE: "Maison — étape modifiée",
+  ETAT_BAGUETTE_MODIFIE: "Baguette — étape modifiée",
   ACCES_MODIFIE: "Accès modifié",
   COURRIEL_CONFIRMATION: "Accusé de réception",
 };
@@ -34,6 +39,9 @@ function lisible(
   // la ligne doit le montrer. D'où ce cas avant le garde-fou du vide.
   if (type === "ROLE_AFFICHE_MODIFIE") return valeur || "aucun";
   if (!valeur) return null;
+  if (type === "ETAT_MAISON_MODIFIE" || type === "ETAT_BAGUETTE_MODIFIE") {
+    return LIBELLES_ETAT_ETAPE[valeur as EtatEtape] ?? valeur;
+  }
   if (type === "AGE_MODIFIE") return `${valeur} ans`;
   // Liste de champs, déjà lisible telle quelle.
   if (type === "FICHE_MODIFIEE") return valeur;

@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 import BoutonDeconnexion from "@/components/connexion/BoutonDeconnexion";
-import { BLASON_ECOLE, blasonDe, NOMS_MAISON, REPARTITION_A_VENIR } from "@/lib/ecole/blasons";
+import { BLASON_ECOLE } from "@/lib/ecole/blasons";
 import { ROUTES, type EntreeMenu } from "@/lib/ecole/menu";
 import { TEXTES_ECOLE } from "@/lib/ecole/constantes";
 
@@ -23,11 +23,21 @@ import { TEXTES_ECOLE } from "@/lib/ecole/constantes";
  */
 export default function MenuParchemin({
   prenomNom,
-  maison,
+  blason,
+  mention,
   entrees,
 }: {
   prenomNom: string;
-  maison: string | null;
+  /**
+   * Le blason à porter, déjà choisi côté serveur : celui de la maison si elle
+   * s’affiche, celui de l’école sinon.
+   */
+  blason: { src: string; largeur: number; hauteur: number; alt: string };
+  /**
+   * Ce qui s’écrit sous le nom : la maison, « Répartition à venir », ou
+   * **rien** — pour un compte que la répartition ne concerne pas.
+   */
+  mention: string | null;
   /**
    * Les entrées que ce compte peut ouvrir, calculées côté serveur par
    * `entreesVisibles`. Le bandeau ne décide de rien : il affiche ce qu’on lui
@@ -37,9 +47,6 @@ export default function MenuParchemin({
 }) {
   const chemin = usePathname();
   const [ouvert, setOuvert] = useState(false);
-
-  const blason = blasonDe(maison);
-  const nomMaison = maison ? NOMS_MAISON[maison] : REPARTITION_A_VENIR;
 
   const estCourante = (entree: EntreeMenu) =>
     chemin === entree.href || chemin.startsWith(`${entree.href}/`);
@@ -91,9 +98,11 @@ export default function MenuParchemin({
                 <p className="font-display text-[0.72rem] font-semibold uppercase tracking-[0.14em] text-ink">
                   {prenomNom}
                 </p>
-                <p className="font-body text-[0.78rem] italic leading-tight text-ink/60">
-                  {nomMaison}
-                </p>
+                {mention ? (
+                  <p className="font-body text-[0.78rem] italic leading-tight text-ink/60">
+                    {mention}
+                  </p>
+                ) : null}
               </div>
               <Image
                 src={blason.src}
@@ -155,9 +164,11 @@ export default function MenuParchemin({
                     <p className="font-display text-[0.7rem] font-semibold uppercase tracking-[0.12em] text-ink">
                       {prenomNom}
                     </p>
-                    <p className="font-body text-[0.78rem] italic leading-tight text-ink/60">
-                      {nomMaison}
-                    </p>
+                    {mention ? (
+                      <p className="font-body text-[0.78rem] italic leading-tight text-ink/60">
+                        {mention}
+                      </p>
+                    ) : null}
                   </div>
                 </div>
                 <BoutonDeconnexion className="rounded-sm border border-ink/25 px-3 py-2 font-display text-[0.6rem] uppercase tracking-[0.12em] text-ink/80 transition-colors duration-300 hover:border-ink/60 disabled:opacity-50" />

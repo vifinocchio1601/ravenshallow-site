@@ -1,4 +1,5 @@
 import MenuParchemin from "@/components/ecole/MenuParchemin";
+import { blasonAffiche, mentionMaison } from "@/lib/ecole/blasons";
 import { entreesVisibles } from "@/lib/session/acces";
 import { exigerConnexion } from "@/lib/session/garde";
 
@@ -23,9 +24,13 @@ export default async function EcoleLayout({
           Un lien qui renvoie ailleurs sans rien expliquer est pire que pas de
           lien du tout — et le nouvel arrivant a sa note pour savoir ce qui
           lui manque. */}
+      {/* Le blason et la mention se décident ici, côté serveur : un compte
+          que la répartition ne concerne pas porte celui de l’école, et rien
+          n’est écrit sous son nom — surtout pas « Répartition à venir ». */}
       <MenuParchemin
         prenomNom={compte.prenomNom}
-        maison={compte.maison}
+        blason={blasonAffiche(compte)}
+        mention={mentionMaison(compte)}
         entrees={entreesVisibles(compte)}
       />
       {children}

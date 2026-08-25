@@ -14,7 +14,7 @@ import {
 } from "@/lib/bjornstav/constantes";
 import { TEXTES_BJORNSTAV } from "@/lib/bjornstav/textes";
 import { ROUTES } from "@/lib/ecole/menu";
-import { aChoisiSaBaguette } from "@/lib/session/acces";
+import { doitPasserAKaldvik } from "@/lib/session/acces";
 import { exigerAcces } from "@/lib/session/garde";
 
 export const metadata: Metadata = {
@@ -32,8 +32,12 @@ export const dynamic = "force-dynamic";
  *   1. `exigerAcces` — dossier accepté et accès non suspendu, sinon renvoi
  *      vers l’écran que réserve l’état du compte. C’est la même table de
  *      vérité que partout ailleurs, aucune condition n’est réécrite ici.
- *   2. `aChoisiSaBaguette` — **le choix est définitif.** Un élève qui a déjà
- *      sa baguette et revient sur l’adresse repart à son bureau.
+ *   2. `doitPasserAKaldvik` — l’échoppe n’ouvre qu’à qui elle attend. Deux
+ *      comptes en repartent aussitôt vers leur bureau, pour des raisons
+ *      opposées : celui qui a **déjà** sa baguette — le choix est définitif —
+ *      et celui que la boutique **ne concerne pas**, une directrice, un
+ *      professeur. La question ne se pose plus en « a-t-il une baguette ? »,
+ *      qui confondait les deux.
  *   3. La fiche doit exister : un compte sans élève n’a rien à faire ici.
  *
  * La page vit **hors du groupe `(ecole)`** : pas de bandeau-parchemin. On
@@ -45,7 +49,7 @@ export const dynamic = "force-dynamic";
  */
 export default async function BjornstavPage() {
   const compte = await exigerAcces(ROUTES.bjornstav);
-  if (aChoisiSaBaguette(compte)) redirect(ROUTES.bureau);
+  if (!doitPasserAKaldvik(compte)) redirect(ROUTES.bureau);
   if (!compte.eleveId) notFound();
 
   const t = TEXTES_BJORNSTAV;

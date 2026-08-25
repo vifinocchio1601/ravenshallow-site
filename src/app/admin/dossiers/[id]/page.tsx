@@ -1,11 +1,19 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import { notFound } from "next/navigation";
+import CommandeEtape from "@/components/admin/CommandeEtape";
 import EnTeteAdmin from "@/components/admin/EnTeteAdmin";
 import FormulaireDecision from "@/components/admin/FormulaireDecision";
 import JournalMembre from "@/components/admin/JournalMembre";
 import { lireDossier, modeDemonstration } from "@/lib/dossier/depot";
-import { libelleAnnee, libellePlace, TEXTES_ETATS } from "@/lib/dossier/etats";
+import {
+  libelleAnnee,
+  libellePlace,
+  LIBELLES_ETAT_ETAPE,
+  TEXTES_ETATS,
+} from "@/lib/dossier/etats";
+import { libelleBaguette } from "@/lib/ecole/baguette";
+import { NOMS_MAISON } from "@/lib/ecole/blasons";
 import { FAMILLES, LIMITES_ECRITURE, TYPES_PORTRAIT } from "@/lib/dossier/constantes";
 
 export const metadata: Metadata = {
@@ -140,6 +148,74 @@ export default async function DossierAdminPage({
                 <p className="italic text-silver">Aucune limite indiquée.</p>
               )}
             </Bloc>
+
+            {/* ── Maison et baguette ──
+                Ni l'une ni l'autre ne figurait ici : on ne retire pas une
+                chose qu'on ne voit pas. La valeur, l'état, et la commande
+                sont donc sur la même ligne. */}
+            <section className="mt-10">
+              <h2 className="font-display text-[0.7rem] uppercase tracking-[0.18em] text-parchment-dim">
+                {t.etapes.titre}
+              </h2>
+              <p className="mt-2 max-w-[62ch] font-body text-sm italic leading-relaxed text-silver">
+                {t.etapes.aide}
+              </p>
+
+              <ul className="mt-5 grid gap-3">
+                {(
+                  [
+                    {
+                      etape: "maison" as const,
+                      etat: dossier.etatMaison,
+                      valeur: dossier.maison
+                        ? NOMS_MAISON[dossier.maison] ?? dossier.maison
+                        : null,
+                    },
+                    {
+                      etape: "baguette" as const,
+                      etat: dossier.etatBaguette,
+                      valeur: libelleBaguette(
+                        dossier.baguetteBois,
+                        dossier.baguetteCoeur,
+                      ),
+                    },
+                  ]
+                ).map(({ etape, etat, valeur }) => {
+                  const te = t.etapes[etape];
+                  return (
+                    <li
+                      key={etape}
+                      className="flex flex-wrap items-center justify-between gap-4 rounded-sm border border-silver/12 bg-mist/40 px-5 py-4"
+                    >
+                      <div className="min-w-0">
+                        <p className="font-display text-[0.66rem] uppercase tracking-[0.14em] text-parchment-dim">
+                          {te.terme}
+                          {/* L'état ne se signale jamais par la seule
+                              couleur : il est écrit. */}
+                          <span className="ml-3 text-silver">
+                            {LIBELLES_ETAT_ETAPE[etat]}
+                          </span>
+                        </p>
+                        <p className="mt-1 font-body text-parchment">
+                          {valeur ?? te.aucune}
+                        </p>
+                        <p className="mt-1 font-body text-xs italic text-silver">
+                          {te.etatDetail[etat]}
+                        </p>
+                      </div>
+
+                      <CommandeEtape
+                        id={dossier.id}
+                        nom={dossier.prenomNom}
+                        etape={etape}
+                        etat={etat}
+                        valeur={valeur}
+                      />
+                    </li>
+                  );
+                })}
+              </ul>
+            </section>
 
             {/* ── Décision — seulement tant que le dossier est en jeu ── */}
             {dossier.statut === "EN_ATTENTE" || dossier.statut === "A_CORRIGER" ? (

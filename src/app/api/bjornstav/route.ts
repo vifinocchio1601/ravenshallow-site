@@ -2,7 +2,11 @@ import { NextResponse } from "next/server";
 import { inscrireBaguette } from "@/lib/bjornstav/depot";
 import { assemblerDenouement, verifierCodes } from "@/lib/bjornstav/reaction";
 import { ROUTES } from "@/lib/ecole/menu";
-import { aChoisiSaBaguette, routeAutorisee } from "@/lib/session/acces";
+import {
+  doitPasserAKaldvik,
+  estConcerneParLaBoutique,
+  routeAutorisee,
+} from "@/lib/session/acces";
 import { compteConnecte } from "@/lib/session/garde";
 
 /**
@@ -22,7 +26,7 @@ import { compteConnecte } from "@/lib/session/garde";
  * avant de l’appeler.
  *
  *   401 — pas de session
- *   403 — dossier non accepté, ou accès suspendu
+ *   403 — dossier non accepté, accès suspendu, ou **compte non concerné**
  *   409 — **une baguette est déjà posée** : le choix ne se rejoue pas
  *   422 — bois ou cœur inconnu de la liste
  */
@@ -37,9 +41,22 @@ export async function POST(request: Request) {
     return NextResponse.json({ erreur: "Accès refusé." }, { status: 403 });
   }
 
+  // La boutique ne concerne pas ce compte : une directrice, un professeur.
+  // Distinct du rejeu, et distinct dans la réponse — « déjà choisie » serait
+  // faux pour quelqu’un qui n’en aura jamais.
+  if (!estConcerneParLaBoutique(compte)) {
+    return NextResponse.json(
+      {
+        erreur: "La boutique ne concerne pas ce compte.",
+        destination: ROUTES.bureau,
+      },
+      { status: 403 },
+    );
+  }
+
   // Premier verrou contre le rejeu. Le deuxième est dans le `updateMany`, le
   // troisième dans la base : celui-ci évite seulement d’y aller pour rien.
-  if (aChoisiSaBaguette(compte)) {
+  if (!doitPasserAKaldvik(compte)) {
     return NextResponse.json(
       { erreur: "Votre baguette est déjà choisie.", destination: ROUTES.bureau },
       { status: 409 },

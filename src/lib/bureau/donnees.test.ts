@@ -27,6 +27,8 @@ function compte(modifications: Partial<CompteConnecte> = {}): CompteConnecte {
     statutAcces: "VALIDE",
     banniJusquau: null,
     maison: null,
+    etatMaison: "NON_FAIT",
+    etatBaguette: "NON_FAIT",
     baguetteBois: null,
     baguetteCoeur: null,
     baguetteChoisieLe: null,
@@ -65,7 +67,9 @@ describe("l’ordre des premiers pas", () => {
 
   it("ouvre le Miroir dès que la baguette est prise, et ferme la boutique", async () => {
     const { premiersPas } = await import("./donnees");
-    const pas = await premiersPas(compte({ baguetteChoisieLe: new Date() }));
+    const pas = await premiersPas(
+      compte({ baguetteChoisieLe: new Date(), etatBaguette: "FAIT" }),
+    );
 
     const [baguette, ceremonie] = pas!;
 
@@ -80,7 +84,12 @@ describe("l’ordre des premiers pas", () => {
   it("fait disparaître la note quand les deux pas sont faits", async () => {
     const { premiersPas } = await import("./donnees");
     const pas = await premiersPas(
-      compte({ baguetteChoisieLe: new Date(), maison: "BRYGGELD" }),
+      compte({
+        baguetteChoisieLe: new Date(),
+        etatBaguette: "FAIT",
+        maison: "BRYGGELD",
+        etatMaison: "FAIT",
+      }),
     );
 
     // `null`, et non une liste vide : c’est ce qui retire la note du bureau.
@@ -94,7 +103,9 @@ describe("l’ordre des premiers pas", () => {
    */
   it("garde la note si la maison est là sans la baguette", async () => {
     const { premiersPas } = await import("./donnees");
-    const pas = await premiersPas(compte({ maison: "TIDEAL" }));
+    const pas = await premiersPas(
+      compte({ maison: "TIDEAL", etatMaison: "FAIT" }),
+    );
 
     expect(pas).not.toBeNull();
     const [baguette, ceremonie] = pas!;
@@ -110,7 +121,15 @@ describe("les panneaux qui attendent leur lot", () => {
     const { progression } = await import("./donnees");
 
     expect((await progression(compte())).pointsMaison).toBeNull();
-    expect((await progression(compte({ maison: "KALDRAFN" }))).pointsMaison).toBe(0);
+
+    // C’est l’état qui ouvre le compteur, jamais la seule présence d’une
+    // maison : ce test posait autrefois `maison` toute seule, et il aurait
+    // continué de passer avec un professeur qui garde la sienne au chaud.
+    const repartie = compte({ maison: "KALDRAFN", etatMaison: "FAIT" });
+    expect((await progression(repartie)).pointsMaison).toBe(0);
+
+    const directrice = compte({ maison: "KALDRAFN", etatMaison: "SANS_OBJET" });
+    expect((await progression(directrice)).pointsMaison).toBeNull();
   });
 });
 
@@ -122,15 +141,25 @@ describe("la baguette, une fois prise", () => {
     // pas l’y envoie déjà.
     expect((await progression(compte())).baguette).toBeNull();
 
+    const baguette = {
+      baguetteBois: "CHENE_DES_TEMPETES",
+      baguetteCoeur: "GRIFFE_OURS_DES_CAVERNES",
+      baguetteChoisieLe: new Date(),
+    };
+
     const avec = await progression(
-      compte({
-        baguetteBois: "CHENE_DES_TEMPETES",
-        baguetteCoeur: "GRIFFE_OURS_DES_CAVERNES",
-        baguetteChoisieLe: new Date(),
-      }),
+      compte({ ...baguette, etatBaguette: "FAIT" }),
     );
     expect(avec.baguette).toBe(
       "Chêne des tempêtes, cœur de griffe d’ours des cavernes",
     );
+
+    // Un compte que la boutique ne concerne pas garde sa baguette en base et
+    // ne l’affiche pas — sans texte de remplacement, qui ferait croire à un
+    // manque.
+    const sansObjet = await progression(
+      compte({ ...baguette, etatBaguette: "SANS_OBJET" }),
+    );
+    expect(sansObjet.baguette).toBeNull();
   });
 });

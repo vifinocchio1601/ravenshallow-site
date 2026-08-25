@@ -30,6 +30,36 @@ export type Fonction =
 
 export type Genre = "FEMININ" | "MASCULIN" | "AUTRE";
 
+/**
+ * Où en est une étape des premiers pas — ou si elle ne concerne pas ce compte.
+ * Miroir de l’enum Prisma `EtatEtape`.
+ *
+ * **Ne jamais déduire cet état de la présence d’une valeur.** Une maison
+ * absente veut dire « le Miroir l’attend » pour un élève et « ce n’est pas son
+ * sujet » pour une directrice : le site doit faire l’inverse dans les deux
+ * cas, et seule cette valeur-ci sait laquelle.
+ */
+export type EtatEtape = "NON_FAIT" | "FAIT" | "SANS_OBJET";
+
+/** Les deux étapes des premiers pas, telles que l’administration les pilote. */
+export type Etape = "maison" | "baguette";
+
+/**
+ * Ce que l’administration demande — jamais un état directement.
+ *
+ * `RETABLIR` ne rend pas un état choisi : il rend **celui que la valeur
+ * commande**. Une maison écrite revient à `FAIT`, une case vide à `NON_FAIT`.
+ * Il n’y a donc aucun moyen de fabriquer un état bancal depuis l’écran, et
+ * aucune question à poser à l’administrateur.
+ */
+export type ActionEtape = "RETIRER" | "RETABLIR";
+
+export const LIBELLES_ETAT_ETAPE: Record<EtatEtape, string> = {
+  NON_FAIT: "Attendu",
+  FAIT: "Fait",
+  SANS_OBJET: "Sans objet",
+};
+
 /** Les quatre maisons (bible du lore, §4). Miroir de l’enum Prisma `Maison`. */
 export type Maison = "KALDRAFN" | "NATTORM" | "BRYGGELD" | "TIDEAL";
 
@@ -218,6 +248,77 @@ export const TEXTES_ETATS = {
       enregistrer: "Enregistrer",
       enregistre: "Modifications enregistrées",
     },
+    /**
+     * Les deux commandes de la fiche d’un membre.
+     *
+     * Chaque confirmation dit ce qui disparaît **et** ce qui est conservé :
+     * un administrateur qui retire une maison doit savoir, avant de cliquer,
+     * qu’il ne l’efface pas.
+     */
+    etapes: {
+      titre: "Maison et baguette",
+      aide: "Une directrice, un professeur, un intendant ne sont concernés ni par le Miroir ni par la boutique. Retirer une étape n’efface rien : la valeur reste en base et se rétablit d’un clic.",
+      retirer: "Retirer",
+      retablir: "Rétablir",
+      annuler: "Annuler",
+      /** Ce que porte le fil du journal, une fois l’action passée. */
+      poseeLe: "Modifié le",
+
+      maison: {
+        terme: "Maison",
+        aucune: "Aucune",
+        eyebrow: "La maison",
+        etatDetail: {
+          NON_FAIT: "Attendu au Miroir de Brume",
+          FAIT: "Réparti — la maison s’affiche et compte au tournoi",
+          SANS_OBJET: "Ce compte n’est pas concerné par la répartition",
+        },
+        retrait: {
+          titre: "Retirer la maison de {nom} ?",
+          corps:
+            "Ce compte n’aura plus de maison : ni blason, ni mention sur sa fiche, et il cessera de compter au tournoi inter-maisons. Le Miroir ne l’attendra plus, et la note des premiers pas disparaîtra de son bureau.",
+          conserve:
+            "Sa maison actuelle — {valeur} — est conservée et pourra être rétablie.",
+          confirmer: "Retirer la maison",
+        },
+        retablissement: {
+          titre: "Rétablir la maison de {nom} ?",
+          corps:
+            "Ce compte retrouve sa maison, telle qu’elle était : {valeur}. Elle réapparaîtra sur sa fiche et dans le bandeau, et il comptera de nouveau au tournoi.",
+          sansValeur:
+            "Ce compte n’a jamais été réparti : le Miroir de Brume l’attendra de nouveau, et la note des premiers pas réapparaîtra sur son bureau.",
+          confirmer: "Rétablir la maison",
+        },
+      },
+
+      baguette: {
+        terme: "Baguette",
+        aucune: "Aucune",
+        eyebrow: "La baguette",
+        etatDetail: {
+          NON_FAIT: "Attendu chez Bjornstav, à Kaldvik",
+          FAIT: "Choisie — elle s’affiche sur la fiche et au bureau",
+          SANS_OBJET: "Ce compte n’est pas concerné par la boutique",
+        },
+        retrait: {
+          titre: "Retirer la baguette de {nom} ?",
+          corps:
+            "La baguette disparaîtra de sa fiche et de son bureau, sans rien à la place. La boutique ne l’attendra plus, et la note des premiers pas disparaîtra.",
+          conserve:
+            "Sa baguette actuelle — {valeur} — est conservée et pourra être rétablie.",
+          confirmer: "Retirer la baguette",
+        },
+        retablissement: {
+          titre: "Rétablir la baguette de {nom} ?",
+          corps:
+            "Ce compte retrouve sa baguette, telle qu’elle était : {valeur}.",
+          sansValeur:
+            "Ce compte n’est jamais passé à Kaldvik : la boutique l’attendra de nouveau, et la note des premiers pas réapparaîtra sur son bureau.",
+          confirmer: "Rétablir la baguette",
+        },
+      },
+    },
+
     suppression: {
       bouton: "Supprimer ce membre",
       titre: "Supprimer {nom} ?",

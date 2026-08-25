@@ -44,6 +44,9 @@ function compte(modifications: Record<string, unknown> = {}) {
     statutAcces: "VALIDE",
     banniJusquau: null,
     maison: null,
+    // L'élève type de ce fichier : la boutique l'attend.
+    etatMaison: "NON_FAIT",
+    etatBaguette: "NON_FAIT",
     baguetteBois: null,
     baguetteCoeur: null,
     baguetteChoisieLe: null,
@@ -147,10 +150,45 @@ describe("ce que la route refuse", () => {
     expect(simule.inscrireBaguette).not.toHaveBeenCalled();
   });
 
+  /**
+   * **Un compte que la boutique ne concerne pas.**
+   *
+   * 403 et non 409 : « votre baguette est déjà choisie » serait faux pour
+   * quelqu'un qui n'en aura jamais.
+   */
+  it("403 pour un compte sans objet, et n'inscrit rien", async () => {
+    simule.compteConnecte.mockResolvedValue(
+      compte({ etatBaguette: "SANS_OBJET" }),
+    );
+    const { statut, corps } = await envoyer({
+      bois: "IF",
+      coeur: "CRISTAL_DE_GLACE",
+    });
+
+    expect(statut).toBe(403);
+    expect(corps.destination).toBe(ROUTES.bureau);
+    expect(simule.inscrireBaguette).not.toHaveBeenCalled();
+  });
+
+  it("403 même pour un compte sans objet qui garde sa baguette au chaud", async () => {
+    simule.compteConnecte.mockResolvedValue(
+      compte({
+        baguetteBois: "FRENE",
+        baguetteCoeur: "PLUME_DE_CORBEAU",
+        baguetteChoisieLe: new Date(),
+        etatBaguette: "SANS_OBJET",
+      }),
+    );
+    const { statut } = await envoyer({ bois: "IF", coeur: "CRISTAL_DE_GLACE" });
+
+    expect(statut).toBe(403);
+    expect(simule.inscrireBaguette).not.toHaveBeenCalled();
+  });
+
   /** Le choix est définitif : on ne repasse pas chez Bjornstav. */
   it("409 quand une baguette est déjà posée, et renvoie au bureau", async () => {
     simule.compteConnecte.mockResolvedValue(
-      compte({ baguetteChoisieLe: new Date() }),
+      compte({ baguetteChoisieLe: new Date(), etatBaguette: "FAIT" }),
     );
     const { statut, corps } = await envoyer({ bois: "IF", coeur: "CRISTAL_DE_GLACE" });
 

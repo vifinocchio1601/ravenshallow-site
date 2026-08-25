@@ -38,7 +38,11 @@ describe("l’inscription de la baguette", () => {
 
     // La condition qui porte tout : sans elle, une seconde requête écraserait
     // la première et le choix cesserait d’être définitif.
-    expect(requete.where).toEqual({ id: "eleve-1", baguetteChoisieLe: null });
+    //
+    // Elle porte sur l’ÉTAT, et non sur la case vide. La différence n’est pas
+    // cosmétique : un compte que la boutique ne concerne pas a lui aussi les
+    // colonnes vides, et l’ancienne condition l’aurait laissé écrire.
+    expect(requete.where).toEqual({ id: "eleve-1", etatBaguette: "NON_FAIT" });
   });
 
   it("écrit les trois colonnes ensemble", async () => {
@@ -50,10 +54,14 @@ describe("l’inscription de la baguette", () => {
     expect(data.baguetteCoeur).toBe("NERF_LOUP_DES_FJORDS");
     // Une baguette à moitié écrite n’existe pas, et la base la refuserait.
     expect(data.baguetteChoisieLe).toBeInstanceOf(Date);
+    // L’état part dans la même écriture : la base refuse une baguette posée
+    // sous un état « attendu », et une seconde requête n’aurait pas de sens.
+    expect(data.etatBaguette).toBe("FAIT");
     expect(Object.keys(data).sort()).toEqual([
       "baguetteBois",
       "baguetteChoisieLe",
       "baguetteCoeur",
+      "etatBaguette",
     ]);
   });
 

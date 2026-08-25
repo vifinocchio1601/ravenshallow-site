@@ -10,7 +10,7 @@ import {
 } from "@/lib/connexion/tentatives";
 import { destinationApres } from "@/lib/session/acces";
 import { COOKIE_SESSION, creerSession, optionsCookie } from "@/lib/session/session";
-import type { StatutAcces, StatutDossier } from "@/lib/dossier/etats";
+import type { EtatEtape, StatutAcces, StatutDossier } from "@/lib/dossier/etats";
 
 /**
  * Connexion d’un joueur.
@@ -74,7 +74,15 @@ export async function POST(request: Request) {
         sessionVersion: true,
         statutAcces: true,
         banniJusquau: true,
-        eleve: { select: { statut: true, maison: true, baguetteChoisieLe: true } },
+        eleve: {
+          select: {
+            statut: true,
+            maison: true,
+            baguetteChoisieLe: true,
+            etatMaison: true,
+            etatBaguette: true,
+          },
+        },
       },
     });
 
@@ -97,6 +105,8 @@ export async function POST(request: Request) {
       banniJusquau: compte.banniJusquau,
       maison: compte.eleve?.maison ?? null,
       baguetteChoisieLe: compte.eleve?.baguetteChoisieLe ?? null,
+      etatMaison: (compte.eleve?.etatMaison ?? "NON_FAIT") as EtatEtape,
+      etatBaguette: (compte.eleve?.etatBaguette ?? "NON_FAIT") as EtatEtape,
     });
 
     const reponse = NextResponse.json({ ok: true, destination });
