@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { ExternalLink } from "lucide-react";
 import AdminCard from "@/components/AdminCard";
 import AdminEmptyState from "@/components/AdminEmptyState";
@@ -70,15 +71,24 @@ export default function AdminPage() {
             </a>
           </AdminCard>
 
-          <AdminCard
-            rune="ᛗᛁᚱ"
-            eyebrow="Miroir de Brume"
-            title="Inscriptions"
-          >
-            <AdminEmptyState>
-              Aucune inscription pour l&apos;instant — cette section sera
-              activée quand la base de données sera connectée.
-            </AdminEmptyState>
+          <AdminCard rune="ᛗᛁᚱ" eyebrow="Dossiers à lire" title="Inscriptions">
+            <p className="leading-[1.7] text-parchment-dim">
+              Les dossiers déposés attendent une lecture : accepter, renvoyer
+              en correction ou refuser.
+            </p>
+            <Link href="/admin/inscriptions" className="btn btn-ghost mt-6">
+              Ouvrir les inscriptions
+            </Link>
+          </AdminCard>
+
+          <AdminCard rune="ᛖᛚᚡ" eyebrow="L’école" title="Liste des membres">
+            <p className="leading-[1.7] text-parchment-dim">
+              Les dossiers acceptés : âge, fonction et statut d’accès se
+              modifient ici.
+            </p>
+            <Link href="/admin/membres" className="btn btn-ghost mt-6">
+              Ouvrir la liste
+            </Link>
           </AdminCard>
 
           <AdminCard rune="ᚹᛁᛏ" eyebrow="Assistance" title="Assistant IA">

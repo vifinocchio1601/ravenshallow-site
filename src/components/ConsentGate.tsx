@@ -1,7 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { useId, useState } from "react";
+import { useEffect, useId, useState } from "react";
+import {
+  lireReglementAccepte,
+  marquerReglementAccepte,
+} from "@/lib/dossier/brouillon";
 
 /**
  * Case « Lu et approuvé » puis bouton d'inscription qui se matérialise
@@ -13,6 +17,19 @@ import { useId, useState } from "react";
 export default function ConsentGate() {
   const [accepted, setAccepted] = useState(false);
   const checkboxId = useId();
+
+  // Le règlement déjà approuvé lors d’une visite précédente : la case reste
+  // cochée, le bouton visible, et on ne redemande rien.
+  useEffect(() => {
+    if (lireReglementAccepte()) setAccepted(true);
+  }, []);
+
+  function basculer(coche: boolean) {
+    setAccepted(coche);
+    // L’horodatage local sert à afficher la date sur le dossier ; celui qui
+    // fait foi sera posé côté serveur à la création du compte.
+    if (coche) marquerReglementAccepte();
+  }
 
   return (
     <section
@@ -41,7 +58,7 @@ export default function ConsentGate() {
           id={checkboxId}
           type="checkbox"
           checked={accepted}
-          onChange={(event) => setAccepted(event.target.checked)}
+          onChange={(event) => basculer(event.target.checked)}
           className="peer sr-only"
         />
 
@@ -82,7 +99,7 @@ export default function ConsentGate() {
         className={`mt-8 w-fit ${accepted ? "mist-reveal mist-reveal--visible" : "mist-reveal"}`}
       >
         <Link
-          href="/#rejoindre"
+          href="/inscription"
           tabIndex={accepted ? 0 : -1}
           className="btn btn-solid"
         >

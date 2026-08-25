@@ -1,0 +1,310 @@
+// Ravenshallow — schéma de la base.
+//
+// Périmètre de ce lot : le dossier d'admission (compte joueur + fiche élève),
+// le registre des visages, et la lecture des dossiers par l'administration.
+// La baguette (Bjornstav) et la répartition (Miroir de Brume) ne sont PAS
+// construites ici : seules leurs colonnes sont réservées, nullables, pour que
+// le lot suivant n'ait pas à migrer de nouveau.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─────────────────────────────────────────────────────────────
+//  Partie I — Le postulant (hors RP)
+// ─────────────────────────────────────────────────────────────
+
+/// Le compte de connexion. Une adresse = un élève (pas de pseudo joueur
+/// séparé), d'où la relation 1–1 avec Eleve.
+model Utilisateur {
+  id             String @id @default(cuid())
+  /// Identifiant de connexion. Stocké en minuscules par l'application.
+  email          String @unique
+  /// Hachage argon2id. Le mot de passe en clair ne quitte jamais la requête.
+  motDePasseHash String
+
+  /// Art. 2.3 — l'âge réel saisi n'est JAMAIS conservé : seul ce booléen
+  /// atteste que le postulant a déclaré 16 ans ou plus.
+  majeur16 Boolean
+
+  role Role @default(JOUEUR)
+
+  /// Horodatage de l'acceptation du règlement, posé côté serveur à la
+  /// création du compte. `reglementVersion` sert aux évolutions annoncées
+  /// dans le Grand Hall (préambule : entrée en vigueur à sept jours).
+  reglementAccepteLe DateTime
+  reglementVersion   String
+
+  /// Droit d'accès courant au site. Indépendant du dossier d'admission :
+  /// un membre validé de longue date peut être banni sans que sa candidature
+  /// soit rejouée. Piloté depuis la liste des membres.
+  ///   EN_ATTENTE      — pas d'accès à l'école
+  ///   VALIDE          — accès total
+  ///   EN_BANNISSEMENT — pas d'accès au forum, mais accès au bureau
+  statutAcces StatutAcces @default(EN_ATTENTE)
+
+  /// Art. 15.4 — limites d'écriture. Facultatives, opposables à tous,
+  /// affichées publiquement sur la fiche, jamais à justifier.
+  limitesEcriture LimiteEcriture[] @default([])
+  limitesAutres   String?
+
+  eleve Eleve?
+
+  /// Le fil de ce membre : décisions sur son dossier, modifications de sa
+  /// fiche et de son accès.
+  journal JournalMembre[] @relation("JournalDuMembre")
+
+  /// Les entrées écrites PAR ce compte, quand il agit comme administrateur.
+  decisionsPrises JournalMembre[] @relation("DecisionsPrises")
+
+  creeLe DateTime @default(now())
+  majLe  DateTime @updatedAt
+
+  @@map("utilisateurs")
+}
+
+/// Droits sur le site. À ne pas confondre avec Fonction, qui décrit la place
+/// du personnage dans l'école.
+enum Role {
+  JOUEUR
+  MODERATEUR
+  ADMIN
+}
+
+/// Accès accordé au membre. « Le bureau » est l'accueil des membres connectés,
+/// pas encore construit : un membre en bannissement y garde accès, mais perd
+/// le forum.
+enum StatutAcces {
+  EN_ATTENTE
+  VALIDE
+  EN_BANNISSEMENT
+}
+
+enum LimiteEcriture {
+  DEUIL
+  MALTRAITANCE
+  NOYADE
+  ENFERMEMENT
+  EMPRISE_MENTALE
+  BLESSURES_DECRITES
+  HARCELEMENT
+  ROMANCE
+}
+
+// ─────────────────────────────────────────────────────────────
+//  Partie II — L'élève (fiche RP)
+// ─────────────────────────────────────────────────────────────
+
+/// La fiche de personnage. Elle porte aussi l'état du dossier d'admission :
+/// tant qu'il n'est pas accepté, la fiche existe mais l'élève n'a accès ni
+/// aux scènes ni aux cours.
+model Eleve {
+  id            String      @id @default(cuid())
+  utilisateurId String      @unique
+  utilisateur   Utilisateur @relation(fields: [utilisateurId], references: [id], onDelete: Cascade)
+
+  /// Format « Prénom Nom » ou « Prénom I. Nom », validé par le schéma partagé.
+  prenomNom String
+  genre     Genre
+  famille   Famille
+
+  /// Art. 10.2 — 13 ans à l'entrée, affiché en dur et non modifiable côté
+  /// joueur. L'administration l'ajuste ensuite depuis la liste des membres,
+  /// notamment après un Rite de passage.
+  age Int @default(13)
+
+  /// Place du personnage dans l'école : son année, ou une fonction au
+  /// château. Les rôles du corps professoral sont attribués par
+  /// l'administration seule (art. 13.5). Le libellé affiché suit `genre`
+  /// (professeur/professeure, directeur/directrice).
+  fonction Fonction @default(PREMIERE_ANNEE)
+
+  portraitType PortraitType
+  /// Renseigné uniquement si portraitType = ACTEUR.
+  acteurNom    String?
+  /// Image déjà recadrée en 9:16 côté client, stockée sur Vercel Blob.
+  portraitUrl  String?
+
+  /// Minimum 700 signes — contrainte portée par le schéma Zod partagé,
+  /// Postgres ne sachant pas exprimer une longueur minimale ici.
+  biographie String @db.Text
+
+  /// Trois champs séparés de part et d'autre : la séparation est volontaire
+  /// (art. 10.5), elle force de vrais défauts.
+  qualite1 String
+  qualite2 String
+  qualite3 String
+  defaut1  String
+  defaut2  String
+  defaut3  String
+
+  plusGrandePeur String
+
+  /// Art. 10.4 — horodatage de la certification. Nul tant que non cochée.
+  certification104Le DateTime?
+
+  // ── État du dossier ──
+  statut    StatutDossier @default(BROUILLON)
+  soumisLe  DateTime?
+  decideLe  DateTime?
+  /// Note de l'administration, affichée au joueur en A_CORRIGER.
+  noteAdmin String?       @db.Text
+
+  visagePris VisagePris?
+
+  // ── Réservé au lot suivant : Bjornstav puis Miroir de Brume ──
+  // Volontairement nullable et non renseigné par ce lot.
+  baguetteBois      BaguetteBois?
+  baguetteCoeur     BaguetteCoeur?
+  baguetteChoisieLe DateTime?
+  maison            Maison?
+  repartiLe         DateTime?
+
+  creeLe DateTime @default(now())
+  majLe  DateTime @updatedAt
+
+  @@index([statut, soumisLe])
+  @@index([fonction])
+  @@map("eleves")
+}
+
+enum Genre {
+  FEMININ
+  MASCULIN
+  AUTRE
+}
+
+/// Année d'étude ou fonction au château. Sept années, conformément à la
+/// bible du lore (§9).
+enum Fonction {
+  PREMIERE_ANNEE
+  DEUXIEME_ANNEE
+  TROISIEME_ANNEE
+  QUATRIEME_ANNEE
+  CINQUIEME_ANNEE
+  SIXIEME_ANNEE
+  SEPTIEME_ANNEE
+  PROFESSEUR
+  DIRECTION
+}
+
+enum Famille {
+  SORCIERS
+  MIXTE
+  PREMIER_LIGNEE
+}
+
+enum PortraitType {
+  ACTEUR
+  IA_ILLUSTRATION
+}
+
+enum StatutDossier {
+  BROUILLON
+  EN_ATTENTE
+  ACCEPTE
+  A_CORRIGER
+  REFUSE
+}
+
+// ─────────────────────────────────────────────────────────────
+//  Registre des visages — art. 6.3
+// ─────────────────────────────────────────────────────────────
+
+/// « Un même visage ne peut être utilisé que par un seul personnage à la
+/// fois. » `nomNormalise` (minuscules, sans accents ni ponctuation) porte
+/// l'unicité et sert à la vérification en direct pendant la saisie.
+model VisagePris {
+  id           String @id @default(cuid())
+  /// Tel que saisi, pour l'affichage.
+  nomActeur    String
+  nomNormalise String @unique
+
+  /// Nul si le visage est réservé par l'administration sans élève associé.
+  eleveId String? @unique
+  eleve   Eleve?  @relation(fields: [eleveId], references: [id], onDelete: Cascade)
+
+  prisLe DateTime @default(now())
+
+  @@map("visages_pris")
+}
+
+// ─────────────────────────────────────────────────────────────
+//  Journal du membre
+// ─────────────────────────────────────────────────────────────
+
+/// Fil chronologique d'un membre : décisions d'administration sur son dossier,
+/// et modifications ultérieures de sa fiche ou de son accès.
+///
+/// Ancré sur le compte et non sur la fiche : un bannissement sanctionne le
+/// joueur. Sert à expliquer une décision (art. 8.2) et à permettre de la
+/// contester dans les quinze jours (art. 8.5).
+model JournalMembre {
+  id            String      @id @default(cuid())
+  utilisateurId String
+  utilisateur   Utilisateur @relation("JournalDuMembre", fields: [utilisateurId], references: [id], onDelete: Cascade)
+
+  type EvenementMembre
+
+  /// Valeurs avant/après, sérialisées en texte parce qu'un événement porte
+  /// selon les cas un enum, un entier ou rien. Nulles pour une soumission.
+  valeurAvant String?
+  valeurApres String?
+
+  /// Motif écrit par l'administration. Obligatoire pour un renvoi en
+  /// correction, un refus et un bannissement — contrainte portée par le
+  /// schéma Zod partagé, Postgres ne sachant pas la conditionner au type.
+  note String? @db.Text
+
+  /// Nul si l'auteur a été supprimé, ou si l'événement vient du joueur
+  /// lui-même (soumission du dossier).
+  parUtilisateurId String?
+  parUtilisateur   Utilisateur? @relation("DecisionsPrises", fields: [parUtilisateurId], references: [id], onDelete: SetNull)
+
+  creeLe DateTime @default(now())
+
+  @@index([utilisateurId, creeLe])
+  @@map("journal_membres")
+}
+
+enum EvenementMembre {
+  DOSSIER_SOUMIS
+  DOSSIER_ACCEPTE
+  DOSSIER_RENVOYE_EN_CORRECTION
+  DOSSIER_REFUSE
+  AGE_MODIFIE
+  FONCTION_MODIFIEE
+  ACCES_MODIFIE
+}
+
+// ─────────────────────────────────────────────────────────────
+//  Réservé — lot suivant (bible du lore, §4 et §5)
+// ─────────────────────────────────────────────────────────────
+
+enum Maison {
+  KALDRAFN
+  NATTORM
+  BRYGGELD
+  TIDEAL
+}
+
+enum BaguetteBois {
+  FRENE
+  IF
+  SORBIER
+  BOULEAU
+  CHENE_DES_TEMPETES
+}
+
+enum BaguetteCoeur {
+  PLUME_DE_CORBEAU
+  ECAILLE_ANGUILLE_ARGENTEE
+  NERF_LOUP_DES_FJORDS
+  GRIFFE_OURS_DES_CAVERNES
+  CRISTAL_DE_GLACE
+}
