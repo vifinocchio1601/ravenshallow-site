@@ -9,7 +9,9 @@
     "lint": "next lint",
     "test": "vitest run",
     "test:watch": "vitest",
-    "courriel:verifier": "node scripts/verifier-courriel.mjs"
+    "courriel:verifier": "node scripts/verifier-courriel.mjs",
+    "postinstall": "prisma generate",
+    "base:importer": "node scripts/importer-dossiers.mjs"
   },
   "dependencies": {
     "@node-rs/argon2": "^2.1.0",
