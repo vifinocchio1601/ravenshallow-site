@@ -17,6 +17,23 @@ export const TEXTES_ECOLE = {
     altDecor: "",
     accueil: "Le château dort encore. Voici ce qui t’attend.",
 
+    /**
+     * La note du nouvel arrivant. Elle disparaît d’elle-même une fois les
+     * deux lignes cochées — ce n’est pas un panneau permanent.
+     */
+    premiersPas: {
+      titre: "Vos premiers pas",
+      aide: "Deux choses à faire avant que le château ne s’ouvre en entier.",
+      baguette: "Passer chez Bjornstav, à Kaldvik, et choisir votre baguette",
+      ceremonie: "Vous présenter devant le Miroir de Brume",
+      /** La raison du verrou, écrite en clair — jamais un simple grisé. */
+      verrou: "Après la boutique",
+      /** Lus par les lecteurs d’écran, en tête de chaque ligne. */
+      etatFait: "Fait :",
+      etatAFaire: "À faire :",
+      etatVerrouille: "Verrouillé :",
+    },
+
     scenes: {
       titre: "Mes scènes en cours",
       aide: "Les scènes où c’est à toi d’écrire.",

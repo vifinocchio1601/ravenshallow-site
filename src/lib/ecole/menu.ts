@@ -22,6 +22,9 @@ export const ROUTES = {
   fiche: "/fiche",
   cours: "/cours",
   ecole: "/ecole",
+
+  // L’école, hors bandeau
+  ceremonie: "/ceremonie",
 } as const;
 
 export type EntreeMenu = {
@@ -33,14 +36,61 @@ export type EntreeMenu = {
    * ce qui est la règle voulue.
    */
   pendantBannissement?: true;
+  /**
+   * L’entrée est ouverte au nouvel arrivant, avant qu’il ait choisi sa
+   * baguette et rencontré le Miroir. Même règle que ci-dessus : absent =
+   * fermée. Une entrée ajoutée plus tard se rangera donc d’elle-même derrière
+   * la liste des premiers pas, sans que personne ait à y penser.
+   */
+  avantPremiersPas?: true;
 };
 
 export const ENTREES_MENU: readonly EntreeMenu[] = [
-  { href: ROUTES.bureau, libelle: "Mon bureau", pendantBannissement: true },
-  { href: ROUTES.fiche, libelle: "Ma fiche", pendantBannissement: true },
+  {
+    href: ROUTES.bureau,
+    libelle: "Mon bureau",
+    pendantBannissement: true,
+    avantPremiersPas: true,
+  },
+  {
+    href: ROUTES.fiche,
+    libelle: "Ma fiche",
+    pendantBannissement: true,
+    avantPremiersPas: true,
+  },
   { href: ROUTES.cours, libelle: "Les cours" },
   { href: ROUTES.ecole, libelle: "L’école" },
 ];
 
-/** Les chemins que le middleware doit garder. */
-export const PREFIXES_ECOLE = ENTREES_MENU.map((e) => e.href);
+/**
+ * Les routes de l’école qui n’ont **pas** d’entrée au bandeau.
+ *
+ * La Cérémonie du Miroir ne se range pas dans un menu : on y va une fois,
+ * depuis le bureau, et l’adresse se ferme derrière soi. Elle a pourtant
+ * besoin d’être gardée comme les autres — d’où cette liste, séparée de
+ * l’affichage mais lue par la même protection.
+ *
+ * Même règle que le bandeau : sans `pendantBannissement`, l’entrée est
+ * fermée au membre suspendu.
+ */
+export type RouteEcole = {
+  href: string;
+  pendantBannissement?: true;
+  avantPremiersPas?: true;
+};
+
+export const ROUTES_HORS_MENU: readonly RouteEcole[] = [
+  // La cérémonie est précisément l’un des premiers pas : elle s’ouvre avant
+  // qu’ils soient faits, et la page se referme d’elle-même une fois la
+  // répartition passée.
+  { href: ROUTES.ceremonie, avantPremiersPas: true },
+];
+
+/**
+ * Les chemins que le middleware doit garder : ceux du bandeau, et ceux qui
+ * n’y figurent pas. Une route oubliée ici ne serait plus gardée du tout.
+ */
+export const PREFIXES_ECOLE = [
+  ...ENTREES_MENU.map((e) => e.href),
+  ...ROUTES_HORS_MENU.map((r) => r.href),
+];

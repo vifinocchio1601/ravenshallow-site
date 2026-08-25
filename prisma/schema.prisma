@@ -1,10 +1,10 @@
 // Ravenshallow — schéma de la base.
 //
-// Périmètre de ce lot : le dossier d'admission (compte joueur + fiche élève),
-// le registre des visages, et la lecture des dossiers par l'administration.
-// La baguette (Bjornstav) et la répartition (Miroir de Brume) ne sont PAS
-// construites ici : seules leurs colonnes sont réservées, nullables, pour que
-// le lot suivant n'ait pas à migrer de nouveau.
+// Le dossier d'admission (compte joueur + fiche élève), le registre des
+// visages, la lecture des dossiers par l'administration, et la Cérémonie du
+// Miroir (répartition en maison).
+// La baguette (Bjornstav) n'est PAS construite : seules ses colonnes sont
+// réservées, nullables, pour que le lot suivant n'ait pas à migrer de nouveau.
 
 generator client {
   provider = "prisma-client-js"
@@ -174,13 +174,19 @@ model Eleve {
 
   visagePris VisagePris?
 
-  // ── Réservé au lot suivant : Bjornstav puis Miroir de Brume ──
+  // ── Réservé : la boutique Bjornstav ──
   // Volontairement nullable et non renseigné par ce lot.
   baguetteBois      BaguetteBois?
   baguetteCoeur     BaguetteCoeur?
   baguetteChoisieLe DateTime?
-  maison            Maison?
-  repartiLe         DateTime?
+
+  // ── Le Miroir de Brume — art. 11.2, définitif ──
+  /// La maison telle qu'elle s'affiche partout : bandeau, fiche, bureau.
+  /// Nulle tant que le Miroir n'a pas parlé. La trace de la cérémonie qui
+  /// l'a décidée vit à part, dans `CeremonieMiroir`.
+  maison    Maison?
+  repartiLe DateTime?
+  ceremonie CeremonieMiroir?
 
   creeLe DateTime @default(now())
   majLe  DateTime @updatedAt
@@ -227,6 +233,50 @@ enum StatutDossier {
   ACCEPTE
   A_CORRIGER
   REFUSE
+}
+
+// ─────────────────────────────────────────────────────────────
+//  La Cérémonie du Miroir — art. 11.1 et 11.2
+// ─────────────────────────────────────────────────────────────
+
+/// La nuit où le Miroir a lu un élève. Une par élève, jamais deux :
+/// `eleveId @unique` fait porter cette règle par la base elle-même, plutôt
+/// que par une condition qu'on pourrait un jour oublier d'écrire.
+///
+/// Ce que la ligne raconte, selon son état :
+///   absente                   — la cérémonie n'a jamais été ouverte
+///   présente, `closeLe` nulle — l'ordre des réponses est tiré, rien de plus
+///   `closeLe` renseignée      — le Miroir a parlé, `Eleve.maison` est écrite
+///
+/// La maison et sa date ne sont pas ici : elles vivent sur `Eleve`, relues à
+/// chaque page. Cette table-ci est la trace, gardée pour expliquer une
+/// répartition au joueur qui la conteste — jamais pour la rejouer (art. 11.2).
+model CeremonieMiroir {
+  id      String @id @default(cuid())
+  eleveId String @unique
+  eleve   Eleve  @relation(fields: [eleveId], references: [id], onDelete: Cascade)
+
+  /// L'ordre d'affichage des réponses, tiré côté serveur à la première
+  /// ouverture et jamais rebattu — sans quoi les joueurs s'entendraient sur
+  /// « prends toujours la dernière ». Cinq entrées, une par question, chacune
+  /// listant les identifiants dans l'ordre d'affichage : « q1c q1a q1d q1b ».
+  melange   String[]
+  ouverteLe DateTime @default(now())
+
+  /// Les cinq identifiants choisis, dans l'ordre des questions. C'est d'eux
+  /// que la maison se recalcule : le résultat doit rester reproductible, sans
+  /// quoi on ne pourrait rien répondre à un joueur qui conteste.
+  reponses String[] @default([])
+
+  /// Les points par maison, tels que comptés cette nuit-là. Recalculables
+  /// aujourd'hui — mais le jour où le barème bougerait, seule cette trace
+  /// dirait encore ce que l'élève a réellement obtenu.
+  points Json?
+
+  /// Renseignée à la révélation. C'est elle qui ferme la cérémonie.
+  closeLe DateTime?
+
+  @@map("ceremonies_miroir")
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -353,7 +403,7 @@ model TentativeConnexion {
 }
 
 // ─────────────────────────────────────────────────────────────
-//  Réservé — lot suivant (bible du lore, §4 et §5)
+//  Les quatre maisons (bible du lore, §4)
 // ─────────────────────────────────────────────────────────────
 
 enum Maison {
@@ -362,6 +412,10 @@ enum Maison {
   BRYGGELD
   TIDEAL
 }
+
+// ─────────────────────────────────────────────────────────────
+//  Réservé — la boutique Bjornstav (bible du lore, §5)
+// ─────────────────────────────────────────────────────────────
 
 enum BaguetteBois {
   FRENE

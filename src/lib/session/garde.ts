@@ -22,6 +22,11 @@ import { COOKIE_SESSION, lireSession } from "./session";
 
 export type CompteConnecte = EtatAcces & {
   id: string;
+  /**
+   * L’identifiant de la **fiche**, distinct de celui du compte. Nul si le
+   * compte n’a pas de fiche — un cas qui ne devrait pas exister.
+   */
+  eleveId: string | null;
   email: string;
   sessionVersion: number;
   jetonVersion: number;
@@ -48,6 +53,7 @@ export async function compteConnecte(): Promise<CompteConnecte | null> {
       banniJusquau: true,
       eleve: {
         select: {
+          id: true,
           statut: true,
           noteAdmin: true,
           prenomNom: true,
@@ -55,6 +61,7 @@ export async function compteConnecte(): Promise<CompteConnecte | null> {
           fonction: true,
           age: true,
           maison: true,
+          baguetteChoisieLe: true,
         },
       },
     },
@@ -68,6 +75,7 @@ export async function compteConnecte(): Promise<CompteConnecte | null> {
 
   return {
     id: compte.id,
+    eleveId: eleve?.id ?? null,
     email: compte.email,
     sessionVersion: compte.sessionVersion,
     jetonVersion: compte.jetonVersion,
@@ -78,6 +86,7 @@ export async function compteConnecte(): Promise<CompteConnecte | null> {
     // il est traité comme une demande jamais envoyée plutôt qu’ouvert.
     statut: (eleve?.statut ?? "BROUILLON") as StatutDossier,
     maison: eleve?.maison ?? null,
+    baguetteChoisieLe: eleve?.baguetteChoisieLe ?? null,
     prenomNom: eleve?.prenomNom ?? "",
     genre: (eleve?.genre ?? "AUTRE") as Genre,
     fonction: (eleve?.fonction ?? "PREMIERE_ANNEE") as Fonction,

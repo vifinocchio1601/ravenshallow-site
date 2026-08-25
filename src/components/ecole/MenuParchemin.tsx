@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation";
 import { useState } from "react";
 import BoutonDeconnexion from "@/components/connexion/BoutonDeconnexion";
 import { BLASON_ECOLE, blasonDe, NOMS_MAISON, REPARTITION_A_VENIR } from "@/lib/ecole/blasons";
-import { ENTREES_MENU, type EntreeMenu } from "@/lib/ecole/menu";
+import { ROUTES, type EntreeMenu } from "@/lib/ecole/menu";
 import { TEXTES_ECOLE } from "@/lib/ecole/constantes";
 
 /**
@@ -24,9 +24,16 @@ import { TEXTES_ECOLE } from "@/lib/ecole/constantes";
 export default function MenuParchemin({
   prenomNom,
   maison,
+  entrees,
 }: {
   prenomNom: string;
   maison: string | null;
+  /**
+   * Les entrées que ce compte peut ouvrir, calculées côté serveur par
+   * `entreesVisibles`. Le bandeau ne décide de rien : il affiche ce qu’on lui
+   * donne, et il peut n’en recevoir qu’une seule.
+   */
+  entrees: readonly EntreeMenu[];
 }) {
   const chemin = usePathname();
   const [ouvert, setOuvert] = useState(false);
@@ -54,7 +61,7 @@ export default function MenuParchemin({
           <div className="flex items-center justify-between gap-4">
             {/* — Le sceau de l’école — */}
             <Link
-              href={ENTREES_MENU[0].href}
+              href={ROUTES.bureau}
               className="flex shrink-0 items-center gap-3 rounded-sm"
             >
               <Image
@@ -71,7 +78,7 @@ export default function MenuParchemin({
 
             {/* — Les entrées, sur écran large — */}
             <ul className="hidden items-center gap-8 md:flex">
-              {ENTREES_MENU.map((entree) => (
+              {entrees.map((entree) => (
                 <li key={entree.href}>
                   <LienMenu entree={entree} courante={estCourante(entree)} />
                 </li>
@@ -123,7 +130,7 @@ export default function MenuParchemin({
           >
             <div>
               <ul className="mt-4 flex flex-col gap-1 border-t border-ink/15 pt-4">
-                {ENTREES_MENU.map((entree) => (
+                {entrees.map((entree) => (
                   <li key={entree.href}>
                     <LienMenu
                       entree={entree}

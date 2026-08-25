@@ -1,4 +1,11 @@
 import "server-only";
+import { TEXTES_ECOLE } from "@/lib/ecole/constantes";
+import { ROUTES } from "@/lib/ecole/menu";
+import {
+  aChoisiSaBaguette,
+  aFiniLesPremiersPas,
+  estReparti,
+} from "@/lib/session/acces";
 import type { CompteConnecte } from "@/lib/session/garde";
 
 /**
@@ -78,4 +85,57 @@ export async function progression(compte: CompteConnecte): Promise<Progression> 
 /** Lot « Grand Hall » — table à créer. */
 export async function annonces(): Promise<Annonce[]> {
   return [];
+}
+
+// ─────────────────────────────────────────────────────────────
+//  Les premiers pas du nouvel arrivant
+// ─────────────────────────────────────────────────────────────
+
+export type PremierPas = {
+  id: string;
+  libelle: string;
+  fait: boolean;
+  /** Nul quand la ligne n’est pas cliquable : déjà faite, ou verrouillée. */
+  href: string | null;
+  /** La raison du verrou, en clair. Nulle si la ligne est ouverte. */
+  verrou: string | null;
+};
+
+/**
+ * La liste des premiers pas, ou `null` quand il n’y a plus rien à faire.
+ *
+ * Rendre `null` plutôt qu’une liste vide est ce qui fait **disparaître** la
+ * note du bureau une fois les deux lignes cochées : elle n’a pas vocation à
+ * rester là comme un panneau de plus.
+ *
+ * L’ordre compte : la baguette d’abord, le Miroir ensuite. La seconde ligne
+ * reste verrouillée tant que la première n’est pas faite — affichée, mais
+ * avec sa raison écrite à côté plutôt qu’un simple grisé.
+ */
+export async function premiersPas(
+  compte: CompteConnecte,
+): Promise<PremierPas[] | null> {
+  if (aFiniLesPremiersPas(compte)) return null;
+
+  const t = TEXTES_ECOLE.bureau.premiersPas;
+  const baguette = aChoisiSaBaguette(compte);
+  const reparti = estReparti(compte);
+
+  return [
+    {
+      id: "baguette",
+      libelle: t.baguette,
+      fait: baguette,
+      // La boutique n’est pas construite : aucune adresse où envoyer.
+      href: null,
+      verrou: null,
+    },
+    {
+      id: "ceremonie",
+      libelle: t.ceremonie,
+      fait: reparti,
+      href: baguette && !reparti ? ROUTES.ceremonie : null,
+      verrou: baguette ? null : t.verrou,
+    },
+  ];
 }

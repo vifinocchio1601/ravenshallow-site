@@ -25,6 +25,24 @@ export type Fonction =
 
 export type Genre = "FEMININ" | "MASCULIN" | "AUTRE";
 
+/** Les quatre maisons (bible du lore, §4). Miroir de l’enum Prisma `Maison`. */
+export type Maison = "KALDRAFN" | "NATTORM" | "BRYGGELD" | "TIDEAL";
+
+/**
+ * Dans l’ordre de l’enum Prisma — donc de la fondation de l’école.
+ *
+ * Cet ordre est celui du parcours des maisons dans le calcul de la
+ * répartition. Il n’y départage jamais rien : deux maisons ne peuvent pas
+ * marquer le même nombre de points sur une même réponse, le barème donnant
+ * toujours 2 à l’une et 1 à l’autre.
+ */
+export const MAISONS: readonly Maison[] = [
+  "KALDRAFN",
+  "NATTORM",
+  "BRYGGELD",
+  "TIDEAL",
+];
+
 export const LIBELLES_STATUT_DOSSIER: Record<StatutDossier, string> = {
   BROUILLON: "Brouillon",
   EN_ATTENTE: "En attente de lecture",

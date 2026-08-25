@@ -38,6 +38,7 @@ const config: Config = {
       fontFamily: {
         display: ["var(--font-display)", "Cinzel", "Georgia", "serif"],
         body: ["var(--font-body)", "EB Garamond", "Georgia", "serif"],
+        manuscrit: ["var(--font-manuscrit)", "Bradley Hand", "cursive"],
       },
       maxWidth: {
         content: "72rem",

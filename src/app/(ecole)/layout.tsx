@@ -1,4 +1,5 @@
 import MenuParchemin from "@/components/ecole/MenuParchemin";
+import { entreesVisibles } from "@/lib/session/acces";
 import { exigerConnexion } from "@/lib/session/garde";
 
 /**
@@ -18,7 +19,15 @@ export default async function EcoleLayout({
 
   return (
     <div className="min-h-[100svh] bg-void">
-      <MenuParchemin prenomNom={compte.prenomNom} maison={compte.maison} />
+      {/* Le bandeau ne montre que ce que ce compte peut réellement ouvrir.
+          Un lien qui renvoie ailleurs sans rien expliquer est pire que pas de
+          lien du tout — et le nouvel arrivant a sa note pour savoir ce qui
+          lui manque. */}
+      <MenuParchemin
+        prenomNom={compte.prenomNom}
+        maison={compte.maison}
+        entrees={entreesVisibles(compte)}
+      />
       {children}
     </div>
   );

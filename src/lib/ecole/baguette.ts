@@ -6,6 +6,18 @@
  * jour où il y en aura une, sans rien changer d’autre.
  */
 
+/**
+ * **La bascule à retirer le jour où Bjornstav ouvrira, et la seule.**
+ *
+ * Tant qu’elle vaut `false`, l’étape de la baguette est réputée franchie :
+ * sans quoi la seconde ligne de la liste des premiers pas resterait
+ * verrouillée pour toujours, et personne n’atteindrait jamais le Miroir.
+ *
+ * Quand la boutique existera : passer à `true`, et `aChoisiSaBaguette` lira
+ * la vraie colonne `baguetteChoisieLe`. Rien d’autre à changer.
+ */
+export const BOUTIQUE_BJORNSTAV_OUVERTE = false;
+
 export const BOIS: Record<string, string> = {
   FRENE: "Frêne",
   IF: "If",

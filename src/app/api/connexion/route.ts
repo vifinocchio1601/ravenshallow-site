@@ -74,7 +74,7 @@ export async function POST(request: Request) {
         sessionVersion: true,
         statutAcces: true,
         banniJusquau: true,
-        eleve: { select: { statut: true, maison: true } },
+        eleve: { select: { statut: true, maison: true, baguetteChoisieLe: true } },
       },
     });
 
@@ -96,6 +96,7 @@ export async function POST(request: Request) {
       statutAcces: compte.statutAcces as StatutAcces,
       banniJusquau: compte.banniJusquau,
       maison: compte.eleve?.maison ?? null,
+      baguetteChoisieLe: compte.eleve?.baguetteChoisieLe ?? null,
     });
 
     const reponse = NextResponse.json({ ok: true, destination });

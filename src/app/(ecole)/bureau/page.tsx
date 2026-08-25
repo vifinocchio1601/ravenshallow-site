@@ -1,9 +1,11 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import Panneau from "@/components/ecole/Panneau";
+import PremiersPas from "@/components/ecole/PremiersPas";
 import {
   annonces,
   courrierNonLu,
+  premiersPas,
   progression,
   scenesEnCours,
 } from "@/lib/bureau/donnees";
@@ -32,11 +34,12 @@ export default async function BureauPage() {
 
   // Quatre sources, aucune n’existe encore : elles rendent des listes vides,
   // et les panneaux savent quoi en faire.
-  const [scenes, courrier, avancee, hall] = await Promise.all([
+  const [scenes, courrier, avancee, hall, pas] = await Promise.all([
     scenesEnCours(compte),
     courrierNonLu(compte),
     progression(compte),
     annonces(),
+    premiersPas(compte),
   ]);
 
   return (
@@ -72,6 +75,14 @@ export default async function BureauPage() {
         <p className="mt-3 max-w-[52ch] font-body leading-[1.8] text-parchment-dim">
           {t.accueil}
         </p>
+
+        {/* La note du nouvel arrivant, avant tout le reste : c’est ce qui
+            l’attend. Elle n’est là que tant qu’il reste un pas à faire. */}
+        {pas ? (
+          <div className="mt-9 max-w-[34rem]">
+            <PremiersPas pas={pas} />
+          </div>
+        ) : null}
 
         <div className="mt-10 grid gap-5 lg:grid-cols-2">
           {/* 1 — Ce qui attend une réponse passe en premier. */}

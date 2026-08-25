@@ -32,7 +32,7 @@ joueur, pas des choix d'implémentation. Ne pas les réécrire sans demander.
 
 ```bash
 npm run dev              # http://localhost:3000
-npm test                 # vitest, 87 tests
+npm test                 # vitest, 168 tests
 npm run lint
 npx tsc --noEmit
 npm run build            # à passer avant tout déploiement
@@ -57,14 +57,31 @@ ailleurs, l'y ajouter.
 | `lib/ecole/menu.ts` | les routes de l'école — le menu, la protection et les droits du membre suspendu s'en déduisent |
 | `lib/dossier/depot.ts` | l'accès au stockage — aiguille entre PostgreSQL et l'échafaudage JSON |
 | `lib/dossier/schema.ts` | la validation, partagée mot pour mot entre le formulaire et la route |
+| `lib/ceremonie/questionnaire.ts` | les cinq questions **et leur barème** — `server-only`, jamais expédié au client |
+| `lib/ceremonie/repartition.ts` | le calcul de la maison et le départage, reproductibles |
 
-**Le jour de la répartition**, la condition à modifier est
-`peutEntrerDansLEcole` — et elle seule. Les colonnes `maison`, `repartiLe`,
-`baguetteBois`, `baguetteCoeur`, `baguetteChoisieLe` existent déjà, vides.
+**L'accès se joue à deux étages**, tous deux dans `acces.ts` :
 
-**Ajouter une entrée au menu** = une ligne dans `ENTREES_MENU`. Une entrée est
-fermée au membre banni **sauf** si elle porte `pendantBannissement` : l'oubli
-va dans le sens de la fermeture.
+- `peutEntrerDansLEcole` — dossier accepté et accès non suspendu. Elle ouvre
+  la porte du château. **Ne pas y ajouter « et réparti »** : cela fermerait le
+  bureau au nouvel arrivant, donc la note qui l'envoie au Miroir.
+- `aFiniLesPremiersPas` — baguette choisie **et** réparti. Elle décide
+  jusqu'où l'on va. Le nouvel arrivant n'a que son bureau et sa fiche.
+
+**Ajouter une entrée au menu** = une ligne dans `ENTREES_MENU`. Deux drapeaux,
+et l'oubli de l'un comme de l'autre va dans le sens de la fermeture :
+
+- `pendantBannissement` — ouverte au membre suspendu
+- `avantPremiersPas` — ouverte au nouvel arrivant
+
+Une route de l'école **sans entrée au bandeau** se déclare dans
+`ROUTES_HORS_MENU` — c'est le cas de la Cérémonie. L'oublier, c'est la laisser
+sans garde côté middleware.
+
+**La bascule Bjornstav** est une constante unique,
+`BOUTIQUE_BJORNSTAV_OUVERTE` dans `lib/ecole/baguette.ts`. Tant qu'elle vaut
+`false`, l'étape de la baguette est réputée franchie. C'est la seule chose à
+retirer le jour où la boutique ouvrira.
 
 ---
 
@@ -136,6 +153,12 @@ pas les refaire. Un état ne se signale jamais par la seule couleur.
   les menus créés plus tard.
 - **Message d'échec unique et neutre** à la connexion, et réponse identique au
   formulaire « mot de passe oublié », adresse connue ou non.
+- **La maison se calcule côté serveur, et la cérémonie ne se joue qu'une
+  fois** (art. 11.2). Le barème ne quitte jamais le serveur ; la route ne
+  renvoie que le code de la maison, ni les points ni le départage. Le verrou
+  contre le rejeu est en base : `updateMany` conditionné à `maison: null`.
+- **La ligne de Nattorm affichée à la révélation parle du silence, pas de la
+  malédiction** (art. 11.4). Ne pas la réécrire en « maison maudite ».
 
 ---
 
@@ -162,6 +185,19 @@ effacement à l'aveugle.
 **Le dépôt vit dans Dropbox.** `node_modules` et `.next` y sont synchronisés en
 continu, ce qui a déjà corrompu un cache webpack.
 
+**La base Neon se met en veille.** Après quelques minutes sans requête, la
+formule gratuite suspend le calcul. La visite suivante doit le réveiller, et si
+le réveil dépasse le délai d'attente de Prisma (5 s), la page tombe sur
+`Can't reach database server at ep-….neon.tech:5432`. **Ce n'est pas une panne :
+recharger suffit.** Un `?connect_timeout=15` sur `DATABASE_URL` ferait
+patienter au lieu d'échouer, si la gêne revient.
+
+**Ne jamais lancer `npm run build` pendant que `npm run dev` tourne.** Les deux
+écrivent dans `.next` : le build périme le manifeste du serveur de
+développement, `main-app.js` part en 404 et **React cesse d'hydrater toute la
+page** — sans la moindre erreur explicite. Arrêter le serveur, construire,
+supprimer `.next`, relancer.
+
 **Images** — les blasons de `public/crests/` pèsent ~1 Mo pièce, servis via
 `next/image`. L'image du bureau a été convertie en JPEG (2,9 Mo → 573 Ko).
 
@@ -173,12 +209,13 @@ continu, ce qui a déjà corrompu un cache webpack.
 (recadrage 9:16, registre des visages, courriel de confirmation), zone
 d'administration (lecture des dossiers, liste des membres, journal),
 connexion, mot de passe oublié, protection des routes, bandeau-parchemin,
-Ma fiche, Mon bureau.
+Ma fiche, Mon bureau, **la Cérémonie du Miroir** (récit, brume, questionnaire,
+révélation, enregistrement) et la note des premiers pas sur le bureau.
 
-**Pas encore** : le Miroir de Brume (répartition), la boutique Bjornstav
-(baguettes), les scènes, la messagerie, les points et les annonces du Grand
-Hall. Les quatre panneaux du bureau lisent `lib/bureau/donnees.ts`, dont les
-fonctions rendent des listes vides — chaque lot en remplacera **une seule**.
+**Pas encore** : la boutique Bjornstav (baguettes), les scènes, la messagerie,
+les points et les annonces du Grand Hall. Les quatre panneaux du bureau lisent
+`lib/bureau/donnees.ts`, dont les fonctions rendent des listes vides — chaque
+lot en remplacera **une seule**.
 
 **Limite connue** : le format `prenomNom` refuse les prénoms composés
 (Jean-Luc) et les noms à apostrophe (O'Brien). `schema.test.ts:91-98` fige ces

@@ -1,4 +1,4 @@
-import { Cinzel, EB_Garamond } from "next/font/google";
+import { Cinzel, EB_Garamond, Kalam } from "next/font/google";
 
 /** Police d'affichage : titres, navigation, boutons, petits libellés. */
 export const cinzel = Cinzel({
@@ -14,5 +14,18 @@ export const ebGaramond = EB_Garamond({
   weight: ["400", "500", "600"],
   style: ["normal", "italic"],
   variable: "--font-body",
+  display: "swap",
+});
+
+/**
+ * Écriture à la main — la note épinglée sur le bureau, et elle seule.
+ *
+ * Elle ne porte jamais un état à elle toute seule : la case cochée et la
+ * raison d’un verrou restent écrites en clair à côté du texte manuscrit.
+ */
+export const kalam = Kalam({
+  subsets: ["latin"],
+  weight: ["400", "700"],
+  variable: "--font-manuscrit",
   display: "swap",
 });

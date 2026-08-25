@@ -408,3 +408,652 @@
 .parchemin__deroule > div {
   overflow: hidden;
 }
+
+/* ————————————————————————————————
+   La Cérémonie du Miroir
+
+   La brume est l'élément central de la page, et elle repose sur une idée :
+   une texture raccordable, posée en `mask-image` sur un simple aplat de
+   couleur. Ce n'est donc pas la texture qui est colorée, mais ce qu'elle
+   laisse voir — d'où le fait qu'une seule variable, `--brume-teinte`,
+   suffise à teindre toute la brume au moment de la révélation.
+
+   Trois nappes, à trois échelles et trois vitesses, dont une à contresens :
+   leurs cycles ne se recalent jamais, si bien qu'on ne voit pas la boucle.
+   ———————————————————————————————— */
+
+:root {
+  /* Blanc bleuté de la lune. Réécrite aux couleurs de la maison à la fin.
+     Composantes séparées par des ESPACES, et non par des virgules : c'est ce
+     qu'attend `rgb(var(--brume-teinte) / 0.62)`. Avec des virgules, la
+     déclaration devient invalide et la brume se peint en transparent. */
+  --brume-teinte: 214 228 242;
+}
+
+.ceremonie {
+  /* La colonne de texte, et tout ce qui doit passer devant la brume. */
+  position: relative;
+  z-index: 2;
+  margin: 0 auto;
+  max-width: 47rem;
+  padding: 0 clamp(1rem, 3vw, 2rem) 8rem;
+}
+
+/* — Les nappes — */
+
+.brume {
+  position: fixed;
+  /* Un peu de marge au-delà du cadre : le glissement au défilement remonte
+     la brume de 18 % de la hauteur d'écran au plus, et sans cette réserve on
+     verrait son bord franc apparaître en bas de page. */
+  inset: -25vh -5vw;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+  will-change: transform;
+}
+
+/*
+   La géométrie se déduit de la tuile, et c'est indispensable.
+
+   Pour qu'une boucle soit invisible, il faut translater d'un nombre ENTIER de
+   tuiles : le motif se retrouve alors superposé à lui-même, et le retour à
+   zéro ne se voit pas. Une fraction de tuile — même un cinquième — fait
+   sauter la brume à chaque rebouclage.
+
+   Translater d'une tuile entière suppose que l'élément déborde d'au moins une
+   tuile de chaque côté, faute de quoi son bord entrerait dans le champ en
+   cours de route. D'où ces dimensions calculées sur `--tuile` plutôt que
+   fixées en pourcentage : la réserve reste juste, du téléphone au grand
+   écran, sans une seule règle de média.
+*/
+.brume__nappe {
+  position: absolute;
+  top: calc(-1 * var(--tuile));
+  left: calc(-1 * var(--tuile));
+  width: calc(100% + 2 * var(--tuile));
+  height: calc(100% + 2 * var(--tuile));
+  background-color: rgb(var(--brume-teinte) / 0.62);
+  -webkit-mask-image: url("/ceremonie/brume-1.webp");
+  mask-image: url("/ceremonie/brume-1.webp");
+  -webkit-mask-repeat: repeat;
+  mask-repeat: repeat;
+  -webkit-mask-size: var(--tuile);
+  mask-size: var(--tuile);
+  mix-blend-mode: screen;
+  will-change: transform;
+  /* La teinte se fond en deux secondes et demie : la brume change de couleur
+     sans qu'on la voie basculer. */
+  transition: background-color 2.4s ease;
+}
+
+.brume__nappe--1 {
+  --tuile: 1180px;
+  filter: blur(9px);
+  opacity: 0.6;
+  animation: brume-derive 180s linear infinite;
+}
+
+.brume__nappe--2 {
+  --tuile: 760px;
+  -webkit-mask-image: url("/ceremonie/brume-2.webp");
+  mask-image: url("/ceremonie/brume-2.webp");
+  filter: blur(6px);
+  opacity: 0.42;
+  animation: brume-derive-inverse 116s linear infinite;
+}
+
+.brume__nappe--3 {
+  --tuile: 1600px;
+  filter: blur(16px);
+  opacity: 0.5;
+  animation: brume-derive-lente 270s linear infinite;
+}
+
+/* Trois échelles, trois vitesses, et la deuxième à contresens : les cycles
+   font 180, 116 et 270 secondes, si bien qu'ils ne se retrouvent jamais
+   ensemble au même point. C'est ce décalage qui empêche l'œil de trouver une
+   répétition, indépendamment du raccord de chaque nappe prise à part. */
+@keyframes brume-derive {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    transform: translate3d(calc(-1 * var(--tuile)), calc(-1 * var(--tuile)), 0);
+  }
+}
+
+@keyframes brume-derive-inverse {
+  from {
+    transform: translate3d(calc(-1 * var(--tuile)), calc(-1 * var(--tuile)), 0);
+  }
+  to {
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes brume-derive-lente {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    transform: translate3d(var(--tuile), var(--tuile), 0);
+  }
+}
+
+/* — Les nuées : des masses floues qui dérivent entre les nappes — */
+
+.brume__nuee {
+  position: absolute;
+  display: block;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle at 50% 50%,
+    rgb(var(--brume-teinte) / 0.5),
+    rgb(var(--brume-teinte) / 0.14) 45%,
+    transparent 72%
+  );
+  filter: blur(46px);
+  mix-blend-mode: screen;
+  opacity: 0.62;
+  transition:
+    background 2.4s ease,
+    opacity 2.4s ease;
+  animation: brume-nuee linear infinite alternate;
+}
+
+@keyframes brume-nuee {
+  from {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  to {
+    transform: translate3d(var(--dx), var(--dy), 0) scale(var(--echelle));
+  }
+}
+
+/* — La brume monte du sol : une nappe basse, plus dense — */
+
+.brume-sol {
+  position: fixed;
+  left: -10%;
+  right: -10%;
+  bottom: -14vh;
+  height: 52vh;
+  z-index: 0;
+  pointer-events: none;
+  mix-blend-mode: screen;
+  background: linear-gradient(
+    to top,
+    rgb(var(--brume-teinte) / 0.3),
+    rgb(var(--brume-teinte) / 0.1) 45%,
+    transparent
+  );
+  filter: blur(22px);
+  transition: background 2.4s ease;
+}
+
+/* — La lune, très haut, hors cadre — */
+
+.lune {
+  position: fixed;
+  top: -14vmin;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 52vmin;
+  height: 52vmin;
+  border-radius: 50%;
+  z-index: 0;
+  pointer-events: none;
+  background: radial-gradient(
+    circle at 50% 55%,
+    rgb(226 238 250 / 0.16),
+    rgb(200 220 240 / 0.05) 42%,
+    transparent 68%
+  );
+}
+
+/* — Grain et vignette, par-dessus la brume — */
+
+.grain-ceremonie {
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  opacity: 0.5;
+  mix-blend-mode: overlay;
+}
+
+.vignette-ceremonie {
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background: radial-gradient(
+    ellipse at 50% 30%,
+    transparent 30%,
+    rgb(3 5 8 / 0.75) 85%
+  );
+}
+
+/* — Le voile de lecture —
+   Sans lui, le texte clair devient illisible dès que la brume passe derrière.
+   Ses bords sont fondus pour qu'on ne voie jamais un rectangle : c'est une
+   zone d'ombre, pas un encadré. Sur téléphone, il couvre toute la largeur. */
+
+.voile-lecture {
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(58rem, 104%);
+  z-index: 1;
+  pointer-events: none;
+  transition: opacity 1.6s ease;
+  background: linear-gradient(
+    to right,
+    transparent 0%,
+    rgb(5 8 12 / 0.72) 9%,
+    rgb(5 8 12 / 0.9) 22%,
+    rgb(5 8 12 / 0.9) 78%,
+    rgb(5 8 12 / 0.72) 91%,
+    transparent 100%
+  );
+}
+
+/* — Le récit — */
+
+.recit {
+  margin: 0 auto;
+  max-width: 38rem;
+}
+
+.recit__narration {
+  font-style: italic;
+  color: var(--parchment-dim);
+  margin: 0 0 1.5rem;
+}
+
+/* La parole de la directrice : détachée, tenue par un filet cuivré. */
+.recit__parole {
+  font-weight: 600;
+  font-style: normal;
+  color: var(--parchment);
+  margin: 0 0 1.5rem;
+  padding-left: 1.4rem;
+  border-left: 1px solid rgb(201 123 61 / 0.5);
+}
+
+.recit__narration:first-of-type::first-letter {
+  font-family: var(--font-display), Georgia, serif;
+  font-style: normal;
+  float: left;
+  font-size: 4.1rem;
+  line-height: 0.82;
+  padding: 0.16em 0.16em 0 0;
+  color: var(--ember);
+}
+
+.filet-ceremonie {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin: 3.5rem 0;
+  color: var(--ember);
+  opacity: 0.55;
+}
+
+.filet-ceremonie::before,
+.filet-ceremonie::after {
+  content: "";
+  height: 1px;
+  flex: 1;
+  background: currentColor;
+}
+
+/* — Le questionnaire — */
+
+.question {
+  border: 0;
+  padding: 0;
+  margin: 0 0 2.6rem;
+  opacity: 0;
+  transform: translateY(14px);
+  transition:
+    opacity 0.9s ease,
+    transform 0.9s ease;
+}
+
+.question[data-visible="true"] {
+  opacity: 1;
+  transform: none;
+}
+
+.reponse input {
+  position: absolute;
+  opacity: 0;
+  width: 1px;
+  height: 1px;
+}
+
+.reponse label {
+  display: block;
+  cursor: pointer;
+  padding: 1rem 1.2rem;
+  background: rgb(16 24 33 / 0.88);
+  border: 1px solid rgb(142 160 179 / 0.2);
+  color: var(--parchment);
+  line-height: 1.6;
+  transition:
+    background 0.35s ease,
+    border-color 0.35s ease,
+    transform 0.35s ease;
+}
+
+.reponse label:hover {
+  background: rgb(30 42 55 / 0.94);
+  border-color: rgb(201 123 61 / 0.5);
+}
+
+/* Le focus vit sur la case radio, qui est invisible : on le reporte sur son
+   libellé, sans quoi la navigation au clavier se ferait à l'aveugle. */
+.reponse input:focus-visible + label {
+  outline: 2px solid var(--aurora-teal);
+  outline-offset: 3px;
+}
+
+/* Le choix ne se signale pas par la seule couleur : le libellé se décale,
+   son cadre s'allume, et un chevron apparaît en tête. */
+.reponse input:checked + label {
+  background: rgb(42 58 76 / 0.96);
+  border-color: rgb(201 123 61 / 0.85);
+  color: var(--parchment);
+  transform: translateX(5px);
+}
+
+.question[data-verrouillee="true"] .reponse label {
+  cursor: default;
+  opacity: 0.45;
+}
+
+.question[data-verrouillee="true"] .reponse input:checked + label {
+  opacity: 1;
+}
+
+/* — prefers-reduced-motion —
+   La brume s'immobilise mais reste présente : c'est le décor de la page, pas
+   une décoration. Les apparitions deviennent instantanées. */
+@media (prefers-reduced-motion: reduce) {
+  .brume__nappe,
+  .brume__nuee {
+    animation: none !important;
+  }
+
+  .question {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* ————————————————————————————————
+   La révélation
+
+   La brume prend la couleur de la maison, le blason monte du brouillard, le
+   nom se pose, puis la ligne. Chaque élément a son propre retard : c'est
+   l'échelonnement qui fait la cérémonie, pas la durée de chaque fondu.
+   ———————————————————————————————— */
+
+/* Toute la brume de la page vire à la couleur de la maison : `--brume-teinte`
+   est réécrite sur la racine, et les nappes la suivent par transition. */
+:root[data-revelation="true"] body {
+  overflow: hidden;
+}
+
+/* Le voile de lecture n'a plus lieu d'être : il n'y a plus de colonne à lire. */
+:root[data-revelation="true"] .voile-lecture {
+  opacity: 0;
+}
+
+.revelation {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: grid;
+  place-items: center;
+  background: rgb(4 6 9 / 0.94);
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    opacity 1.6s ease,
+    visibility 1.6s;
+}
+
+.revelation[data-ouverte="true"] {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* Les nappes de la révélation reprennent la mécanique de celles du fond —
+   mêmes classes, même raccord — mais peintes aux couleurs de la maison. */
+.revelation .brume__nappe {
+  background-color: var(--halo-1);
+  opacity: 0;
+  transition: opacity 2.6s ease;
+}
+
+.revelation[data-ouverte="true"] .brume__nappe--1 {
+  opacity: 0.62;
+}
+.revelation[data-ouverte="true"] .brume__nappe--2 {
+  opacity: 0.44;
+}
+.revelation[data-ouverte="true"] .brume__nappe--3 {
+  opacity: 0.52;
+}
+
+.revelation .brume__nuee {
+  background: radial-gradient(
+    circle,
+    var(--halo-1) 0%,
+    var(--halo-2) 40%,
+    transparent 72%
+  );
+  filter: blur(60px);
+  opacity: 0;
+  transition: opacity 2.6s ease;
+}
+
+.revelation[data-ouverte="true"] .brume__nuee {
+  opacity: 0.46;
+}
+
+.revelation__contenu {
+  position: relative;
+  text-align: center;
+  padding: clamp(1.6rem, 5vw, 3rem);
+  max-width: 32rem;
+}
+
+/* Un puits d'ombre derrière le texte : sans lui, le nom de la maison se perd
+   dans sa propre brume, qui est claire par construction. */
+.revelation__contenu::before {
+  content: "";
+  position: absolute;
+  inset: -14% -10%;
+  z-index: -1;
+  background: radial-gradient(
+    ellipse at 50% 50%,
+    rgb(4 6 9 / 0.9) 0%,
+    rgb(4 6 9 / 0.78) 52%,
+    transparent 78%
+  );
+}
+
+/* Le blason monte du brouillard : il se déflouté en grandissant. */
+.revelation__blason {
+  width: min(46vw, 240px);
+  height: auto;
+  margin: 0 auto 1.8rem;
+  opacity: 0;
+  transform: scale(0.86);
+  filter: blur(16px);
+  transition:
+    opacity 1.8s ease 1.1s,
+    transform 2.2s cubic-bezier(0.2, 0.7, 0.2, 1) 1.1s,
+    filter 1.8s ease 1.1s;
+}
+
+.revelation[data-ouverte="true"] .revelation__blason {
+  opacity: 1;
+  transform: none;
+  filter: none;
+}
+
+.revelation__maison {
+  font-family: var(--font-display), Georgia, serif;
+  font-size: clamp(2.1rem, 8vw, 3.4rem);
+  letter-spacing: 0.2em;
+  margin: 0 0 0.9rem;
+  color: var(--parchment);
+  opacity: 0;
+  transform: translateY(12px);
+  transition:
+    opacity 1.6s ease 1.9s,
+    transform 1.6s ease 1.9s;
+}
+
+.revelation[data-ouverte="true"] .revelation__maison {
+  opacity: 1;
+  transform: none;
+}
+
+.revelation__ligne,
+.revelation__action {
+  opacity: 0;
+  transition: opacity 1.6s ease 2.5s;
+}
+
+.revelation[data-ouverte="true"] .revelation__ligne,
+.revelation[data-ouverte="true"] .revelation__action {
+  opacity: 1;
+}
+
+.revelation__ligne {
+  font-style: italic;
+  color: var(--parchment-dim);
+  margin: 0 0 2.6rem;
+  line-height: 1.85;
+}
+
+/* — Mouvement réduit —
+   La règle globale ramène déjà les durées à l'instantané, mais elle ne touche
+   pas aux RETARDS : sans cette annulation, la révélation resterait invisible
+   deux secondes et demie avant d'apparaître d'un coup. */
+@media (prefers-reduced-motion: reduce) {
+  .revelation,
+  .revelation__blason,
+  .revelation__maison,
+  .revelation__ligne,
+  .revelation__action,
+  .revelation .brume__nappe,
+  .revelation .brume__nuee {
+    transition-delay: 0s !important;
+  }
+
+  .revelation__blason {
+    filter: none;
+    transform: none;
+  }
+
+  .revelation__maison {
+    transform: none;
+  }
+}
+
+/* ————————————————————————————————
+   La note des premiers pas
+
+   Un bout de parchemin posé sur le bureau, volontairement de travers et
+   volontairement clair au milieu des panneaux sombres : ce n'est pas un
+   panneau de plus, c'est une note qu'on a laissée là, et qui disparaîtra.
+   ———————————————————————————————— */
+
+.note-parchemin {
+  position: relative;
+  color: var(--ink);
+  transform: rotate(-0.7deg);
+  background-image:
+    /* fibres du papier */
+    repeating-linear-gradient(
+      90deg,
+      rgb(43 35 24 / 0.035) 0 1px,
+      transparent 1px 4px
+    ),
+    /* une trace d'usure vers le bas, comme une feuille manipulée */
+    linear-gradient(
+      180deg,
+      rgb(43 35 24 / 0.05) 0%,
+      transparent 14%,
+      transparent 84%,
+      rgb(43 35 24 / 0.14) 100%
+    ),
+    linear-gradient(96deg, #cabb9d 0%, #e2d8bd 42%, #ded2b4 100%);
+  box-shadow: 0 18px 40px -22px rgb(0 0 0 / 0.95);
+}
+
+/* Le ruban de gomme qui la tient au bureau, en haut à gauche. */
+.note-parchemin::before {
+  content: "";
+  position: absolute;
+  top: -0.55rem;
+  left: 1.6rem;
+  width: 3.4rem;
+  height: 1.1rem;
+  transform: rotate(-4deg);
+  background: rgb(233 225 205 / 0.34);
+  box-shadow: 0 2px 6px -3px rgb(0 0 0 / 0.8);
+}
+
+.note-parchemin__ligne {
+  font-family: var(--font-manuscrit), "Bradley Hand", cursive;
+  font-size: 1.06rem;
+  line-height: 1.5;
+}
+
+/* La case, dessinée plutôt que posée en caractère : un « ☐ » ne se rend pas
+   de la même façon d'une police à l'autre, et disparaît sur certaines. */
+.note-parchemin__case {
+  flex: none;
+  width: 1.15rem;
+  height: 1.15rem;
+  margin-top: 0.15rem;
+  display: grid;
+  place-items: center;
+  border: 1.5px solid rgb(43 35 24 / 0.55);
+  border-radius: 2px;
+  font-family: var(--font-manuscrit), "Bradley Hand", cursive;
+  font-size: 1.05rem;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--ink);
+}
+
+/* Ligne faite : la case porte sa coche, et le texte est biffé. Deux signes,
+   jamais la seule couleur. */
+.note-parchemin__ligne[data-etat="fait"] .note-parchemin__texte {
+  text-decoration: line-through;
+  text-decoration-thickness: 1.5px;
+  opacity: 0.62;
+}
+
+/* Ligne verrouillée : atténuée, mais sa raison est écrite juste à côté. */
+.note-parchemin__ligne[data-etat="verrouille"] {
+  opacity: 0.5;
+}
+
+.note-parchemin__raison {
+  font-family: var(--font-body), Georgia, serif;
+  font-style: italic;
+  font-size: 0.86rem;
+  opacity: 0.85;
+}

@@ -15,23 +15,36 @@
  */
 
 import type { StatutAcces, StatutDossier } from "@/lib/dossier/etats";
-import { ENTREES_MENU, ROUTES } from "@/lib/ecole/menu";
+import { BOUTIQUE_BJORNSTAV_OUVERTE } from "@/lib/ecole/baguette";
+import {
+  ENTREES_MENU,
+  ROUTES,
+  ROUTES_HORS_MENU,
+  type EntreeMenu,
+} from "@/lib/ecole/menu";
 
 /** Le strict nécessaire pour décider — pas la fiche entière. */
 export type EtatAcces = {
   statut: StatutDossier;
   statutAcces: StatutAcces;
   banniJusquau: Date | string | null;
-  /** Réservé : la répartition n’existe pas encore. */
+  /** La maison, ou `null` tant que le Miroir n’a pas parlé. */
   maison: string | null;
+  /** Nulle tant que la baguette n’a pas été choisie chez Bjornstav. */
+  baguetteChoisieLe: Date | string | null;
 };
 
 /**
  * **La condition d’entrée dans l’école.**
  *
- * Le jour où le Miroir de Brume et la boutique Bjornstav existeront, c’est
- * ici — et nulle part ailleurs — qu’on ajoutera « et réparti ». Les colonnes
- * `maison` et `baguetteBois` attendent déjà en base.
+ * Elle ne dit pas « réparti », et c’est délibéré : l’accès se joue à deux
+ * étages. Celui-ci ouvre la porte du château à tout dossier accepté et non
+ * suspendu — le nouvel arrivant y trouve son bureau, et sur ce bureau la
+ * liste de ce qu’il lui reste à faire. Le second étage, `estReparti`, décide
+ * ensuite jusqu’où il va.
+ *
+ * Ajouter « et réparti » ici fermerait le bureau au nouvel arrivant, donc la
+ * liste qui l’envoie devant le Miroir : il ne pourrait plus jamais y aller.
  */
 export function peutEntrerDansLEcole(compte: EtatAcces): boolean {
   return compte.statut === "ACCEPTE" && compte.statutAcces === "VALIDE";
@@ -40,6 +53,41 @@ export function peutEntrerDansLEcole(compte: EtatAcces): boolean {
 /** Dossier accepté, mais accès suspendu : le bureau et la fiche, rien d’autre. */
 export function estBanni(compte: EtatAcces): boolean {
   return compte.statut === "ACCEPTE" && compte.statutAcces === "EN_BANNISSEMENT";
+}
+
+/**
+ * Le Miroir a-t-il parlé ?
+ *
+ * C’est la maison qui fait foi, et non `repartiLe` : elle est ce que le site
+ * affiche partout, et une date sans maison ne voudrait rien dire. La
+ * répartition est définitive (art. 11.2) — une fois vraie, cette réponse ne
+ * redevient jamais fausse.
+ */
+export function estReparti(compte: EtatAcces): boolean {
+  return compte.maison !== null;
+}
+
+/**
+ * La baguette est-elle choisie ?
+ *
+ * Tant que la boutique n’existe pas, la réponse est oui pour tout le monde —
+ * voir `BOUTIQUE_BJORNSTAV_OUVERTE`, la seule bascule à retirer le jour où
+ * elle ouvrira.
+ */
+export function aChoisiSaBaguette(compte: EtatAcces): boolean {
+  if (!BOUTIQUE_BJORNSTAV_OUVERTE) return true;
+  return compte.baguetteChoisieLe !== null;
+}
+
+/**
+ * **Le second étage de l’accès.**
+ *
+ * `peutEntrerDansLEcole` ouvre la porte du château ; celui-ci décide jusqu’où
+ * l’on va. Le nouvel arrivant a son bureau et sa fiche, et rien d’autre, tant
+ * qu’il n’a pas franchi ses deux premiers pas : la baguette, puis le Miroir.
+ */
+export function aFiniLesPremiersPas(compte: EtatAcces): boolean {
+  return aChoisiSaBaguette(compte) && estReparti(compte);
 }
 
 /**
@@ -78,19 +126,34 @@ export function destinationApres(compte: EtatAcces): string {
 /**
  * Ce compte peut-il ouvrir ce chemin de l’école ?
  *
- * La réponse se déduit du menu : une entrée est fermée pendant un
- * bannissement **sauf** si elle porte `pendantBannissement`. Toute entrée
- * ajoutée plus tard sera donc interdite au membre banni par défaut — ce qui
- * est le comportement voulu, et qu’on ne risque pas d’oublier.
+ * Deux états restreignent l’accès, pour des raisons opposées : le membre
+ * suspendu, à qui l’on a fermé les portes, et le nouvel arrivant, qui ne les
+ * a pas encore ouvertes. Les deux se déclarent de la même façon — par un
+ * drapeau sur l’entrée — et **leur absence vaut fermeture** dans les deux
+ * cas. Une entrée ajoutée plus tard sera donc interdite à l’un comme à
+ * l’autre par défaut, ce qui est la règle voulue et qu’on ne risque pas
+ * d’oublier.
  */
 export function routeAutorisee(compte: EtatAcces, chemin: string): boolean {
-  const entree = ENTREES_MENU.find(
+  const entree = [...ENTREES_MENU, ...ROUTES_HORS_MENU].find(
     (e) => chemin === e.href || chemin.startsWith(`${e.href}/`),
   );
-  // Chemin hors menu : on ne l’ouvre pas sur une supposition.
-  if (!entree) return peutEntrerDansLEcole(compte);
 
-  if (peutEntrerDansLEcole(compte)) return true;
+  // Chemin inconnu des deux listes : on ne l’ouvre pas sur une supposition.
+  if (!entree) {
+    return peutEntrerDansLEcole(compte) && aFiniLesPremiersPas(compte);
+  }
+
+  // Le bannissement passe avant tout le reste : un membre suspendu garde son
+  // bureau et sa fiche, réparti ou non.
   if (estBanni(compte)) return entree.pendantBannissement === true;
-  return false;
+
+  if (!peutEntrerDansLEcole(compte)) return false;
+  if (aFiniLesPremiersPas(compte)) return true;
+  return entree.avantPremiersPas === true;
+}
+
+/** Les entrées du bandeau que ce compte peut réellement ouvrir. */
+export function entreesVisibles(compte: EtatAcces): readonly EntreeMenu[] {
+  return ENTREES_MENU.filter((entree) => routeAutorisee(compte, entree.href));
 }
