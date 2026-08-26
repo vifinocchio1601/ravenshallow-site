@@ -10,6 +10,7 @@ import { TEXTES_CORBEAUX } from "@/lib/corbeaux/constantes";
 import { heureDe, jourDe, journeeDe } from "@/lib/corbeaux/dates";
 import type { CorbeauAffiche, FilCharge } from "@/lib/corbeaux/depot";
 import { ROUTES } from "@/lib/ecole/menu";
+import { signalerLectureCorbeaux } from "./useNonLus";
 import { useRafraichissement } from "./useRafraichissement";
 
 /**
@@ -92,7 +93,11 @@ export default function Fil({
   // pastille du bandeau sans attendre le rechargement de la page.
   useEffect(() => {
     if (!conversationId) return;
-    void fetch(`/api/corbeaux/${conversationId}/lu`, { method: "POST" });
+    // On prévient le bandeau une fois la lecture inscrite : sa pastille
+    // s'éteint à l'instant, sans attendre le prochain tour de la minuterie.
+    void fetch(`/api/corbeaux/${conversationId}/lu`, { method: "POST" }).then(
+      () => signalerLectureCorbeaux(),
+    );
   }, [conversationId, corbeaux.length]);
 
   // ── Le passé, en remontant ──
@@ -252,7 +257,8 @@ export default function Fil({
               // Le fil du staff ne se signale pas et ne se retire pas : ce
               // n’est pas une conversation entre joueurs.
               avecActions={!avecAdministration}
-              onRetire={() =>
+              onRetire={() => {
+                signalerLectureCorbeaux();
                 setFil((precedent) =>
                   precedent
                     ? {
@@ -262,8 +268,8 @@ export default function Fil({
                         ),
                       }
                     : precedent,
-                )
-              }
+                );
+              }}
             />
           ))}
         </ol>

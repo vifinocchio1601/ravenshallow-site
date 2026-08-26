@@ -16,5 +16,19 @@ import base from "./vitest.config.mts";
  */
 export default {
   ...base,
-  test: { ...base.test, include: ["src/lib/corbeaux/en-base.essai.ts"] },
+  test: {
+    ...base.test,
+    include: ["src/lib/corbeaux/en-base.essai.ts"],
+    /**
+     * Vingt secondes au lieu de cinq.
+     *
+     * La base Neon se met en veille après quelques minutes sans requête, et le
+     * réveil prend plusieurs secondes. Au délai par défaut, les premiers essais
+     * échouaient une fois sur deux avec un « Test timed out » qui ne disait
+     * rien de la cause — un faux échec est pire qu'un essai lent, parce qu'on
+     * finit par cesser de le lire.
+     */
+    testTimeout: 20_000,
+    hookTimeout: 20_000,
+  },
 };

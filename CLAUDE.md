@@ -57,7 +57,13 @@ se bloquer, se chercher, puis efface ce qu'il a écrit — conversations
 comprises, sans quoi celles dont les deux comptes disparaissent resteraient
 orphelines. Son ménage vise `essai.*` **et** `.invalid` : la première version
 n'avait que la seconde condition, et emportait les comptes de démonstration
-créés à côté.
+créés à côté. Son délai est porté à vingt secondes — au défaut de cinq, le
+réveil de Neon faisait échouer les premiers essais sous un « Test timed out »
+qui ne disait rien de la cause.
+
+⚠️ **La base porte maintenant de vraies conversations**, entre les comptes du
+joueur. Tout script de ménage doit viser `@ravenshallow.invalid` et rien
+d'autre — et surtout ne jamais commencer par un effacement large.
 
 `.env.local` porte cinq variables : `ADMIN_PASSWORD`, `AUTH_SECRET`,
 `MAIL_EXPEDITEUR`, `MAIL_APP_PASSWORD`, `DATABASE_URL`. Les mêmes existent sur
@@ -334,6 +340,27 @@ introduisant la faute** — chacun tombe.
 Si un besoin d'accès plus large se présente un jour, **c'est une décision du
 joueur**, pas un ajout de commodité. Le dire au lieu de l'écrire.
 
+**Le compteur du bandeau vit par lui-même, et il le faut.** Un layout d'App
+Router n'est pas rendu à nouveau quand on navigue entre deux pages du même
+segment — c'est ce qui le rend rapide, et c'est aussi ce qui figeait la
+pastille sur la valeur du premier chargement : on lisait ses corbeaux, elle
+restait là. `useNonLus` la tient à jour de deux façons — l'**événement**
+`ravenshallow:corbeaux-lus`, pour l'immédiat, et l'interrogation périodique,
+pour ce qui arrive. Un événement de fenêtre plutôt qu'un contexte React :
+le bandeau vit dans un layout, les fils dans des pages, et les deux ne
+partagent aucun arbre où poser un fournisseur.
+
+`/api/corbeaux/non-lus` existe pour ça, à côté de `/api/corbeaux` qui rend le
+même nombre : celle-là rend aussi les extraits de trente fils, et le bandeau
+est sur **toutes** les pages. Des fragments de conversations n'ont pas à
+traverser le réseau pour afficher un chiffre.
+
+**Le compteur ne promet que ce qui est ouvrable.** `compterNonLus` filtre sur
+la portée, comme `listerConversations` : un membre suspendu qui verrait « 3 »
+sans rien trouver derrière serait plus mal servi que sans pastille du tout.
+Les deux requêtes doivent s'accorder — sinon le bandeau et la page se
+contredisent à l'écran.
+
 **Le rafraîchissement est une interrogation périodique, et rien d'autre.**
 `useRafraichissement` : quinze secondes, **arrêt quand l'onglet est caché**,
 rattrapage au retour, jamais deux appels en même temps. Pas de WebSocket —
@@ -580,6 +607,11 @@ côté et « 01:40 aujourd'hui » de l'autre. Tout ce qui affiche une date porte
 donc `<time dateTime={iso}>` et `suppressHydrationWarning` — l'instant voyage
 en ISO, et c'est la mise en forme du navigateur qui gagne, la seule juste pour
 la personne qui lit.
+
+**Un libellé de bandeau sur deux lignes se cale à gauche par défaut.** « MON /
+BUREAU », « LES / CORBEAUX » : il faut `text-center` sur le libellé pour que
+les deux mots s'alignent l'un sous l'autre. Le déroulé de téléphone, lui, est
+une liste verticale et reste au fer à gauche.
 
 **La lettrine se recopie sur tous les blocs si on l'y laisse.** La règle est
 écrite `.recit > .recit__narration:first-of-type::first-letter` : sans le

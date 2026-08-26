@@ -344,7 +344,24 @@ async function compterNonLusParConversation(
  * rien d’antérieur au moment où j’ai retiré le fil de ma vue.
  */
 export async function compterNonLus(compte: PourLesCorbeaux): Promise<number> {
-  if (porteeDeLaTour(compte) === "RIEN") return 0;
+  const portee = porteeDeLaTour(compte);
+  if (portee === "RIEN") return 0;
+
+  /**
+   * **Le compteur ne promet que ce qui est ouvrable.**
+   *
+   * Un membre suspendu ne voit que le fil de l’administration : compter aussi
+   * les corbeaux de ses conversations entre joueurs lui afficherait un « 3 »
+   * derrière lequel il ne trouverait rien. Une pastille qui envoie chercher ce
+   * qu’on ne peut pas atteindre est pire que pas de pastille du tout.
+   *
+   * La même règle que `listerConversations`, dite en SQL — les deux doivent
+   * s’accorder, sinon le bandeau et la page se contredisent à l’écran.
+   */
+  const seulementAdministration =
+    portee === "ADMINISTRATION_SEULE"
+      ? Prisma.sql`AND c."type" = 'AVEC_ADMINISTRATION'`
+      : Prisma.empty;
 
   const lignes = await prisma.$queryRaw<{ total: bigint }[]>(Prisma.sql`
     SELECT COUNT(*)::bigint AS total
@@ -352,6 +369,7 @@ export async function compterNonLus(compte: PourLesCorbeaux): Promise<number> {
     JOIN "participations" p
       ON p."conversationId" = m."conversationId"
      AND p."utilisateurId" = ${compte.id}
+    JOIN "conversations" c ON c."id" = m."conversationId"
     WHERE m."auteurId" IS DISTINCT FROM ${compte.id}
       AND (p."luJusquau" IS NULL OR m."envoyeLe" > p."luJusquau")
       AND (p."masqueeLe" IS NULL OR m."envoyeLe" > p."masqueeLe")
@@ -359,6 +377,7 @@ export async function compterNonLus(compte: PourLesCorbeaux): Promise<number> {
         SELECT 1 FROM "messages_masques" mm
         WHERE mm."messageId" = m."id" AND mm."utilisateurId" = ${compte.id}
       )
+      ${seulementAdministration}
   `);
 
   return Number(lignes[0]?.total ?? 0);

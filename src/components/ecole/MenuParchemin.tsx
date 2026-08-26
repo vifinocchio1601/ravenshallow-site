@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 import BoutonDeconnexion from "@/components/connexion/BoutonDeconnexion";
+import { useNonLus } from "@/components/corbeaux/useNonLus";
 import { BLASON_ECOLE } from "@/lib/ecole/blasons";
 import { ROUTES, type EntreeMenu } from "@/lib/ecole/menu";
 import { TEXTES_CORBEAUX } from "@/lib/corbeaux/constantes";
@@ -57,6 +58,21 @@ export default function MenuParchemin({
   const chemin = usePathname();
   const [ouvert, setOuvert] = useState(false);
 
+  /**
+   * Le compteur se tient à jour tout seul.
+   *
+   * Un layout d’App Router n’est pas rendu à nouveau quand on navigue entre
+   * deux pages du même segment — c’est ce qui le rend rapide, et c’est aussi
+   * ce qui figeait la pastille sur la valeur du premier chargement : on lisait
+   * ses corbeaux, elle restait là. Elle vit donc par elle-même désormais, et
+   * s’éteint à l’instant où l’on lit.
+   */
+  const nonLus = useNonLus(compteurs[ROUTES.corbeaux] ?? 0);
+  const compteursVivants: Readonly<Record<string, number>> = {
+    ...compteurs,
+    [ROUTES.corbeaux]: nonLus,
+  };
+
   const estCourante = (entree: EntreeMenu) =>
     chemin === entree.href || chemin.startsWith(`${entree.href}/`);
 
@@ -99,7 +115,7 @@ export default function MenuParchemin({
                   <LienMenu
                     entree={entree}
                     courante={estCourante(entree)}
-                    compte={compteurs[entree.href] ?? 0}
+                    compte={compteursVivants[entree.href] ?? 0}
                   />
                 </li>
               ))}
@@ -157,7 +173,7 @@ export default function MenuParchemin({
                     <LienMenu
                       entree={entree}
                       courante={estCourante(entree)}
-                      compte={compteurs[entree.href] ?? 0}
+                      compte={compteursVivants[entree.href] ?? 0}
                       bloc
                       onClick={() => setOuvert(false)}
                     />
@@ -236,12 +252,15 @@ function LienMenu({
       >
         ◆
       </span>
+      {/* `text-center` : les entrées du bandeau tiennent sur deux lignes —
+          « MON / BUREAU », « LES / CORBEAUX » —, et les deux mots doivent
+          s’aligner l’un sous l’autre plutôt que de se caler à gauche.
+          Le déroulé de téléphone, lui, est une liste verticale : le texte y
+          reste au fer à gauche, comme n’importe quelle liste de liens. */}
       <span
-        className={
-          courante
-            ? "border-b border-ink/70 pb-0.5"
-            : "border-b border-transparent pb-0.5"
-        }
+        className={`pb-0.5 ${bloc ? "text-left" : "text-center"} ${
+          courante ? "border-b border-ink/70" : "border-b border-transparent"
+        }`}
       >
         {entree.libelle}
       </span>

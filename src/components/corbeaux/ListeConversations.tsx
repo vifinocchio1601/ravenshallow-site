@@ -7,6 +7,7 @@ import { TEXTES_CORBEAUX } from "@/lib/corbeaux/constantes";
 import { quandDansLaListe } from "@/lib/corbeaux/dates";
 import type { ResumeConversation } from "@/lib/corbeaux/depot";
 import { ROUTES } from "@/lib/ecole/menu";
+import { signalerLectureCorbeaux } from "./useNonLus";
 import { useRafraichissement } from "./useRafraichissement";
 
 /**
@@ -33,6 +34,9 @@ export default function ListeConversations({
     if (!reponse.ok) return;
     const lu = (await reponse.json()) as { conversations: ResumeConversation[] };
     setConversations(lu.conversations);
+    // Cette page-ci vient d'apprendre ce qui a bougé : autant que le bandeau
+    // le sache en même temps qu'elle, plutôt qu'au tour suivant.
+    signalerLectureCorbeaux();
   });
 
   if (conversations.length === 0) {

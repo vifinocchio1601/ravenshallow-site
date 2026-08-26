@@ -255,6 +255,37 @@ describe("le fil de l’administration", () => {
     expect(fils).toHaveLength(1);
     expect(fils[0].avecAdministration).toBe(true);
   });
+
+  /**
+   * **Le compteur du bandeau doit dire la même chose que la page.**
+   *
+   * Un membre suspendu ne voit que le fil du staff : lui compter aussi les
+   * corbeaux de ses conversations entre joueurs afficherait une pastille
+   * derrière laquelle il ne trouverait rien. Une pastille qui envoie chercher
+   * ce qu'on ne peut pas atteindre est pire que pas de pastille du tout.
+   */
+  it("le compteur d'un suspendu ne compte que le fil du staff", async () => {
+    const suspendue = { ...alice, statutAcces: "EN_BANNISSEMENT" as const };
+
+    // Quelqu'un lui écrit pendant sa suspension : elle ne doit rien en voir.
+    // Un tiers, et non Bob : à ce point de l'essai, Bob a bloqué Alice, et son
+    // corbeau ne partirait pas — le test aurait été vert pour la mauvaise
+    // raison.
+    const camarade = await creer("Camarade Essai", "camarade");
+    const envoi = await envoyerCorbeau(camarade, { membreId: alice.id }, "Tu reviens quand ?");
+    expect(envoi.envoye).toBe(true);
+
+    const filsVisibles = await listerConversations(suspendue);
+    const totalVisible = filsVisibles.reduce((n, f) => n + f.nonLus, 0);
+
+    // Le bandeau et la page s'accordent : ni l'un ni l'autre ne promet ce
+    // corbeau-là.
+    expect(await compterNonLus(suspendue)).toBe(totalVisible);
+    expect(filsVisibles.every((f) => f.avecAdministration)).toBe(true);
+
+    // Une fois l'accès rétabli, il est bien là — rien n'a été perdu.
+    expect(await compterNonLus(alice)).toBeGreaterThan(totalVisible);
+  });
 });
 
 /**
