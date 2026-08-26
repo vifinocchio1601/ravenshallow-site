@@ -17,6 +17,9 @@
 //       conversation et sa clé, **le type qui ne change jamais**, le corps
 //       d'un message qui n'est ni vide ni démesuré, et la copie figée d'un
 //       signalement, qui ne se réécrit pas
+//   `20260826110000_pouvoirs`            — l'accord entre une permission et sa
+//       portée, et l'unicité d'une permission sans maison — que Postgres ne
+//       garantit PAS tout seul, deux NULL lui étant distincts
 
 generator client {
   provider = "prisma-client-js"
@@ -103,6 +106,15 @@ model Utilisateur {
   blocagesSubis         Blocage[]       @relation("BlocagesSubis")
   signalementsEnvoyes   Signalement[]   @relation("SignalementsEnvoyes")
   signalementsRecus     Signalement[]   @relation("SignalementsRecus")
+
+  // ── Les pouvoirs ──
+  /// Les permissions accordées à la carte, indépendantes de `role`. Une ligne
+  /// par maison pour les deux permissions de maison ; une seule, sans maison,
+  /// pour les trois qui portent sur tout le forum.
+  ///
+  /// **Aucune ne touche à la Tour aux Corbeaux, et aucune ne le pourra** : la
+  /// liste `Permission` n'en compte que cinq, et un test refuse la sixième.
+  permissions PermissionAccordee[]
 
   creeLe DateTime @default(now())
   majLe  DateTime @updatedAt
@@ -271,6 +283,16 @@ model Eleve {
   maison    Maison?
   repartiLe DateTime?
   ceremonie CeremonieMiroir?
+
+  /// Ce que ce personnage a ouvert et écrit sur le forum. Ancré sur la fiche
+  /// et non sur le compte : un post RP est écrit par un personnage.
+  sujetsOuverts Sujet[] @relation("SujetsOuverts")
+  postsEcrits   Post[]  @relation("PostsEcrits")
+
+  /// Les maisons dont cet élève est préfet. Ancré sur la fiche et non sur le
+  /// compte : être préfet est une charge du personnage, pas un droit du
+  /// joueur — et c'est la maison de la fiche qu'on lit à côté.
+  prefectures Prefet[]
 
   creeLe DateTime @default(now())
   majLe  DateTime @updatedAt
@@ -455,6 +477,15 @@ enum EvenementMembre {
   ETAT_BAGUETTE_MODIFIE
   ACCES_MODIFIE
   COURRIEL_CONFIRMATION
+  /// Le rôle technique — joueur, modérateur, administrateur. Distinct de
+  /// `ACCES_MODIFIE` : suspendre un compte et le faire modérateur ne se lisent
+  /// pas de la même façon, et deux valeurs qui se ressemblent dans un même
+  /// enum finissent toujours par se confondre.
+  ROLE_MODIFIE
+  PERMISSION_ACCORDEE
+  PERMISSION_RETIREE
+  PREFET_NOMME
+  PREFET_DEMIS
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -767,4 +798,342 @@ enum StatutSignalement {
   EN_ATTENTE
   TRAITE
   CLASSE_SANS_SUITE
+}
+
+// ─────────────────────────────────────────────────────────────
+//  Les pouvoirs — permissions attribuables et préfets
+// ─────────────────────────────────────────────────────────────
+
+/// **Les cinq permissions attribuables, et il n'y en aura pas d'autres sans
+/// une décision explicite.**
+///
+/// Elles sont indépendantes de `Utilisateur.role` : la directrice du château
+/// n'est pas modératrice du site, et peut pourtant écrire les annonces des
+/// quatre maisons. Elles sont aussi indépendantes de `Eleve.roleAffiche`, qui
+/// reste purement décoratif — un membre peut afficher « Directrice » sans
+/// aucun pouvoir, et l'inverse.
+///
+/// **Aucune ne donne accès à la Tour aux Corbeaux.** Cette permission n'existe
+/// pas, ne figure pas dans cette liste, pas même désactivée, et ne doit jamais
+/// y entrer : personne ne lit les conversations privées, quel que soit son
+/// rôle. `lib/forum/pouvoirs.test.ts` compte les valeurs de cet enum et
+/// échoue à la sixième — pas pour interdire d'en ajouter une, mais pour que
+/// personne ne le fasse sans s'en apercevoir.
+///
+/// **Aucune ne permet d'en attribuer**, non plus. Seule la zone
+/// d'administration accorde et retire, et un test relit le code source pour
+/// s'en assurer : sans quoi un professeur se promeut lui-même, ou promeut un
+/// ami.
+enum Permission {
+  /// Portée : une maison. Écrire les annonces de cette maison.
+  ANNONCES_MAISON
+  /// Portée : une maison. Lire ses espaces réservés — dortoir compris.
+  LIRE_ESPACES_MAISON
+  /// Portée : tout le forum.
+  CLORE_SCENE
+  /// Portée : tout le forum.
+  EPINGLER_SUJET
+  /// Portée : tout le forum.
+  VERROUILLER_SECTION
+}
+
+/// Une permission accordée à un membre, sur une maison ou sur tout le forum.
+///
+/// **Une ligne par maison, jamais un NULL qui voudrait dire « toutes ».**
+/// « Les quatre maisons » s'écrit avec quatre lignes, posées dans une seule
+/// transaction et retirées d'un seul clic. Le raccourci `maison = NULL` pour
+/// « toutes » ferait porter deux sens à la même case — « toutes les maisons »
+/// ici, « sans objet » là — et c'est exactement le piège contre lequel
+/// `EtatEtape` a été inventé.
+///
+/// Deux garanties vivent en SQL et pas ici :
+///   • un `CHECK` : permission de maison ⇔ `maison` renseignée ;
+///   • **deux index uniques partiels**. Postgres tient deux NULL pour
+///     distincts dans un index unique : un `@@unique` ordinaire laisserait
+///     accorder `CLORE_SCENE` deux fois au même compte.
+///
+/// L'historique n'est pas ici : retirer une permission efface la ligne. Le
+/// « qui, quoi, quand » vit dans `JournalMembre`, déjà indexé par membre et
+/// déjà affiché sur sa fiche — deux histoires valent moins qu'une seule.
+model PermissionAccordee {
+  id            String      @id @default(cuid())
+  utilisateurId String
+  utilisateur   Utilisateur @relation(fields: [utilisateurId], references: [id], onDelete: Cascade)
+
+  permission Permission
+
+  /// Renseignée pour `ANNONCES_MAISON` et `LIRE_ESPACES_MAISON`, **nulle pour
+  /// les trois autres** — un `CHECK` impose la correspondance dans les deux
+  /// sens. Une permission de maison sans maison n'aurait pas de portée ; une
+  /// permission globale avec une maison en aurait deux.
+  maison Maison?
+
+  accordeeLe  DateTime @default(now())
+  /// « Administration », tant que la zone d'administration n'est qu'un mot de
+  /// passe partagé sans comptes distincts. Même convention que
+  /// `roleAffichePosePar` et `Signalement.traitePar`.
+  accordeePar String
+
+  @@index([utilisateurId])
+  /// « Qui détient quoi ? » — la page d'ensemble lit par là.
+  @@index([permission, maison])
+  @@map("permissions_accordees")
+}
+
+/// Un préfet, et la maison dont il l'est.
+///
+/// Le droit d'écrire les annonces de cette maison **dérive** de cette table :
+/// nommer un préfet ne crée aucune ligne dans `permissions_accordees`. Sans
+/// quoi lui retirer le titre laisserait le pouvoir derrière lui, et personne
+/// ne verrait pourquoi il écrit encore.
+///
+/// Plusieurs préfets par maison, et un même élève peut en être de plusieurs —
+/// la contrainte n'interdit que de le nommer deux fois pour la même. La maison
+/// n'est **pas** contrainte à être la sienne : c'est une décision du joueur,
+/// pas un oubli.
+///
+/// La table reste vide au 26 août 2026. Le staff écrit les annonces depuis la
+/// zone d'administration en attendant ; le jour où un préfet est nommé, il n'y
+/// a rien à développer.
+model Prefet {
+  id      String @id @default(cuid())
+  eleveId String
+  eleve   Eleve  @relation(fields: [eleveId], references: [id], onDelete: Cascade)
+
+  maison Maison
+
+  nommeLe  DateTime @default(now())
+  /// Même convention que `PermissionAccordee.accordeePar`.
+  nommePar String
+
+  @@unique([eleveId, maison])
+  @@index([maison])
+  @@map("prefets")
+}
+
+// ─────────────────────────────────────────────────────────────
+//  Le forum — le moteur, et ses trois espaces
+// ─────────────────────────────────────────────────────────────
+
+/// Qui peut ouvrir un sujet ici.
+enum QuiOuvreUnSujet {
+  TOUT_MEMBRE
+  /// Les membres de la maison à qui le lieu est réservé.
+  MEMBRES_MAISON
+  /// Les préfets de la maison et les détenteurs d'`ANNONCES_MAISON`.
+  DETENTEUR_PERMISSION
+  /// « Sur convocation » : le staff seul ouvre le sujet. L'élève convoqué
+  /// répond — c'est tout l'intérêt, et c'est pourquoi ce n'est pas un lieu
+  /// fermé.
+  STAFF_SEULEMENT
+}
+
+/// Qui peut répondre dans un sujet ici.
+///
+/// **Il n'existe pas de valeur « selon le mode de participation ».** Le mode
+/// d'une scène — libre, sur invitation, réservé — est une **convention entre
+/// joueurs, écrite dans le titre**, et le site ne l'applique pas : c'est une
+/// décision du joueur, prise le 26 août 2026. Une valeur d'enum qui prétendrait
+/// le contraire finirait par servir à refuser un post.
+enum QuiRepond {
+  TOUT_MEMBRE
+  MEMBRES_MAISON
+}
+
+/// Qui peut **lire** ce lieu. La lecture est presque toujours ouverte : une
+/// scène verrouillée par l'année reste lisible, un dortoir aussi. Seul
+/// l'espace d'une maison se ferme vraiment.
+enum Visibilite {
+  TOUS
+  MAISON
+}
+
+/// Un espace du forum, et **ses paramètres**.
+///
+/// Trois espaces reposent sur le même moteur — le domaine, le monde des
+/// non-mages, et celui d'une maison. Ce qui les distingue tient dans les
+/// colonnes ci-dessous, jamais dans du code : construire trois fois le même
+/// forum serait le meilleur moyen d'en avoir trois qui divergent.
+model Espace {
+  id String @id @default(cuid())
+
+  /// Stable, et lue par les routes : « domaine », « non-mages », « maison ».
+  /// Le nom, lui, peut changer sans casser une adresse.
+  cle         String @unique
+  nom         String
+  description String @db.Text
+  ordre       Int
+
+  /// Le minimum de lignes d'un post. **Nul = aucune exigence.** Dix dans le
+  /// domaine (art. 12.2), aucune ailleurs.
+  lignesMinimum Int?
+
+  quiOuvreUnSujet QuiOuvreUnSujet @default(TOUT_MEMBRE)
+  quiRepond       QuiRepond       @default(TOUT_MEMBRE)
+
+  /// **Le point d'accroche des points, et rien d'autre.** Les points n'existent
+  /// pas ; le jour venu, ce booléen dira où l'on compte, et `maisonQuiCompte`
+  /// dira pour qui. Lire `Eleve.maison` directement, c'est le bug.
+  comptePourLesPoints Boolean @default(false)
+
+  /// Les sujets d'ici comptent-ils dans les scènes simultanées (art. 17.3) ?
+  /// **Le compte est affiché, jamais opposé** : la limite est un principe de
+  /// confiance, pas un verrou — décision du joueur, 26 août 2026.
+  compteLesScenes Boolean @default(false)
+
+  visibilite Visibilite @default(TOUS)
+
+  /// L'année minimale par défaut. Chaque lieu peut resserrer, jamais ouvrir.
+  anneeMinimale Fonction?
+
+  /// Fermé à l'écriture — sans rien cacher : ce qui s'y est joué reste lisible.
+  ouvert Boolean @default(true)
+
+  sections Section[]
+
+  creeLe DateTime @default(now())
+  majLe  DateTime @updatedAt
+
+  @@index([ordre])
+  @@map("espaces")
+}
+
+/// Une section, ou une sous-section : **la même table**.
+///
+/// « L'école » a besoin de trois niveaux — l'aile, la pièce, le sujet ; « Le
+/// monde des non-mages » de deux. Une table auto-référente laisse les deux
+/// coexister sans imposer la même profondeur partout.
+///
+/// **Deux niveaux au maximum**, et c'est la base qui le tient : un déclencheur
+/// refuse un parent qui a déjà un parent. Sans lui, rien n'empêcherait une
+/// arborescence que l'interface ne saurait pas dessiner.
+///
+/// **Une section ne peut que RESSERRER ce que l'espace a ouvert.** L'année, la
+/// visibilité et l'ouverture se résolvent en prenant la plus stricte des deux
+/// valeurs — voir `lib/forum/lieux.ts`. Une surcharge qui ouvrirait une porte
+/// que l'espace ferme serait une porte dérobée.
+model Section {
+  id String @id @default(cuid())
+
+  espaceId String
+  espace   Espace @relation(fields: [espaceId], references: [id], onDelete: Cascade)
+
+  /// Nul = section de premier niveau. Renseigné = sous-section.
+  parentId String?
+  parent   Section?  @relation("SousSections", fields: [parentId], references: [id], onDelete: Cascade)
+  enfants  Section[] @relation("SousSections")
+
+  /// Unique dans l'espace, et non par parent : les adresses restent plates,
+  /// `/domaine/la-bibliotheque` plutôt que `/domaine/aile-est/la-bibliotheque`.
+  /// Déplacer une pièce d'une aile à l'autre ne casse alors aucun lien.
+  slug        String
+  nom         String
+  description String @db.Text
+  ordre       Int
+
+  /// Les resserrements. Nul = on garde ce que l'espace dit.
+  anneeMinimale Fonction?
+
+  /// **L'écriture** réservée à cette maison. La lecture, elle, reste ouverte —
+  /// c'est ce qui fait les dortoirs : tout le monde lit, seule la maison écrit.
+  maisonReservee Maison?
+
+  /// « Sur convocation » se règle ici : c'est une propriété de la pièce, pas
+  /// de l'espace. Nul = on garde ce que l'espace dit.
+  quiOuvreUnSujet QuiOuvreUnSujet?
+
+  visibilite Visibilite?
+
+  ouverte Boolean @default(true)
+
+  sujets Sujet[]
+
+  creeLe DateTime @default(now())
+  majLe  DateTime @updatedAt
+
+  @@unique([espaceId, slug])
+  @@index([espaceId, parentId, ordre])
+  @@map("sections")
+}
+
+/// Un sujet — une scène, une annonce, une discussion.
+///
+/// **Pas de colonne `mode`.** Libre, sur invitation, réservé : le mode est
+/// écrit dans le titre par le joueur, et le site ne l'applique pas. Une colonne
+/// qui ne décide de rien finirait par décider de quelque chose — quelqu'un
+/// écrirait une condition dessus, et le site refuserait des posts au nom d'une
+/// règle qui devait tenir à la bonne foi.
+model Sujet {
+  id String @id @default(cuid())
+
+  sectionId String
+  section   Section @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+
+  /// Ancré sur la **fiche** et non sur le compte : un post RP est écrit par un
+  /// personnage. Nul si le compte a été supprimé — le sujet reste lisible.
+  auteurId String?
+  auteur   Eleve?  @relation("SujetsOuverts", fields: [auteurId], references: [id], onDelete: SetNull)
+
+  /// Le mode de participation s'y écrit par convention : « Le vent sur la
+  /// galerie (RÉSERVÉ Sigrid) ».
+  titre String
+
+  epingle Boolean   @default(false)
+  closLe  DateTime?
+  /// « Administration », ou le nom du modérateur le jour où il y en aura.
+  closPar String?
+
+  /// **Le verrouillage n'est pas rétroactif.** L'année exigée est recopiée à
+  /// l'ouverture, et un déclencheur interdit de la réécrire : changer la règle
+  /// d'un lieu ne referme pas une scène déjà en cours.
+  anneeRequiseALOuverture Fonction?
+
+  /// Dénormalisé et indexé — le tri « par activité récente ». Le recalculer à
+  /// chaque affichage obligerait à balayer tous les posts de tous les sujets.
+  /// Même raison que `Conversation.dernierMessageLe`.
+  dernierPostLe DateTime @default(now())
+
+  posts Post[]
+
+  creeLe DateTime @default(now())
+
+  @@index([sectionId, epingle, dernierPostLe])
+  @@index([auteurId])
+  @@map("sujets")
+}
+
+/// Un post.
+///
+/// Texte brut, rendu par React donc échappé d'office ; les retours à la ligne
+/// sont conservés par `whitespace-pre-wrap`, jamais par une conversion en
+/// `<br>` — qui obligerait à assembler du HTML à la main.
+model Post {
+  id String @id @default(cuid())
+
+  sujetId String
+  sujet   Sujet  @relation(fields: [sujetId], references: [id], onDelete: Cascade)
+
+  auteurId String?
+  auteur   Eleve?  @relation("PostsEcrits", fields: [auteurId], references: [id], onDelete: SetNull)
+
+  corps String @db.Text
+
+  /// Art. 16.3 — l'avertissement se met **en tête de post**, et se propose au
+  /// moment de publier. Nul quand il n'y en a pas.
+  avertissementContenu String?
+
+  publieLe  DateTime  @default(now())
+  modifieLe DateTime?
+
+  /// Art. 19.3 — un post non conforme est masqué **le temps d'une correction**,
+  /// pas supprimé. Les quatre colonnes vont ensemble ou pas du tout ; le joueur
+  /// est prévenu par un corbeau du château et dispose de sept jours.
+  masqueLe        DateTime?
+  masquePar       String?
+  motifMasquage   String?   @db.Text
+  corrigerAvantLe DateTime?
+
+  @@index([sujetId, publieLe])
+  @@index([auteurId])
+  @@map("posts")
 }

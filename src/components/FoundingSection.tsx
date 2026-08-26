@@ -17,7 +17,7 @@ export default function FoundingSection() {
               className="pointer-events-none absolute inset-0 bg-[radial-gradient(55%_55%_at_50%_45%,rgba(63,217,199,0.16)_0%,transparent_70%)]"
             />
             <Image
-              src="/crests/ravenshallow.png"
+              src="/crests/ravenshallow.webp"
               alt="Blason de Ravenshallow : le corbeau, le serpent noir, la salamandre et l'anguille réunis sur un même écu."
               width={679}
               height={900}

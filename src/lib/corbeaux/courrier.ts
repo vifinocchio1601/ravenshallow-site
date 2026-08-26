@@ -1,5 +1,6 @@
 import "server-only";
 import { prisma } from "@/lib/prisma";
+import { cleAdministration } from "./droits";
 
 /**
  * **Le courrier adressé à l’administration — et rien d’autre.**
@@ -231,6 +232,54 @@ export async function repondreAuCourrier(
       where: { id: fil.id },
       data: { dernierMessageLe: corbeau.envoyeLe },
     });
+  });
+
+  return "ENVOYEE";
+}
+
+/**
+ * **Le château écrit le premier à un membre.**
+ *
+ * Jusqu’ici le courrier ne savait que *répondre* : un fil existait forcément,
+ * parce qu’un membre l’avait ouvert. L’article 19.3 demande l’inverse — un
+ * post masqué pour correction, et « le joueur en est informé ». Il fallait
+ * donc pouvoir commencer la conversation.
+ *
+ * Le fil est créé s’il n’existe pas, avec sa participation dans la même
+ * écriture : sans elle, le membre ne verrait jamais la lettre. Le corbeau
+ * n’a **pas d’auteur** — dans un fil de courrier il n’y a que deux
+ * interlocuteurs, et un corbeau sans auteur ne peut venir que du second.
+ * C’est ce qui le signe.
+ *
+ * `AVEC_ADMINISTRATION` est écrit en toutes lettres, à chaque requête, comme
+ * partout dans ce fichier : c’est le filtre qui empêche le courrier de
+ * déborder sur les conversations entre joueurs, et le sortir dans une
+ * constante le rendrait invisible.
+ */
+export async function ecrireAuMembre(
+  utilisateurId: string,
+  corps: string,
+): Promise<ResultatReponse> {
+  const cle = cleAdministration(utilisateurId);
+
+  const existant = await prisma.conversation.findFirst({
+    where: { clePaire: cle, type: "AVEC_ADMINISTRATION" },
+    select: { id: true },
+  });
+
+  if (existant) return repondreAuCourrier(existant.id, corps);
+
+  await prisma.conversation.create({
+    data: {
+      type: "AVEC_ADMINISTRATION",
+      clePaire: cle,
+      // Ouvert par le château : personne à nommer, comme pour l'auteur du
+      // corbeau. L'anti-démarchage ne compte que les fils ouverts PAR un
+      // membre — celui-ci ne pèse donc sur le plafond de personne.
+      ouvertParId: null,
+      participations: { create: { utilisateurId } },
+      messages: { create: { auteurId: null, corps } },
+    },
   });
 
   return "ENVOYEE";

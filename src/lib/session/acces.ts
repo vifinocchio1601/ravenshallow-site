@@ -17,9 +17,12 @@
 import type { EtatEtape, StatutAcces, StatutDossier } from "@/lib/dossier/etats";
 import {
   ENTREES_MENU,
+  MENU,
   ROUTES,
   ROUTES_HORS_MENU,
+  estUnGroupe,
   type EntreeMenu,
+  type LienMenu,
 } from "@/lib/ecole/menu";
 
 /** Le strict nécessaire pour décider — pas la fiche entière. */
@@ -219,6 +222,11 @@ export function routeAutorisee(compte: EtatAcces, chemin: string): boolean {
     return peutEntrerDansLEcole(compte) && aFiniLesPremiersPas(compte);
   }
 
+  // Une adresse qui exige une maison se referme sur qui n’en a pas, quel que
+  // soit le reste : l’élève que le Miroir attend comme la directrice qu’il ne
+  // concerne pas. La question ne se pose qu’ici, par `aUneMaison`.
+  if (entree.exigeUneMaison === true && !aUneMaison(compte)) return false;
+
   // Le bannissement passe avant tout le reste : un membre suspendu garde son
   // bureau et sa fiche, réparti ou non.
   if (estBanni(compte)) return entree.pendantBannissement === true;
@@ -228,7 +236,35 @@ export function routeAutorisee(compte: EtatAcces, chemin: string): boolean {
   return entree.avantPremiersPas === true;
 }
 
-/** Les entrées du bandeau que ce compte peut réellement ouvrir. */
-export function entreesVisibles(compte: EtatAcces): readonly EntreeMenu[] {
+/**
+ * **Les adresses du bandeau que ce compte peut réellement ouvrir**, à plat.
+ *
+ * C’est la liste des feuilles, et c’est elle qui porte la règle. Le groupe
+ * qui les chapeaute n’a pas d’adresse : il n’y a rien à autoriser.
+ */
+export function liensVisibles(compte: EtatAcces): readonly LienMenu[] {
   return ENTREES_MENU.filter((entree) => routeAutorisee(compte, entree.href));
+}
+
+/**
+ * **Le menu tel qu’il s’affiche** : l’arbre, débarrassé de ce que ce compte ne
+ * peut pas ouvrir.
+ *
+ * Un groupe dont toutes les feuilles sont fermées **disparaît**. Il ne se
+ * grise pas : un chapeau qui n’ouvre sur rien est pire qu’une absence, on
+ * clique, il se déplie, et il est vide.
+ *
+ * Se déduit de `liensVisibles` plutôt que de refaire le tri : une seule règle,
+ * appliquée une seule fois.
+ */
+export function menuVisible(compte: EtatAcces): readonly EntreeMenu[] {
+  const ouvertes = new Set(liensVisibles(compte).map((l) => l.href));
+
+  return MENU.flatMap((entree): EntreeMenu[] => {
+    if (!estUnGroupe(entree)) {
+      return ouvertes.has(entree.href) ? [entree] : [];
+    }
+    const liens = entree.liens.filter((l) => ouvertes.has(l.href));
+    return liens.length > 0 ? [{ libelle: entree.libelle, liens }] : [];
+  });
 }

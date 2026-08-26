@@ -13,6 +13,31 @@ export type StatutDossier =
 export type StatutAcces = "EN_ATTENTE" | "VALIDE" | "EN_BANNISSEMENT";
 
 /**
+ * Le rôle technique du compte. Miroir de l’enum Prisma `Role`.
+ *
+ * **À ne pas confondre avec `roleAffiche`**, qui est un libellé décoratif et
+ * n’ouvre rien. Celui-ci ouvre : `MODERATEUR` et `ADMIN` sont le staff, et
+ * « les modérateurs interviennent partout » sur le forum, y compris pour clore
+ * un sujet abandonné (art. 17.2).
+ *
+ * Il ne dit rien des permissions à la carte, qui vivent à part et s’accordent
+ * à n’importe quel membre : la directrice du château n’est pas modératrice du
+ * site, et peut pourtant écrire les annonces des quatre maisons.
+ */
+export type Role = "JOUEUR" | "MODERATEUR" | "ADMIN";
+
+export const ROLES: readonly Role[] = ["JOUEUR", "MODERATEUR", "ADMIN"];
+
+export const LIBELLES_ROLE: Record<Role, { court: string; detail: string }> = {
+  JOUEUR: { court: "Joueur", detail: "Aucun pouvoir de modération" },
+  MODERATEUR: {
+    court: "Modérateur",
+    detail: "Intervient partout sur le forum",
+  },
+  ADMIN: { court: "Administrateur", detail: "Comme modérateur, sans réserve" },
+};
+
+/**
  * L’année d’étude, et rien d’autre. Miroir de l’enum Prisma `Fonction`.
  *
  * `PROFESSEUR` et `DIRECTION` en ont été retirés : un rôle au château se
@@ -120,6 +145,35 @@ const ANNEES_RETIREES: Record<string, string> = {
   DIRECTION: "Direction",
 };
 
+/**
+ * **Le rang d’une année, de 1 à 7 — et le seul endroit qui en compare deux.**
+ *
+ * `Fonction` est une liste de chaînes : sans rang, chaque page qui veut savoir
+ * si un élève « a atteint la quatrième année » réinventerait un ordre, et
+ * c’est la copie qu’on oublierait de corriger.
+ *
+ * Une valeur inconnue — les deux retirées de l’enum, ou une valeur d’avant un
+ * renommage — rend **1**, le sens prudent : elle ferme les portes plutôt que
+ * de les ouvrir par accident.
+ *
+ * **Le redoublant ne perd rien** : son année ne bouge pas au redoublement
+ * (art. 18.5), donc son rang non plus. C’est acquis par construction, il n’y a
+ * rien à écrire pour l’obtenir.
+ */
+export function rangAnnee(fonction: Fonction): number {
+  const rang = FONCTIONS.indexOf(fonction);
+  return rang === -1 ? 1 : rang + 1;
+}
+
+/** L’année exigée est-elle atteinte ? `null` = aucune exigence. */
+export function atteintLAnnee(
+  fonction: Fonction,
+  requise: Fonction | null,
+): boolean {
+  if (!requise) return true;
+  return rangAnnee(fonction) >= rangAnnee(requise);
+}
+
 /** Libellé d’une année. Sait aussi relire les deux valeurs retirées. */
 export function libelleAnnee(fonction: Fonction): string {
   return ANNEES[fonction] ?? ANNEES_RETIREES[fonction] ?? fonction;
@@ -167,7 +221,7 @@ export const TEXTES_ETATS = {
   envoye: {
     titre: "Ton dossier est parti",
     corps:
-      "Il attend maintenant la lecture de l’administration. Rien ne s’ouvre avant : ni la Grande Salle, ni les scènes, ni les cours. Tu recevras un courriel dès que la décision sera prise.",
+      "Il attend maintenant la lecture de l’administration. Rien ne s’ouvre avant : ni le château, ni les scènes, ni les cours. Tu recevras un courriel dès que la décision sera prise.",
     badge: "En attente de lecture",
   },
   correction: {

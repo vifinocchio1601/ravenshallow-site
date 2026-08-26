@@ -1,0 +1,15 @@
+-- Un changement de rôle n'est pas un changement d'accès.
+--
+-- `20260826110000_pouvoirs` a branché `Utilisateur.role`, resté colonne morte
+-- depuis la première migration. Il manquait l'événement qui va avec : faute de
+-- quoi le journal rangeait « joueur → modérateur » sous `ACCES_MODIFIE`, à
+-- côté des suspensions, et l'affichait « Accès modifié : MODERATEUR » — une
+-- phrase fausse, dans la seule page qui sert à comprendre ce qui est arrivé à
+-- un compte.
+--
+-- Deux valeurs qui se ressemblent dans un même enum finissent toujours par se
+-- confondre. Celle-ci est donc à part.
+--
+-- Migration séparée et non fondue dans la précédente : celle-là est déjà
+-- appliquée sur la base, et l'historique des migrations ne se réécrit pas.
+ALTER TYPE "EvenementMembre" ADD VALUE 'ROLE_MODIFIE';

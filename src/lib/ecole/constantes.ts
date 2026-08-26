@@ -8,6 +8,8 @@ export const TEXTES_ECOLE = {
     aria: "Navigation de l’école",
     derouler: "Menu",
     replier: "Fermer",
+    /** Le libellé de la liste qu’un groupe déplie, pour les lecteurs d’écran. */
+    sousMenuAria: "{groupe} — sous-menu",
   },
 
   bureau: {
@@ -107,17 +109,63 @@ export const TEXTES_ECOLE = {
     },
   },
 
+  /**
+   * Les salles pas encore construites.
+   *
+   * Chacune existe pour que le menu soit complet et honnête : une entrée qui
+   * mène à une page qui dit ce qui viendra vaut mieux qu’une entrée absente —
+   * un site où l’on ne voit rien paraît vide.
+   *
+   * `rune` accompagne le titre ; elle est décorative et lue `aria-hidden`.
+   */
   aVenir: {
+    badge: "À venir",
+
+    ecole: {
+      rune: "ᚺ",
+      titre: "L’école",
+      corps:
+        "L’intérieur du château ouvrira bientôt : les Tours centrales, les quatre ailes et leurs dix-neuf pièces y auront chacune leur porte.",
+    },
     cours: {
+      rune: "ᛏ",
       titre: "Les cours",
       corps:
         "Les salles de classe ne sont pas encore ouvertes. Les matières, les emplois du temps et les épreuves viendront avec la rentrée.",
     },
-    ecole: {
-      titre: "L’école",
+    alentours: {
+      rune: "ᛚ",
+      titre: "Les alentours",
       corps:
-        "Le château se visite bientôt : la Grande Salle, les dortoirs, la falaise et la forêt sombre y auront chacun leur porte.",
+        "Ce qui entoure le château — la falaise et la mer, le lac, la forêt sombre, le chemin escarpé qui descend vers Kaldvik. Rien n’y est encore jouable.",
     },
-    badge: "À venir",
+    maison: {
+      rune: "ᛗ",
+      titre: "Ma maison",
+      corps:
+        "Le dortoir, les annonces et les espaces réservés à ta maison. Cette porte s’ouvrira en même temps que le forum.",
+    },
+    nonMages: {
+      rune: "ᛜ",
+      titre: "Le monde des non-mages",
+      corps:
+        "Ce qui se joue loin des falaises, chez ceux qui ne savent rien de la magie. L’espace existe ; il attend d’être rempli.",
+    },
+    histoire: {
+      rune: "ᛇ",
+      titre: "Histoire",
+      corps:
+        "La fondation, les quatre, la rupture. Ce que l’on enseigne aux jeunes élèves — et ce que l’on tait aux autres. Les archives s’ouvriront plus tard, avec la carte et le bestiaire.",
+    },
+  },
+
+  /** Les archives, pour les pages qui portent vraiment quelque chose. */
+  archives: {
+    eyebrow: "Les archives",
+    reglement: {
+      titre: "Règlement",
+      chapeau:
+        "Le texte en vigueur, tel qu’il a été accepté à l’inscription. Il est susceptible d’évoluer : toute modification est affichée dans le Grand Hall et entre en vigueur sept jours plus tard.",
+    },
   },
 } as const;

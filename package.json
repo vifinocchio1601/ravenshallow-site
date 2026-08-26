@@ -9,11 +9,12 @@
     "lint": "next lint",
     "test": "vitest run",
     "test:watch": "vitest",
-    "corbeaux:essai": "vitest run --config vitest.essai.mts",
+    "corbeaux:essai": "vitest run --config vitest.essai.mts src/lib/corbeaux/en-base.essai.ts",
     "courriel:verifier": "node scripts/verifier-courriel.mjs",
     "postinstall": "prisma generate",
     "base:importer": "node scripts/importer-dossiers.mjs",
-    "base:migrer": "node scripts/migrer.mjs"
+    "base:migrer": "node scripts/migrer.mjs",
+    "forum:essai": "vitest run --config vitest.essai.mts src/lib/forum/en-base.essai.ts"
   },
   "dependencies": {
     "@node-rs/argon2": "^2.1.0",

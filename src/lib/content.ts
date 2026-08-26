@@ -28,7 +28,7 @@ export const HOUSES: House[] = [
     description:
       "Meneurs froids et disciplinés. On y valorise la vision à long terme et une loyauté qui se mérite avant de se donner.",
     color: "var(--kaldrafn)",
-    crest: "/crests/kaldrafn.png",
+    crest: "/crests/kaldrafn.webp",
     crestWidth: 608,
     crestHeight: 900,
     rune: "ᚲ",
@@ -41,7 +41,7 @@ export const HOUSES: House[] = [
     description:
       "Une maison qui porte un nom qu'elle n'a pas choisi, et une réputation plus lourde que ses élèves ne le méritent.",
     color: "var(--nattorm)",
-    crest: "/crests/nattorm.png",
+    crest: "/crests/nattorm.webp",
     crestWidth: 615,
     crestHeight: 900,
     rune: "ᚾ",
@@ -54,7 +54,7 @@ export const HOUSES: House[] = [
     description:
       "Pragmatiques et travailleurs. Ici, on préfère la débrouillardise à la théorie, et l'entraide à l'éclat individuel.",
     color: "var(--bryggeld)",
-    crest: "/crests/bryggeld.png",
+    crest: "/crests/bryggeld.webp",
     crestWidth: 625,
     crestHeight: 900,
     rune: "ᛒ",
@@ -67,7 +67,7 @@ export const HOUSES: House[] = [
     description:
       "Intuitifs et vigilants, parfois hantés par des pressentiments qu'ils ne contrôlent pas. On y honore le courage de dire ce que l'on voit.",
     color: "var(--tideal)",
-    crest: "/crests/tideal.png",
+    crest: "/crests/tideal.webp",
     crestWidth: 641,
     crestHeight: 900,
     rune: "ᛏ",

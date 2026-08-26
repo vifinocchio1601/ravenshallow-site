@@ -116,6 +116,7 @@ export default async function FicheElevePage() {
               alt={blason.alt}
               width={blason.largeur}
               height={blason.hauteur}
+              sizes="40px"
               className="h-14 w-auto"
             />
             {/* Le blason de l'école reste, pour ne pas laisser un trou —

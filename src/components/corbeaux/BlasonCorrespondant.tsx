@@ -29,6 +29,9 @@ export default function BlasonCorrespondant({
       alt={blason.alt}
       width={blason.largeur}
       height={blason.hauteur}
+      /* Le blason ne s’affiche jamais qu’en vignette : sans `sizes`, next/image
+         en réclamerait une pleine largeur pour trente pixels à l’écran. */
+      sizes="32px"
       className={`w-auto shrink-0 ${taille === "petit" ? "h-7" : "h-10"}`}
     />
   );

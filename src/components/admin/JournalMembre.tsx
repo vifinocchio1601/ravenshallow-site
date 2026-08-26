@@ -1,13 +1,18 @@
 import type { EntreeJournal } from "@/lib/dossier/depot";
+import { NOMS_MAISON } from "@/lib/ecole/blasons";
+import { TEXTES_POUVOIRS } from "@/lib/forum/constantes";
+import type { Permission } from "@/lib/forum/pouvoirs";
 import {
   libelleAnnee,
   LIBELLES_ETAT_ETAPE,
+  LIBELLES_ROLE,
   LIBELLES_STATUT_ACCES,
   LIBELLES_STATUT_DOSSIER,
   TEXTES_ETATS,
   type Etape,
   type EtatEtape,
   type Fonction,
+  type Role,
   type StatutAcces,
   type StatutDossier,
 } from "@/lib/dossier/etats";
@@ -25,6 +30,11 @@ const LIBELLES: Record<EntreeJournal["type"], string> = {
   ETAT_BAGUETTE_MODIFIE: "Baguette — étape modifiée",
   ACCES_MODIFIE: "Accès modifié",
   COURRIEL_CONFIRMATION: "Accusé de réception",
+  ROLE_MODIFIE: "Rôle sur le site modifié",
+  PERMISSION_ACCORDEE: TEXTES_POUVOIRS.journal.PERMISSION_ACCORDEE,
+  PERMISSION_RETIREE: TEXTES_POUVOIRS.journal.PERMISSION_RETIREE,
+  PREFET_NOMME: TEXTES_POUVOIRS.journal.PREFET_NOMME,
+  PREFET_DEMIS: TEXTES_POUVOIRS.journal.PREFET_DEMIS,
 };
 
 /**
@@ -52,6 +62,21 @@ function lisible(
   }
   if (type === "ACCES_MODIFIE") {
     return LIBELLES_STATUT_ACCES[valeur as StatutAcces]?.court ?? valeur;
+  }
+  if (type === "ROLE_MODIFIE") {
+    return LIBELLES_ROLE[valeur as Role]?.court ?? valeur;
+  }
+  if (type === "PREFET_NOMME" || type === "PREFET_DEMIS") {
+    return NOMS_MAISON[valeur] ?? valeur;
+  }
+  // « ANNONCES_MAISON:KALDRAFN » — la permission, et la maison quand il y en
+  // a une. Le journal doit dire SUR QUOI le pouvoir portait : « pouvoir
+  // retiré » sans la maison ne se relit pas six mois plus tard.
+  if (type === "PERMISSION_ACCORDEE" || type === "PERMISSION_RETIREE") {
+    const [permission, maison] = valeur.split(":");
+    const nom =
+      TEXTES_POUVOIRS.permissions[permission as Permission]?.nom ?? permission;
+    return maison ? `${nom} — ${NOMS_MAISON[maison] ?? maison}` : nom;
   }
   return LIBELLES_STATUT_DOSSIER[valeur as StatutDossier] ?? valeur;
 }

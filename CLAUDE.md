@@ -11,20 +11,25 @@ déploiement automatique au push sur `main`.
 ## Avant d'écrire quoi que ce soit
 
 **La documentation de référence n'est pas dans le dépôt.** Deux `.docx`, deux
-niveaux au-dessus, dans `Perso/Ravenshallow/` — **et ils n'y sont plus au
-26 août 2026** : le dossier ne contient que `Logos/`, `Site/` et `images/`.
-Une recherche dans tout `Dropbox/Perso` ne les retrouve pas. Le règlement
-reste intégralement lisible dans `src/lib/reglement.ts` ; **la bible du lore,
-elle, n'est plus consultable** — la redemander au joueur avant toute question
-de lore.
+niveaux au-dessus, dans `Perso/Ravenshallow/` — **rendus par le joueur le
+26 août 2026**, après une disparition de quelques jours. S'ils manquent encore,
+les redemander plutôt que de trancher au jugé.
 
-- `Bible du LORE.docx` — le monde, les quatre maisons, la magie, le bestiaire,
-  la structure scolaire
+- `Bible_du_LORE.docx` — seize sections, mise à jour du 26 août 2026 : le
+  monde et **la carte opposable**, la fondation et la grotte, les quatre
+  maisons, la magie et la baguette, le bestiaire, les figures, la structure
+  scolaire, le parcours du joueur, **le vocabulaire des espaces**, l'identité
+  visuelle, et les points encore ouverts
 - `Reglement_Ravenshallow.docx` — identique à `src/lib/reglement.ts`, ses
-  87 points vérifiés par comparaison
+  87 points revérifiés par comparaison automatique le 26 août 2026 : 87 sur 87,
+  aucun écart de texte
 
-Les extraire avec `zipfile` + `word/document.xml`. Toute question de lore ou de
-règle se tranche là, pas au jugé.
+Les extraire avec `zipfile` + `word/document.xml`. **Attention à l'extraction
+ligne à ligne** : quatre points du règlement (6.2, 10.2, 10.4, 15.2) se
+poursuivent au paragraphe suivant, et une comparaison naïve les croit
+divergents alors que le code porte bien le texte entier.
+
+Toute question de lore ou de règle se tranche là, pas au jugé.
 
 **Le règlement fait autorité sur le produit.** Les durées de bannissement
 (art. 8), le droit de contester dans les quinze jours (8.5), le format des
@@ -50,9 +55,18 @@ npm run corbeaux:essai    # exerce la Tour aux Corbeaux SUR LA VRAIE BASE
 `base:migrer` existe parce que la CLI Prisma ne lit pas `.env.local` : le
 script fait le pont, sans jamais afficher la chaîne de connexion.
 
-`corbeaux:essai` est à part, et son nom de fichier — `en-base.essai.ts`, et
-non `.test.ts` — l'exclut de `npm test` **à dessein** : il écrit vraiment en
-base. Il crée deux comptes `essai.*@ravenshallow.invalid`, les fait s'écrire,
+**Les deux essais en base** sont à part, et leur nom de fichier —
+`en-base.essai.ts`, et non `.test.ts` — les exclut de `npm test` **à
+dessein** : ils écrivent vraiment en base. Chaque script npm vise **un seul
+fichier par son chemin** ; les lancer ensemble mélangerait deux ménages qui
+n'ont rien à voir.
+
+`forum:essai` crée un compte `essai.pouvoirs@ravenshallow.invalid`, lui
+accorde et lui retire des permissions, le nomme puis le démet préfet, et
+vérifie **la trace au journal** à chaque geste — plus les trois refus de la
+base, éprouvés pour de bon. Il efface par l'adresse exacte.
+
+`corbeaux:essai` Il crée deux comptes `essai.*@ravenshallow.invalid`, les fait s'écrire,
 se bloquer, se chercher, puis efface ce qu'il a écrit — conversations
 comprises, sans quoi celles dont les deux comptes disparaissent resteraient
 orphelines. Son ménage vise `essai.*` **et** `.invalid` : la première version
@@ -73,13 +87,13 @@ Vercel, environnement Production — avec là-bas la chaîne Neon **pooled**.
 
 ## Les coutures uniques
 
-Quatorze endroits concentrent chacun une décision. Ne pas recopier leur
+Vingt-deux endroits concentrent chacun une décision. Ne pas recopier leur
 logique ailleurs, l'y ajouter.
 
 | Fichier | Ce qu'il décide, seul |
 | --- | --- |
 | `lib/session/acces.ts` | qui entre dans l'école, **jusqu'où il va**, où l'on atterrit — **et les six questions qu'on a le droit de poser sur une étape** |
-| `lib/ecole/menu.ts` | les routes de l'école — le menu, la protection, et les droits du suspendu comme du nouvel arrivant s'en déduisent |
+| `lib/ecole/menu.ts` | les routes de l'école — **l'arbre du bandeau**, la protection, les droits du suspendu comme du nouvel arrivant, et la remontée de la pastille sur un groupe |
 | `lib/dossier/depot.ts` | l'accès au stockage — aiguille entre PostgreSQL et l'échafaudage JSON |
 | `lib/dossier/schema.ts` | la validation, partagée mot pour mot entre le formulaire et la route |
 | `lib/ceremonie/questionnaire.ts` | les cinq questions **et leur barème** — `server-only`, jamais expédié au client |
@@ -92,6 +106,14 @@ logique ailleurs, l'y ajouter.
 | `lib/corbeaux/depot.ts` | l'accès aux conversations. **Seul endroit qui compose une requête** sur les messages |
 | `lib/corbeaux/schema.ts` | ce qu'un corbeau a le droit de porter — **partagé mot pour mot** entre le champ et la route |
 | `lib/corbeaux/constantes.ts` | tous les textes de la Tour, **et aucun import** : c'est ce qui permet à `ecole/menu.ts` d'y prendre le nom de l'entrée sans ouvrir un cycle |
+| `lib/forum/pouvoirs.ts` | **qui a le droit de quoi, et sur quelle maison.** Les cinq permissions, le staff qui passe partout, et le droit du préfet qui **dérive** de sa nomination |
+| `lib/forum/depot-pouvoirs.ts` | l'accès aux permissions et aux préfets. **Seul endroit qui écrit** dans `permissions_accordees` et `prefets` — et qui journalise chaque geste dans la même transaction |
+| `lib/forum/lieux.ts` | **qui lit un lieu, qui y ouvre un sujet, qui y répond.** Et la règle qu'une section ne peut que **resserrer** ce que l'espace ouvre |
+| `lib/forum/longueur.ts` | ce qui fait dix lignes — **partagé mot pour mot** entre le compteur du champ et la route. Le hors-RP est retiré avant comptage |
+| `lib/forum/scenes.ts` | le repère de scènes simultanées, **qui n'oppose rien** |
+| `lib/forum/depot.ts` | l'accès au forum. Filtre en **appelant** `peutLireLeLieu`, jamais en recopiant sa condition dans un `where` |
+| `lib/forum/schema.ts` | ce qu'un titre, un post et un avertissement ont le droit d'être — **partagé mot pour mot** entre le champ et la route |
+| `lib/texte.ts` | le ménage sur un texte libre écrit par un joueur, **partagé** par les corbeaux et par les posts |
 
 **L'accès se joue à deux étages**, tous deux dans `acces.ts` :
 
@@ -136,11 +158,41 @@ valeur commande — une maison écrite revient à `FAIT`, une case vide à
 `NON_FAIT`. Aucun état bancal ne peut donc sortir de l'écran, et la base le
 refuserait de toute façon.
 
-**Ajouter une entrée au menu** = une ligne dans `ENTREES_MENU`. Deux drapeaux,
-et l'oubli de l'un comme de l'autre va dans le sens de la fermeture :
+**Le menu est un ARBRE, mais les règles portent sur ses FEUILLES.**
+
+`MENU` est la source : cinq entrées, dont trois ouvrent un sous-menu. Un
+groupe n'a **pas d'adresse** — on ne clique pas sur « Le domaine », on
+l'ouvre. `ENTREES_MENU` est la liste plate des feuilles, **déduite** de
+l'arbre : deux listes tenues à la main finiraient par diverger, et l'entrée
+oubliée dans la seconde serait une route sans garde.
+
+Trois fonctions, et il faut prendre la bonne :
+
+| | Ce qu'elle rend |
+| --- | --- |
+| `routeAutorisee(compte, chemin)` | une adresse s'ouvre-t-elle ? |
+| `liensVisibles(compte)` | les feuilles ouvertes, **à plat** |
+| `menuVisible(compte)` | **l'arbre pour l'affichage** — un groupe dont toutes les feuilles sont fermées disparaît |
+
+Un groupe vide ne se grise pas : il **disparaît**. Un chapeau qui n'ouvre sur
+rien est pire qu'une absence — on clique, il se déplie, et il est vide.
+
+**Ajouter une entrée** = une ligne dans `MENU`. Ajouter un lieu aux archives =
+une ligne dans ses `liens`. **Trois drapeaux**, et l'oubli de chacun va dans le
+sens de la fermeture :
 
 - `pendantBannissement` — ouverte au membre suspendu
 - `avantPremiersPas` — ouverte au nouvel arrivant
+- `exigeUneMaison` — fermée à qui n'a pas de maison qui s'affiche. C'est ce qui
+  fait que « Ma maison » n'existe ni pour l'élève que le Miroir attend, ni pour
+  la directrice qu'il ne concerne pas. La question n'est pas posée là :
+  `routeAutorisee` appelle `aUneMaison`.
+
+**La pastille remonte sur le groupe.** `compteDe(entree, compteurs)` rend le
+compte d'une feuille, ou **la somme des feuilles** d'un groupe. Elle vit dans
+`ecole/menu.ts` et non dans le bandeau : c'est une règle — sans elle, un
+corbeau reçu se cache derrière un sous-menu fermé et on le rate — et une règle
+enfouie dans un composant ne se teste pas.
 
 Une route de l'école **sans entrée au bandeau** se déclare dans
 `ROUTES_HORS_MENU` — c'est le cas de la boutique et de la Cérémonie.
@@ -393,6 +445,224 @@ et le jour où il en faudrait un, c'est ce fichier-là qui changerait, seul.
 
 ---
 
+## Les pouvoirs
+
+Les droits d'un membre viennent de **trois sources qui ne se recouvrent
+jamais**, et les confondre est l'erreur à ne pas commettre :
+
+| | Ce que c'est | Ce que ça ouvre |
+| --- | --- | --- |
+| `Utilisateur.statutAcces` | l'accès au site | l'école, ou le cul-de-sac |
+| `Utilisateur.role` | le rôle technique | le staff **intervient partout** sur le forum |
+| `permissions_accordees` + `prefets` | des charges à la carte | une permission précise, sur une maison ou sur tout le forum |
+| `Eleve.roleAffiche` | **rien du tout** | un libellé à l'écran, et c'est tout |
+
+`role` dormait depuis la première migration — déclaré, jamais lu nulle part.
+Le lot des pouvoirs l'a branché : `MODERATEUR` et `ADMIN` sont le staff.
+`ROLE_MODIFIE` est **son propre événement de journal**, distinct de
+`ACCES_MODIFIE` : suspendre un compte et le faire modérateur ne se lisent pas
+de la même façon, et le journal affichait sinon « Accès modifié : MODERATEUR ».
+
+**Cinq permissions, et la sixième n'existe pas.** Deux portent sur une maison
+— écrire ses annonces, lire ses espaces réservés —, trois sur tout le forum :
+clore une scène, épingler un sujet, verrouiller une section.
+
+**Aucune ne touche à la Tour aux Corbeaux**, sous aucune forme, pas même
+désactivée. `pouvoirs.test.ts` compte les valeurs de la liste et relit le code
+source de `lib/corbeaux/` : la messagerie ne sait pas ce qu'est une permission,
+et il n'existe aucun chemin de l'une vers l'autre. **Aucune ne permet non plus
+d'en attribuer** — seule la zone d'administration accorde, et un test relit
+`src/app/` pour s'en assurer. Sans lui, il suffirait d'un jour de commodité
+pour qu'un professeur se promeuve lui-même.
+
+**Une ligne par maison, jamais un `null` qui voudrait dire « toutes ».** Les
+quatre maisons, c'est quatre lignes, posées ensemble et retirées ensemble. Le
+raccourci inverse ferait porter deux sens à la même case, et c'est exactement
+ce que `EtatEtape` a été inventé pour éviter.
+
+**Le droit du préfet DÉRIVE de sa nomination**, et ne crée aucune ligne de
+permission. C'est ce qui fait que le démettre reprend tout (art. 13.5) : une
+permission posée à la nomination lui survivrait, et personne ne verrait
+pourquoi il écrit encore. Plusieurs préfets par maison ; **la maison n'est pas
+contrainte à être la sienne** — décision du joueur, non un oubli.
+
+**Chaque geste laisse sa trace au journal du membre, dans la même
+transaction.** C'est indispensable : le retrait efface la ligne, et sans le
+journal il ne resterait rien du tout. `valeurApres` porte
+`ANNONCES_MAISON:KALDRAFN` — la permission **et** la maison : « pouvoir
+retiré » sans la maison ne se relit pas six mois plus tard.
+
+**Reposer un pouvoir déjà détenu n'est pas un événement** : ni ligne, ni entrée
+au journal. `accorderPermission` compare avant d'écrire plutôt que de deviner
+après coup ce que l'insertion a posé — dans une transaction, toutes les lignes
+portent le même instant, et un tri par date ne les départage pas.
+
+`/admin/pouvoirs` répond à « qui peut clore une scène ? », la fiche du membre à
+« que peut Sigrid ? ». Les deux existent parce que ce ne sont pas la même
+question, et qu'une permission accordée en juin et oubliée en décembre ne se
+voit que sur la première.
+
+---
+
+## Le forum
+
+```
+espace  →  section  →  section (facultative)  →  sujet  →  post
+```
+
+**Une seule table pour les sections et les sous-sections.** « L'école » a
+besoin de trois étages — l'aile, la pièce, le sujet ; « Le monde des non-mages »
+de deux. La base tient les deux niveaux et refuse le troisième.
+
+**Trois espaces, un seul moteur.** Ce qui les distingue tient dans des
+colonnes, jamais dans du code : construire trois fois le même forum serait le
+meilleur moyen d'en avoir trois qui divergent.
+
+| | `domaine` | `non-mages` | `maison` |
+| --- | --- | --- | --- |
+| lignes minimum | **10** (art. 12.2) | aucune | aucune |
+| qui ouvre un sujet | tout membre | tout membre | préfets et permission |
+| qui répond | tout membre | tout membre | membres de la maison |
+| points | **oui** | non | non |
+| compte les scènes | **oui** | non | non |
+| visibilité | tous | tous | **sa maison** |
+
+**Une section ne peut que RESSERRER ce que l'espace ouvre.** L'année, la
+visibilité et l'ouverture se résolvent en prenant la **plus stricte** des deux
+valeurs — jamais celle de la section aveuglément. Une surcharge qui ouvrirait
+une porte que l'espace ferme serait une porte dérobée, invisible à qui lit
+l'espace.
+
+**Lire et écrire ne se décident pas de la même façon**, et c'est le principe :
+
+- **presque tout est lisible.** Un première année lit ce qui se joue dans les
+  souterrains, un Bryggeld lit le dortoir de Nattorm, un lieu définitivement
+  clos garde ses scènes visibles. Seule la visibilité `MAISON` referme.
+- **l'écriture porte les verrous** : l'année atteinte, la maison du lieu, la
+  permission d'annonce, le lieu ouvert.
+
+**L'année d'un sujet est figée à son ouverture, et répondre la relit — pas
+celle du lieu.** C'est toute la promesse « une scène en cours ne se ferme pas
+si les règles changent ». Relire la règle du lieu dans `peutRepondre`
+refermerait les scènes en cours le jour où l'on durcit un couloir.
+
+**Le redoublant ne perd rien**, et il n'y a rien à écrire pour l'obtenir : son
+année ne bouge pas (art. 18.5), donc son rang non plus. `rangAnnee` dans
+`dossier/etats.ts` est le seul endroit qui compare deux années.
+
+### « Sur convocation » est une règle de PIÈCE
+
+`quiOuvreUnSujet` vit sur l'espace **et** sur la section. Le manque n'est
+apparu qu'en posant le contenu — c'est exactement pour ça que le contenu vient
+après le moteur.
+
+`STAFF_SEULEMENT` dit « sur convocation » en toutes lettres : le staff ouvre,
+**l'élève convoqué répond**. Ne pas le confondre avec `ouverte: false`, qui
+ferme le lieu à tout le monde et ferait taire le convoqué. Et ne pas détourner
+`DETENTEUR_PERMISSION` sans maison : le refus annoncerait « il faut une
+permission » sans pouvoir dire laquelle.
+
+### L'école : cinq sections, vingt pièces
+
+Posées par `20260826130000_ecole`. **Les lieux vivent en base**, jamais dans
+le code : une description se corrige sans toucher au moteur.
+
+Trois choses arbitrées avant de les écrire, et inscrites dans la migration :
+
+- **« La Grande Salle » n'existe pas, et ne doit pas revenir.** J'avais proposé
+  ce nom pour la pièce ; le joueur l'a retiré le 26 août 2026 — « la grande
+  salle c'est Harry Potter ». La bible range la ressemblance avec les univers
+  de magie existants parmi les **interdits** (§13), et le vocabulaire suit la
+  même règle que les visuels. La pièce s'appelle **La Salle de Banquet**, et
+  ce nom ne se confond avec rien. Sa description a changé aussi : elle ouvrait
+  sur « Quatre longues tables », qui était la même image empruntée.
+- **Les ailes est et ouest ont été inversées** par rapport à la première
+  liste : la carte fait autorité (bible §2, art. 12.4), et sa rose des vents
+  met la mer à l'**est**, la forêt à l'**ouest**. Les appariements maison/vue
+  étaient justes et n'ont pas bougé.
+- **Les salles de cours n'y sont pas**, à dessein : chantier à part.
+
+Deux descriptions demandent de la prudence :
+
+- **Les souterrains** rappellent l'article 13.1 en toutes lettres et ne disent
+  **rien** de ce que le sceau retient — la bible marque ce contenu
+  « confidentiel staff », et une description de lieu est un document que les
+  joueurs lisent.
+- **La Tour aux Corbeaux** est ce lieu-ci **et** le nom de la messagerie.
+  C'est voulu. Sa description reste dans le monde : elle dit que tout le monde
+  y monte, elle ne parle pas du site.
+
+**Un lieu verrouillé s'affiche, avec sa condition écrite** — jamais caché,
+jamais signalé par la seule couleur : `CartouchePiece` rend la raison en
+toutes lettres, précédée hors écran de « Écriture verrouillée : », et rappelle
+à chaque fois que **la lecture reste ouverte**.
+
+### Écrire : ce que la route refait, et pourquoi
+
+**Le dépôt appelle la couture lui-même.** `ouvrirSujet` et `repondre` relisent
+le lieu, résolvent ses règles, interrogent `lieux.ts`, puis valident le texte
+contre le minimum de l'espace — la route ne fait que traduire le résultat en
+code HTTP. Une seule porte, qu'aucune route ne contourne : c'est le parti pris
+d'`envoyerCorbeau`.
+
+**403 et 422 ne disent pas la même chose**, et les confondre ferait lire
+« vous n'avez pas le droit » à quelqu'un qui a seulement écrit trois lignes :
+
+| | Ce que ça veut dire |
+| --- | --- |
+| **403** | le lieu se refuse à ce compte — année, maison, convocation, fermé |
+| **422** | il a le droit, mais pas comme ça — titre vide, post trop court |
+| **404** | le lieu ou la scène n'existent pas, **ou** ne sont pas lisibles par lui |
+
+Le 404 couvre les deux derniers cas exprès : « il existe mais pas pour vous »
+se lit comme une confirmation. Même choix que dans la Tour.
+
+**Le compteur de lignes lit le même fichier que la route.** `forum/longueur.ts`
+est appelé par le champ à chaque frappe et par le dépôt avant d'écrire : deux
+comptages qui divergent, c'est un joueur qui voit « 10 » à l'écran et se fait
+refuser son post. Le hors-RP `[HRP]` est retiré **avant** comptage des deux
+côtés — et **conservé** dans le texte : on ne compte pas avec, on ne l'efface
+pas pour autant.
+
+**Un post masqué n'est pas supprimé** (art. 19.3). Trois vues, et les trois
+comptent : son auteur voit le texte, le motif et la date limite — c'est lui
+qui corrige ; le staff voit le texte et le motif ; les autres voient une
+ligne. Montrer le texte à tous viderait la mesure de son sens, le cacher à son
+auteur l'empêcherait de le reprendre.
+
+**Le joueur est prévenu par un corbeau du château**, et il fallait pour cela
+que le château sache écrire le premier : `ecrireAuMembre` crée le fil
+`AVEC_ADMINISTRATION` s'il n'existe pas, **avec sa participation dans la même
+écriture** — sans elle, la lettre n'arriverait dans aucune boîte. Le corbeau
+n'a pas d'auteur, et c'est ce qui le signe. Un envoi raté ne défait pas le
+masquage : il est rapporté, comme pour les courriels.
+
+**Masquer relève du staff, et d'aucune permission attribuable.** Ce n'est pas
+un pouvoir qu'on accorde à la carte — ne pas l'ajouter à `Permission`.
+
+### Deux règles qui NE SONT PAS dans le code, et c'est une décision
+
+Le joueur a tranché le 26 août 2026, deux fois, dans le même sens : **ce qui se
+règle entre joueurs reste à la bonne foi ; ce qui est une règle du monde reste
+un verrou.**
+
+- **Le mode de participation** — libre, sur invitation, réservé — s'écrit
+  **dans le titre du sujet** : « Le vent sur la galerie (RÉSERVÉ Sigrid) ». Il
+  n'y a **aucune colonne `mode`**, et il ne faut pas en ajouter une : une
+  colonne qui ne décide de rien finit par décider de quelque chose. Un intrus
+  se règle en privé, ou par un corbeau à l'administration.
+- **La limite de scènes simultanées** (art. 17.3, trois puis cinq) est
+  **affichée, jamais opposée**. `forum/scenes.ts` ne sait que constater. Le
+  compte donne au modérateur le fait dont il a besoin le jour de la
+  remontrance — sans lui, elle tomberait de nulle part.
+
+Les **dix lignes**, elles, restent bloquantes : ça ne concerne que celui qui
+écrit, et ça se vérifie sans rien interpréter. Le hors-RP est retiré **avant**
+comptage (art. 12.3) — sinon on atteindrait dix lignes sans écrire une ligne de
+jeu, et la règle ne dirait plus rien.
+
+---
+
 ## Authentification
 
 Trois mécanismes distincts, à ne pas confondre :
@@ -566,7 +836,7 @@ brume s'est peinte en transparent une bonne demi-heure avant qu'on comprenne.
 **Prisma CLI lit `.env`, pas `.env.local`.** Passer `DATABASE_URL` en variable
 d'environnement à la commande.
 
-**Onze règles de la base ne sont pas dans `schema.prisma`** et ne s'en
+**Vingt-deux règles de la base ne sont pas dans `schema.prisma`** et ne s'en
 déduiraient jamais. Régénérer le schéma depuis Prisma seul les perdrait.
 
 Dans `20260825200000_baguette_definitive` : la cohérence des trois colonnes de
@@ -600,6 +870,39 @@ d'un signalement, qui ne se réécrit pas. Le déclencheur du signalement laisse
 **effacer** la personne visée sans jamais la **remplacer** : refuser aussi
 l'effacement rendrait un compte indestructible, un vieux signalement empêchant
 pour toujours de le fermer.
+
+Dans `20260826110000_pouvoirs` : l'accord entre une permission et sa portée —
+une permission de maison porte une maison, une permission globale n'en porte
+aucune, **et la vérification se fait dans les deux sens** —, plus les **deux
+index uniques partiels** de `permissions_accordees`.
+
+**Ces deux index-là sont le piège du lot, et il ne se voit pas.** Dans un
+index unique, Postgres tient deux `NULL` pour **distincts**. Un `@@unique`
+ordinaire sur `("utilisateurId", permission, maison)` laisserait donc accorder
+`CLORE_SCENE` dix fois au même compte — et la retirer une fois n'en retirerait
+qu'une : le pouvoir survivrait au retrait, sans que rien ne le signale. D'où
+deux index partiels qui se partagent la table sans se recouvrir,
+`WHERE maison IS NULL` et `WHERE maison IS NOT NULL`. Prisma ne sait pas les
+exprimer : ils vivent en SQL, et seulement là. C'est le cousin exact du piège
+des trois valeurs déjà rencontré avec `not` dans la Tour.
+
+Les neuf garanties de cette migration ont été **éprouvées sur la vraie base**,
+dans une transaction annulée : chacune refuse bien ce qu'elle doit refuser, et
+rien n'est resté écrit.
+
+Dans `20260826120000_forum` : **deux niveaux de sections et jamais trois**,
+**l'année exigée à l'ouverture d'un sujet qui ne se réécrit jamais**, un titre
+et un corps ni vides ni démesurés, une clôture complète ou absente, et les
+quatre colonnes d'un masquage qui vont ensemble.
+
+Le déclencheur des deux niveaux regarde **les deux bouts** : le parent ne doit
+pas avoir de parent, **et** la section ne doit pas déjà avoir d'enfants. Sans
+la seconde condition, on fabrique trois niveaux d'un seul `UPDATE`, par
+l'autre côté.
+
+Celui de l'année figée est ce qui fait tenir « le verrouillage n'est pas
+rétroactif » : sans lui, un script de reprise refermerait des scènes en cours
+sans que personne le voie. Même procédé que le type d'une conversation.
 
 **Les deux verrous anti-rejeu portent sur l'ÉTAT, pas sur la case vide.**
 `enregistrerRepartition` et `inscrireBaguette` conditionnent leur `updateMany`
@@ -638,6 +941,28 @@ BUREAU », « LES / CORBEAUX » : il faut `text-center` sur le libellé pour que
 les deux mots s'alignent l'un sous l'autre. Le déroulé de téléphone, lui, est
 une liste verticale et reste au fer à gauche.
 
+**`hidden` ne suffit pas quand une classe pose un `display`.** L'attribut
+`hidden` vaut `display: none` — mais une classe utilitaire comme `flex` le
+**remplace en silence**, et le sous-menu reste ouvert en permanence. Le défaut
+ne se voyait pas sur écran large, où le déroulant n'a pas de classe de
+`display` : seul l'accordéon de téléphone était touché. Les deux portent
+désormais la même décision dans la classe **et** dans l'attribut.
+
+**Cinq entrées ne tiennent pas sur une ligne de parchemin.** « Le monde des
+non-mages » en toutes lettres se cassait en quatre lignes et poussait la
+déconnexion hors du cadre. Trois remèdes, tous nécessaires :
+
+- **le libellé du bandeau est court** — « Les non‑mages » —, le nom complet
+  reste sur la page. C'est le procédé de la Tour (`NOM_COURT` / `NOM_LONG`) ;
+- son **trait d'union est insécable** (U+2011). Avec un tiret ordinaire, le
+  mot se coupe en « NON- / MAGES » et l'entrée retombe sur trois lignes ;
+- le bandeau passe au déroulé **sous `lg`** et non sous `md`, et le mot
+  « Ravenshallow » à côté du sceau ne revient qu'au-delà de `2xl` — il coûte
+  130 px, et le sceau dit déjà où l'on est.
+
+Ne pas ajouter `shrink-0` sur les entrées pour « régler » le problème : elles
+cessent alors de se comprimer et débordent sur le nom du membre.
+
 **`not` de Prisma exclut les valeurs nulles**, là où le `IS DISTINCT FROM` du
 SQL les garde. `auteurId: { not: moi }` laissait donc tomber tous les corbeaux
 **sans auteur** — c'est-à-dire les réponses de l'administration. Le bandeau les
@@ -660,8 +985,33 @@ d'essai. Un compte de test s'appelle `quelquechose@ravenshallow.invalid`,
 jamais une adresse réelle du projet, et aucun script ne commence par un
 effacement à l'aveugle.
 
-**Le dépôt vit dans Dropbox.** `node_modules` et `.next` y sont synchronisés en
-continu, ce qui a déjà corrompu un cache webpack.
+**Le dépôt vit dans Dropbox**, et c'est la source de la moitié des pannes de
+ce fichier : cache webpack corrompu, `.next` qui se recrée pendant qu'on
+l'efface, `npm run build` qui échoue sous des messages qui n'y font pas penser.
+Le 26 août 2026, une compilation est restée bloquée sur « Compiling / … »
+pendant plus de deux minutes — Dropbox indexait les milliers de fichiers que
+webpack venait d'écrire.
+
+**Le remède est posé, et il vaut pour toutes ces pannes à la fois :**
+
+```bash
+xattr -w com.dropbox.ignored 1 .next
+xattr -w com.dropbox.ignored 1 node_modules
+```
+
+Dropbox cesse de suivre ces deux dossiers. Après quoi la page d'accueil est
+rendue en **30 ms** au lieu de ne jamais répondre.
+
+⚠️ **L'attribut vit sur le DOSSIER, pas sur son nom.** Effacer `.next` l'emporte
+avec lui, et le suivant repart synchronisé. Le bon geste après un effacement :
+
+```bash
+mkdir -p .next && xattr -w com.dropbox.ignored 1 .next
+```
+
+Vérifier d'un coup d'œil : `xattr -p com.dropbox.ignored .next` doit répondre
+`1`. Et pour effacer le cache, toujours **déplacer plutôt qu'effacer** — voir
+plus bas.
 
 Le même mécanisme **fait échouer `npm run build`**, et sous des messages qui
 n'y font pas penser : `Cannot find module for page: /_document`, ou
@@ -674,10 +1024,18 @@ quelques secondes, recommencer. Deuxième ou troisième essai, ça passe.
 
 **La base Neon se met en veille.** Après quelques minutes sans requête, la
 formule gratuite suspend le calcul. La visite suivante doit le réveiller, et si
-le réveil dépasse le délai d'attente de Prisma (5 s), la page tombe sur
-`Can't reach database server at ep-….neon.tech:5432`. **Ce n'est pas une panne :
-recharger suffit.** Un `?connect_timeout=15` sur `DATABASE_URL` ferait
-patienter au lieu d'échouer, si la gêne revient.
+le réveil dépasse le délai d'attente de Prisma (5 s par défaut), la page tombe
+sur `Can't reach database server at ep-….neon.tech:5432`. Ce n'est pas une
+panne — mais c'est arrivé assez souvent pour être corrigé.
+
+**`connect_timeout=15` est posé sur `DATABASE_URL` dans `.env.local`** depuis
+le 26 août 2026 : Prisma patiente au lieu d'abandonner. Le paramètre s'ajoute
+proprement avec la classe `URL` de Node, sans jamais afficher la chaîne — et le
+fichier se sauvegarde avant d'être réécrit.
+
+⚠️ **Le même paramètre manque encore sur Vercel**, où `DATABASE_URL` est la
+chaîne Neon *pooled* et se règle dans le tableau de bord du projet. À faire
+avec le joueur, clic par clic, avant l'ouverture.
 
 **Ne jamais lancer `npm run build` pendant que `npm run dev` tourne.** Les deux
 écrivent dans `.next` : le build périme le manifeste du serveur de
@@ -685,10 +1043,41 @@ développement, `main-app.js` part en 404 et **React cesse d'hydrater toute la
 page** — sans la moindre erreur explicite. Arrêter le serveur, construire,
 supprimer `.next`, relancer.
 
-**Images** — les blasons de `public/crests/` pèsent ~1 Mo pièce (5,7 Mo au
-total), servis via `next/image` sur toutes les pages de l'école : à alléger un
-jour. `public/ceremonie/` (232 Ko) et `public/bjornstav/` (224 Ko) montrent la
-cible. L'image du bureau a été convertie en JPEG (2,9 Mo → 573 Ko).
+Le fait le 26 août 2026 a donné pire encore : un `Cannot find module
+'./9161.js'` sur **toutes** les pages, y compris `/connexion`, et il a survécu
+à trois `rm -rf .next` suivis d'un redémarrage. Dropbox rematérialise des
+fichiers pendant l'effacement, et le nouveau serveur repart sur un cache
+à moitié ancien.
+
+**Le remède qui marche à tous les coups : déplacer plutôt qu'effacer.** Un
+renommage est atomique — la synchronisation ne peut pas courir après :
+
+```bash
+mv .next /private/tmp/next-mort && rm -rf /private/tmp/next-mort &
+```
+
+Puis relancer. Le `&` renvoie l'effacement en arrière-plan : il peut prendre
+du temps, mais il ne se passe plus dans le dépôt.
+
+**Images** — les blasons de `public/crests/` sont en **WebP** : les PNG
+d'origine pesaient ~1 Mo pièce (5,2 Mo), ils font 767 Ko à eux cinq (−86 %),
+même définition, encodés une fois pour toutes à `quality: 85`. Écart invisible,
+vérifié à 3× de zoom sur fond sombre. L'image du bureau a été convertie en JPEG
+(2,9 Mo → 573 Ko) ; `public/ceremonie/` (232 Ko) et `public/bjornstav/`
+(224 Ko) étaient déjà à la cible. **La carte reste en JPEG** : elle s'affiche
+à 1088 px, c'est la seule qui a besoin de sa taille.
+
+**Un blason sans `sizes` réclame la pleine largeur pour trente pixels.** C'était
+le vrai gâchis, et il ne se voyait pas dans le poids des fichiers : `next/image`
+sans attribut `sizes` fabrique un `srcset` de deux entrées — la largeur
+naturelle et son double — et un écran retina prend la plus grande. Le bandeau
+téléchargeait donc **109 Ko** pour un écu de 32 px de large ; avec
+`sizes="32px"`, il en télécharge **7 Ko**. Les cinq usages de l'école le
+déclarent maintenant (bandeau ×3, `BlasonCorrespondant`, Ma fiche) ;
+`HouseCard` et `FoundingSection`, côté vitrine, l'avaient déjà. Les dimensions
+de `lib/ecole/blasons.ts` sont les dimensions **naturelles** du fichier — elles
+ne donnent que le rapport, jamais la taille d'affichage. En ajouter un nouveau
+sans `sizes`, c'est refaire le trou.
 
 Le fond de Bjornstav a été **aplani, assombri et refroidi** avant d'entrer
 dans le dépôt : c'est ce qui permet au texte de rester lisible pendant tout le
@@ -727,7 +1116,45 @@ Les comptes qui ne sont pas des élèves — directrice, professeurs — se
 déclarent depuis la fiche du membre : **maison et baguette retirées, sans rien
 effacer**, chacune réversible et tracée au journal.
 
-**Pas encore** : les scènes, les points et les annonces du Grand Hall.
+**Le menu regroupé est en place** : cinq entrées, dont trois ouvrent un
+sous-menu, la pastille des corbeaux remontée sur « Mon personnage », un
+accordéon par groupe sur téléphone, et le sous-menu atteignable au clavier —
+Entrée ou Espace l'ouvre, Échap le referme en rendant le focus au bouton, et
+sortir du groupe par Tab le referme seul.
+
+Sept adresses nouvelles, dont six sont des **pages « à venir »** partageant un
+gabarit unique (`ecole/PageAVenir.tsx`) : `/ecole`, `/cours`, `/alentours`,
+`/maison`, `/non-mages`, `/archives/histoire`. La septième porte vraiment
+quelque chose : `/archives/reglement` rend le règlement sous le bandeau, **à
+partir de la même source** que la page publique — recopier les 87 points pour
+les mettre sous le parchemin, ce serait en avoir deux versions dont une fausse.
+
+**Les pouvoirs sont posés** : cinq permissions attribuables à n'importe quel
+membre, les préfets, la traçabilité au journal et la page d'ensemble
+`/admin/pouvoirs`. Aucun préfet n'est nommé et aucune permission accordée —
+c'est voulu : le staff écrit les annonces en attendant, et le jour où le joueur
+en nomme un, il n'y a rien à développer.
+
+**Le moteur du forum est posé, et L'école est meublée** : quatre tables, les
+trois espaces avec leur paramétrage, **cinq sections et vingt pièces** en base,
+la couture qui dit qui lit et qui écrit, les dix lignes, le repère de scènes,
+et deux écrans — `/ecole` et `/ecole/<pièce>` — qui se parcourent déjà. Les
+espaces `non-mages` et `maison` existent, vides : on les remplira quand on
+aura de quoi.
+
+**On écrit dedans.** Ouvrir une scène, répondre, le compteur de dix lignes
+pendant la frappe, les balises `[HRP]`, l'avertissement de contenu proposé au
+moment de publier, clore et épingler pour qui en a la permission, et le post
+masqué sept jours pour correction — avec le corbeau du château qui prévient.
+
+Le panneau **« Mes scènes en cours »** du bureau est le deuxième à cesser
+d'être vide, et il n'a pas eu à bouger.
+
+**Pas encore** : les points, les cours, les annonces du Grand Hall, le Registre
+magique, et le contenu des espaces `non-mages` et `maison`. Le point
+d'accroche des points est un booléen sur l'espace — `comptePourLesPoints` — et
+le jour venu il se branchera sur `maisonQuiCompte`, jamais sur la colonne
+`maison`.
 
 Le **Registre magique** — l'annuaire des membres, trié par maison et par
 fonction — n'existe pas : c'est lui qui portera « bloquer depuis sa fiche »,
@@ -738,9 +1165,9 @@ les fonctions rendent des listes vides — chaque lot en remplacera **une
 seule**. `progression()` est la première à rendre autre chose : elle porte
 déjà l'année et la baguette.
 
-**Limites connues** — les blasons de `public/crests/` pèsent ~1 Mo pièce, et la
-Tour en affiche **un par ligne de conversation** : c'était déjà « à alléger un
-jour », ça le devient franchement.
+**Limites connues** — les blasons ne sont plus une limite : passés en WebP et
+munis de leur `sizes`, la ligne de conversation de la Tour en charge 7 Ko au
+lieu de 109.
 
 Le compteur de non-lus par conversation construit un `OR` d'une clause par
 fil, parce que le seuil de lecture change de l'un à l'autre. Tenable pour la

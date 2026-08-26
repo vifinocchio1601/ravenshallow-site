@@ -2,7 +2,7 @@ import MenuParchemin from "@/components/ecole/MenuParchemin";
 import { compterNonLus } from "@/lib/corbeaux/depot";
 import { blasonAffiche, mentionMaison } from "@/lib/ecole/blasons";
 import { ROUTES } from "@/lib/ecole/menu";
-import { entreesVisibles } from "@/lib/session/acces";
+import { menuVisible } from "@/lib/session/acces";
 import { exigerConnexion } from "@/lib/session/garde";
 
 /**
@@ -38,7 +38,7 @@ export default async function EcoleLayout({
         prenomNom={compte.prenomNom}
         blason={blasonAffiche(compte)}
         mention={mentionMaison(compte)}
-        entrees={entreesVisibles(compte)}
+        entrees={menuVisible(compte)}
         compteurs={{ [ROUTES.corbeaux]: nonLus }}
       />
       {children}

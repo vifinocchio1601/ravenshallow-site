@@ -9,7 +9,7 @@ import {
 import {
   aFiniLesPremiersPas,
   destinationApres,
-  entreesVisibles,
+  liensVisibles,
   estBanni,
   peutEntrerDansLEcole,
   routeAutorisee,
@@ -346,7 +346,7 @@ describe("« Administratrice » n’accorde aucun droit", () => {
         expect(estBanni(avec)).toBe(estBanni(sans));
         expect(aFiniLesPremiersPas(avec)).toBe(aFiniLesPremiersPas(sans));
         expect(destinationApres(avec)).toBe(destinationApres(sans));
-        expect(entreesVisibles(avec)).toEqual(entreesVisibles(sans));
+        expect(liensVisibles(avec)).toEqual(liensVisibles(sans));
 
         for (const chemin of TOUS_LES_CHEMINS) {
           expect(
@@ -378,7 +378,7 @@ describe("« Administratrice » n’accorde aucun droit", () => {
     // conteste une sanction (art. 8.5). Le titre « Administratrice » n’y est
     // pour rien : un élève suspendu sans aucun rôle a exactement les mêmes
     // trois entrées.
-    expect(entreesVisibles(suspendue).map((e) => e.href)).toEqual([
+    expect(liensVisibles(suspendue).map((e) => e.href)).toEqual([
       ROUTES.bureau,
       ROUTES.fiche,
       ROUTES.corbeaux,

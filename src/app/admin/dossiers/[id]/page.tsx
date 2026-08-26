@@ -5,7 +5,9 @@ import CommandeEtape from "@/components/admin/CommandeEtape";
 import EnTeteAdmin from "@/components/admin/EnTeteAdmin";
 import FormulaireDecision from "@/components/admin/FormulaireDecision";
 import JournalMembre from "@/components/admin/JournalMembre";
+import PanneauPouvoirs from "@/components/admin/PanneauPouvoirs";
 import { lireDossier, modeDemonstration } from "@/lib/dossier/depot";
+import { pouvoirsDuMembre } from "@/lib/forum/depot-pouvoirs";
 import {
   libelleAnnee,
   libellePlace,
@@ -35,6 +37,10 @@ export default async function DossierAdminPage({
 }) {
   const dossier = await lireDossier(params.id);
   if (!dossier) notFound();
+
+  // Les pouvoirs vivent à part du dossier : ils s'accordent au compte, pas à
+  // la candidature, et se lisent donc par leur propre couture.
+  const { pouvoirs, eleveId } = await pouvoirsDuMembre(params.id);
 
   const t = TEXTES_ETATS.admin;
 
@@ -216,6 +222,15 @@ export default async function DossierAdminPage({
                 })}
               </ul>
             </section>
+
+            {/* ── Les pouvoirs ──
+                Après maison et baguette, et avant la décision : c'est un
+                réglage du membre, pas une lecture de sa candidature. */}
+            <PanneauPouvoirs
+              utilisateurId={dossier.id}
+              eleveId={eleveId}
+              pouvoirs={pouvoirs}
+            />
 
             {/* ── Décision — seulement tant que le dossier est en jeu ── */}
             {dossier.statut === "EN_ATTENTE" || dossier.statut === "A_CORRIGER" ? (

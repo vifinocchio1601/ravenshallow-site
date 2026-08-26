@@ -58,7 +58,7 @@ src/
 │  └─ RuneDivider.tsx    — séparateur runique
 └─ lib/content.ts        — maisons, territoires, liens, runes
 
-public/crests/  — kaldrafn, nattorm, bryggeld, tideal, ravenshallow, carte
+public/crests/  — kaldrafn, nattorm, bryggeld, tideal, ravenshallow (.webp), carte (.jpg)
 ```
 
 ## Accessibilité & mouvement

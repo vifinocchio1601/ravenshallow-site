@@ -6,6 +6,7 @@ import AdminEmptyState from "@/components/AdminEmptyState";
 import { TEXTES_CORBEAUX } from "@/lib/corbeaux/constantes";
 import { courrierEnAttente } from "@/lib/corbeaux/courrier";
 import { signalementsEnAttente } from "@/lib/corbeaux/moderation";
+import { TEXTES_POUVOIRS } from "@/lib/forum/constantes";
 
 export const metadata: Metadata = {
   title: "Administration — Ravenshallow",
@@ -156,6 +157,24 @@ export default async function AdminPage() {
             ) : null}
             <Link href="/admin/signalements" className="btn btn-ghost mt-6">
               {TEXTES_CORBEAUX.moderation.lien}
+            </Link>
+          </AdminCard>
+
+          {/* Les pouvoirs.
+              Séparés de la liste des membres : celle-ci répond à « que peut
+              Sigrid ? », celle-là à « qui peut clore une scène ? ». Une
+              permission accordée en juin et oubliée en décembre ne se voit
+              que sur la seconde. */}
+          <AdminCard
+            rune="ᛊᛖᚷ"
+            eyebrow={TEXTES_POUVOIRS.eyebrow}
+            title={TEXTES_POUVOIRS.titre}
+          >
+            <p className="leading-[1.7] text-parchment-dim">
+              {TEXTES_POUVOIRS.accroche}
+            </p>
+            <Link href="/admin/pouvoirs" className="btn btn-ghost mt-6">
+              {TEXTES_POUVOIRS.lien}
             </Link>
           </AdminCard>
 

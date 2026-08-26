@@ -3,7 +3,7 @@ import { ENTREES_MENU, PREFIXES_ECOLE, ROUTES, ROUTES_HORS_MENU } from "@/lib/ec
 import {
   aFiniLesPremiersPas,
   destinationApres,
-  entreesVisibles,
+  liensVisibles,
   estBanni,
   doitPasserAKaldvik,
   doitPasserAuMiroir,
@@ -171,7 +171,7 @@ describe("le nouvel arrivant", () => {
    * une maison.
    */
   it("a son bureau, sa fiche et les corbeaux — rien d’autre", () => {
-    expect(entreesVisibles(NOUVEL_ARRIVANT).map((e) => e.href)).toEqual([
+    expect(liensVisibles(NOUVEL_ARRIVANT).map((e) => e.href)).toEqual([
       ROUTES.bureau,
       ROUTES.fiche,
       ROUTES.corbeaux,
@@ -194,7 +194,7 @@ describe("le nouvel arrivant", () => {
 
 describe("l’élève réparti", () => {
   it("voit tout le bandeau", () => {
-    expect(entreesVisibles(REPARTI).map((e) => e.href)).toEqual(
+    expect(liensVisibles(REPARTI).map((e) => e.href)).toEqual(
       ENTREES_MENU.map((e) => e.href),
     );
   });
@@ -246,7 +246,7 @@ describe("le membre banni", () => {
    */
   it("garde son bureau, sa fiche et la voie de recours, réparti ou non", () => {
     for (const etat of [BANNI, BANNI_REPARTI]) {
-      expect(entreesVisibles(etat).map((e) => e.href)).toEqual([
+      expect(liensVisibles(etat).map((e) => e.href)).toEqual([
         ROUTES.bureau,
         ROUTES.fiche,
         ROUTES.corbeaux,
@@ -270,7 +270,7 @@ describe("le dossier non accepté", () => {
     for (const chemin of Object.values(ROUTES)) {
       expect(routeAutorisee(EN_ATTENTE, chemin), chemin).toBe(false);
     }
-    expect(entreesVisibles(EN_ATTENTE)).toHaveLength(0);
+    expect(liensVisibles(EN_ATTENTE)).toHaveLength(0);
   });
 });
 
@@ -318,7 +318,7 @@ describe("les propriétés que le jour d’après ne doit pas casser", () => {
     expect(ENTREES_MENU.map((e) => e.href)).not.toContain(chemin);
 
     for (const etat of [NOUVEL_ARRIVANT, AVEC_BAGUETTE, REPARTI, BANNI]) {
-      expect(entreesVisibles(etat).map((e) => e.href)).not.toContain(chemin);
+      expect(liensVisibles(etat).map((e) => e.href)).not.toContain(chemin);
     }
   });
 

@@ -9,36 +9,45 @@ import { aUneMaison, estConcerneParLeMiroir } from "@/lib/session/acces";
  */
 
 export const BLASON_ECOLE = {
-  src: "/crests/ravenshallow.png",
+  src: "/crests/ravenshallow.webp",
   largeur: 679,
   hauteur: 900,
   alt: "Blason de Ravenshallow",
 } as const;
 
+/**
+ * Les blasons sont en **WebP** : les PNG d’origine pesaient un mégaoctet
+ * pièce, pour un écu de trente pixels dans le bandeau. Même image, −86 %.
+ *
+ * `largeur` et `hauteur` sont les dimensions **naturelles** du fichier, et ne
+ * disent rien de la taille d’affichage : elles ne servent qu’à donner son
+ * rapport à `next/image`. **Chaque usage doit donc déclarer son `sizes`** —
+ * sans lui, le navigateur réclame la pleine largeur pour une vignette.
+ */
 type Blason = { src: string; largeur: number; hauteur: number; alt: string };
 
 const BLASONS_MAISON: Record<string, Blason> = {
   KALDRAFN: {
-    src: "/crests/kaldrafn.png",
+    src: "/crests/kaldrafn.webp",
     largeur: 608,
     hauteur: 900,
     alt: "Blason de la maison Kaldrafn",
   },
   NATTORM: {
-    src: "/crests/nattorm.png",
+    src: "/crests/nattorm.webp",
     largeur: 615,
     hauteur: 900,
     alt: "Blason de la maison Nattorm",
   },
   BRYGGELD: {
-    src: "/crests/bryggeld.png",
-    largeur: 608,
+    src: "/crests/bryggeld.webp",
+    largeur: 625,
     hauteur: 900,
     alt: "Blason de la maison Bryggeld",
   },
   TIDEAL: {
-    src: "/crests/tideal.png",
-    largeur: 608,
+    src: "/crests/tideal.webp",
+    largeur: 641,
     hauteur: 900,
     alt: "Blason de la maison Tideål",
   },

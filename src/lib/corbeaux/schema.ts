@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { nettoyerTexteLibre } from "@/lib/texte";
 import { TEXTES_CORBEAUX } from "./constantes";
 
 /**
@@ -22,50 +23,11 @@ export const RECHERCHE_MIN = 2;
 export const RECHERCHE_MAX = 60;
 
 /**
- * Un caractère de contrôle, **sauf le saut de ligne et la tabulation**.
- *
- * Le saut de ligne est précisément ce qu’on veut garder : les retours à la
- * ligne d’un corbeau s’affichent tels quels. La tabulation reste elle aussi —
- * quelqu’un qui colle un bout de texte indenté doit le retrouver indenté.
- *
- * Écrit en toutes lettres plutôt qu’en classe de caractères : une plage comme
- * `[-]` se lit mal, et la variante qu’on écrit parfois à sa place
- * contient de vrais caractères de contrôle, invisibles dans un éditeur et
- * perdus au premier copier-coller.
+ * Le ménage vit maintenant dans `lib/texte.ts` : les posts du forum en ont le
+ * même besoin, et deux copies auraient fini par diverger. Réexporté sous son
+ * ancien nom — c’est celui qu’emploient les appelants de la Tour.
  */
-function estCaractereDeControle(signe: string): boolean {
-  if (signe === "\n" || signe === "\t") return false;
-  const code = signe.codePointAt(0) ?? 0;
-  return code < 0x20 || code === 0x7f;
-}
-
-/**
- * Le ménage fait avant tout examen.
- *
- * **Ce qu’on ne touche PAS mérite d’être dit** : ni les apostrophes droites,
- * ni la ponctuation, ni la casse. Le site écrit ses propres textes avec des
- * apostrophes typographiques ; il n’a pas à réécrire ceux d’un joueur. Un
- * bout de code collé, une citation, une orthographe personnelle doivent
- * ressortir tels qu’ils sont entrés.
- *
- * Quatre passes, dans cet ordre :
- *   1. les fins de ligne de Windows deviennent des sauts simples
- *   2. les caractères de contrôle disparaissent, sauf ceux qui servent
- *   3. les espaces en fin de ligne s’en vont, invisibles et sans usage
- *   4. plus de deux sauts de ligne d’affilée se ramènent à deux : une ligne
- *      vide sépare deux paragraphes, quarante ne séparent rien et poussent
- *      simplement le reste de la conversation hors de l’écran
- */
-export function nettoyerCorbeau(brut: string): string {
-  const sansControle = [...brut.replace(/\r\n?/g, "\n")]
-    .filter((signe) => !estCaractereDeControle(signe))
-    .join("");
-
-  return sansControle
-    .replace(/[ \t]+$/gm, "")
-    .replace(/\n{3,}/g, "\n\n")
-    .trim();
-}
+export const nettoyerCorbeau = nettoyerTexteLibre;
 
 export const corbeauSchema = z
   .string()

@@ -20,7 +20,14 @@ export type EvenementMembre =
   | "ETAT_MAISON_MODIFIE"
   | "ETAT_BAGUETTE_MODIFIE"
   | "ACCES_MODIFIE"
-  | "COURRIEL_CONFIRMATION";
+  | "COURRIEL_CONFIRMATION"
+  // Les pouvoirs. `ROLE_MODIFIE` est distinct de `ACCES_MODIFIE` : suspendre
+  // un compte et le faire modérateur ne se lisent pas de la même façon.
+  | "ROLE_MODIFIE"
+  | "PERMISSION_ACCORDEE"
+  | "PERMISSION_RETIREE"
+  | "PREFET_NOMME"
+  | "PREFET_DEMIS";
 
 export type EntreeJournal = {
   id: string;

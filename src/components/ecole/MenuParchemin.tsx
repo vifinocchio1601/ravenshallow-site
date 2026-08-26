@@ -3,11 +3,18 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import BoutonDeconnexion from "@/components/connexion/BoutonDeconnexion";
 import { useNonLus } from "@/components/corbeaux/useNonLus";
 import { BLASON_ECOLE } from "@/lib/ecole/blasons";
-import { ROUTES, type EntreeMenu } from "@/lib/ecole/menu";
+import {
+  ROUTES,
+  compteDe,
+  estUnGroupe,
+  type EntreeMenu,
+  type GroupeMenu,
+  type LienMenu,
+} from "@/lib/ecole/menu";
 import { TEXTES_CORBEAUX } from "@/lib/corbeaux/constantes";
 import { TEXTES_ECOLE } from "@/lib/ecole/constantes";
 
@@ -18,10 +25,18 @@ import { TEXTES_ECOLE } from "@/lib/ecole/constantes";
  * réels, un focus visible et un ordre de tabulation naturel. Rien n’est
  * dessiné sur une image, rien ne dépend de la souris.
  *
- * Sur téléphone, le parchemin se replie en un rouleau qu’on ouvre au tap. Le
- * déroulé est une transition de `grid-template-rows`, la seule façon d’animer
- * une hauteur inconnue — et `prefers-reduced-motion`, traité globalement dans
- * `globals.css`, la ramène à l’instantané.
+ * ── Les groupes ──
+ *
+ * Trois entrées sur cinq ouvrent un sous-menu, et **le survol n’est jamais la
+ * seule façon de l’ouvrir** : chaque groupe est un `<button aria-expanded>`
+ * qu’on actionne à la souris, au clavier ou au doigt. Le survol s’ajoute
+ * par-dessus, comme une commodité.
+ *
+ * Sur téléphone, le parchemin se replie en un rouleau, et les groupes y
+ * deviennent des accordéons — pas des menus flottants, qui n’ont aucun sens
+ * sans souris. Le déroulé est une transition de `grid-template-rows`, la seule
+ * façon d’animer une hauteur inconnue — et `prefers-reduced-motion`, traité
+ * globalement dans `globals.css`, la ramène à l’instantané.
  */
 export default function MenuParchemin({
   prenomNom,
@@ -42,16 +57,15 @@ export default function MenuParchemin({
    */
   mention: string | null;
   /**
-   * Les entrées que ce compte peut ouvrir, calculées côté serveur par
-   * `entreesVisibles`. Le bandeau ne décide de rien : il affiche ce qu’on lui
-   * donne, et il peut n’en recevoir qu’une seule.
+   * L’arbre du menu, déjà taillé côté serveur par `menuVisible` : ce compte
+   * peut ouvrir tout ce qu’il y trouve. Le bandeau ne décide de rien, et un
+   * groupe vide ne lui parvient jamais.
    */
   entrees: readonly EntreeMenu[];
   /**
-   * Ce qu’il y a à annoncer sur une entrée, indexé par son adresse — les
-   * corbeaux non lus, aujourd’hui. Le bandeau ne connaît aucune adresse en
-   * particulier : il affiche le compte qu’on lui remet, et rien si on ne lui
-   * en remet pas.
+   * Ce qu’il y a à annoncer sur une adresse — les corbeaux non lus,
+   * aujourd’hui. Le bandeau ne connaît aucune adresse en particulier : il
+   * affiche le compte qu’on lui remet, et rien si on ne lui en remet pas.
    */
   compteurs: Readonly<Record<string, number>>;
 }) {
@@ -73,8 +87,21 @@ export default function MenuParchemin({
     [ROUTES.corbeaux]: nonLus,
   };
 
+  const estLienCourant = (lien: LienMenu) =>
+    chemin === lien.href || chemin.startsWith(`${lien.href}/`);
+
   const estCourante = (entree: EntreeMenu) =>
-    chemin === entree.href || chemin.startsWith(`${entree.href}/`);
+    estUnGroupe(entree)
+      ? entree.liens.some(estLienCourant)
+      : estLienCourant(entree);
+
+  /**
+   * **Le compte d’un groupe est la somme de celui de ses feuilles**, et cette
+   * règle vit dans `ecole/menu.ts` — pas ici. Sans la remontée, on raterait
+   * ses corbeaux derrière un sous-menu fermé, et une règle enfouie dans un
+   * composant ne se teste pas.
+   */
+  const compte = (entree: EntreeMenu) => compteDe(entree, compteursVivants);
 
   return (
     <nav aria-label={TEXTES_ECOLE.menu.aria} className="px-3 pt-3 sm:px-5 sm:pt-5">
@@ -101,28 +128,39 @@ export default function MenuParchemin({
                 alt={BLASON_ECOLE.alt}
                 width={BLASON_ECOLE.largeur}
                 height={BLASON_ECOLE.hauteur}
+                sizes="32px"
                 className="h-9 w-auto sm:h-11"
               />
-              <span className="hidden font-display text-[0.72rem] font-semibold uppercase tracking-[0.26em] text-ink lg:inline">
+              <span className="hidden font-display text-[0.72rem] font-semibold uppercase tracking-[0.26em] text-ink 2xl:inline">
                 Ravenshallow
               </span>
             </Link>
 
             {/* — Les entrées, sur écran large — */}
-            <ul className="hidden items-center gap-8 md:flex">
+            <ul className="hidden items-center gap-5 lg:flex xl:gap-7">
               {entrees.map((entree) => (
-                <li key={entree.href}>
-                  <LienMenu
-                    entree={entree}
-                    courante={estCourante(entree)}
-                    compte={compteursVivants[entree.href] ?? 0}
-                  />
+                <li key={cleDe(entree)}>
+                  {estUnGroupe(entree) ? (
+                    <GroupeDeroulant
+                      groupe={entree}
+                      courante={estCourante(entree)}
+                      compte={compte(entree)}
+                      compteurs={compteursVivants}
+                      estLienCourant={estLienCourant}
+                    />
+                  ) : (
+                    <LienMenuAffiche
+                      lien={entree}
+                      courante={estCourante(entree)}
+                      compte={compte(entree)}
+                    />
+                  )}
                 </li>
               ))}
             </ul>
 
             {/* — L’élève, et de quoi ressortir — */}
-            <div className="hidden shrink-0 items-center gap-4 md:flex">
+            <div className="hidden shrink-0 items-center gap-4 lg:flex">
               <div className="text-right">
                 <p className="font-display text-[0.72rem] font-semibold uppercase tracking-[0.14em] text-ink">
                   {prenomNom}
@@ -138,6 +176,7 @@ export default function MenuParchemin({
                 alt={blason.alt}
                 width={blason.largeur}
                 height={blason.hauteur}
+                sizes="32px"
                 className="h-9 w-auto sm:h-11"
               />
               <BoutonDeconnexion className="rounded-sm border border-ink/25 px-3 py-2 font-display text-[0.6rem] uppercase tracking-[0.12em] text-ink/80 transition-colors duration-300 hover:border-ink/60 hover:text-ink disabled:opacity-50" />
@@ -149,14 +188,17 @@ export default function MenuParchemin({
               onClick={() => setOuvert((o) => !o)}
               aria-expanded={ouvert}
               aria-controls="parchemin-deroule"
-              className="flex items-center gap-2 rounded-sm border border-ink/25 px-3 py-2 font-display text-[0.62rem] uppercase tracking-[0.14em] text-ink transition-colors duration-300 hover:border-ink/60 md:hidden"
+              className="flex items-center gap-2 rounded-sm border border-ink/25 px-3 py-2 font-display text-[0.62rem] uppercase tracking-[0.14em] text-ink transition-colors duration-300 hover:border-ink/60 lg:hidden"
             >
               <span aria-hidden="true" className="flex flex-col gap-[3px]">
                 <span className="block h-px w-4 bg-ink" />
                 <span className="block h-px w-4 bg-ink" />
                 <span className="block h-px w-4 bg-ink" />
               </span>
+              {/* La pastille suit jusque sur le rouleau replié : sinon, un
+                  corbeau reçu sur téléphone ne se voit nulle part. */}
               {ouvert ? TEXTES_ECOLE.menu.replier : TEXTES_ECOLE.menu.derouler}
+              <Pastille compte={entrees.reduce((n, e) => n + compte(e), 0)} />
             </button>
           </div>
 
@@ -164,19 +206,30 @@ export default function MenuParchemin({
           <div
             id="parchemin-deroule"
             data-ouvert={ouvert}
-            className="parchemin__deroule md:hidden"
+            className="parchemin__deroule lg:hidden"
           >
             <div>
               <ul className="mt-4 flex flex-col gap-1 border-t border-ink/15 pt-4">
                 {entrees.map((entree) => (
-                  <li key={entree.href}>
-                    <LienMenu
-                      entree={entree}
-                      courante={estCourante(entree)}
-                      compte={compteursVivants[entree.href] ?? 0}
-                      bloc
-                      onClick={() => setOuvert(false)}
-                    />
+                  <li key={cleDe(entree)}>
+                    {estUnGroupe(entree) ? (
+                      <GroupeAccordeon
+                        groupe={entree}
+                        contientLaPageCourante={estCourante(entree)}
+                        compte={compte(entree)}
+                        compteurs={compteursVivants}
+                        estLienCourant={estLienCourant}
+                        onNavigation={() => setOuvert(false)}
+                      />
+                    ) : (
+                      <LienMenuAffiche
+                        lien={entree}
+                        courante={estCourante(entree)}
+                        compte={compte(entree)}
+                        bloc
+                        onClick={() => setOuvert(false)}
+                      />
+                    )}
                   </li>
                 ))}
               </ul>
@@ -188,6 +241,7 @@ export default function MenuParchemin({
                     alt={blason.alt}
                     width={blason.largeur}
                     height={blason.hauteur}
+                    sizes="24px"
                     className="h-8 w-auto"
                   />
                   <div>
@@ -211,82 +265,311 @@ export default function MenuParchemin({
   );
 }
 
+/** Un groupe n’a pas d’adresse : son libellé lui sert de clé. */
+function cleDe(entree: EntreeMenu): string {
+  return estUnGroupe(entree) ? entree.libelle : entree.href;
+}
+
+// ─────────────────────────────────────────────────────────────
+//  Le groupe, sur écran large — un menu déroulant
+// ─────────────────────────────────────────────────────────────
+
+/**
+ * **Le survol ouvre, mais il n’est jamais le seul à ouvrir.**
+ *
+ * Le bouton porte `aria-expanded` et réagit à Entrée comme à Espace ; le
+ * groupe se referme sur Échap — en rendant le focus au bouton, sans quoi on le
+ * perdrait au début de la page — et dès que le focus quitte le groupe. C’est
+ * ce dernier point qui fait tenir la navigation au clavier : on entre dans le
+ * sous-menu par Tab, on en sort par Tab, et il se ferme tout seul.
+ */
+function GroupeDeroulant({
+  groupe,
+  courante,
+  compte,
+  compteurs,
+  estLienCourant,
+}: {
+  groupe: GroupeMenu;
+  courante: boolean;
+  compte: number;
+  compteurs: Readonly<Record<string, number>>;
+  estLienCourant: (lien: LienMenu) => boolean;
+}) {
+  const [deplie, setDeplie] = useState(false);
+  const identifiant = useId();
+  const bouton = useRef<HTMLButtonElement>(null);
+
+  return (
+    <div
+      className="relative"
+      onMouseEnter={() => setDeplie(true)}
+      onMouseLeave={() => setDeplie(false)}
+      // Le focus quitte le groupe : on referme. `relatedTarget` est la cible
+      // qui reçoit le focus — nulle quand on quitte la fenêtre, auquel cas on
+      // ferme aussi, ce qui est le comportement attendu.
+      onBlur={(e) => {
+        if (!e.currentTarget.contains(e.relatedTarget as Node | null)) {
+          setDeplie(false);
+        }
+      }}
+      onKeyDown={(e) => {
+        if (e.key === "Escape" && deplie) {
+          setDeplie(false);
+          bouton.current?.focus();
+        }
+      }}
+    >
+      <button
+        ref={bouton}
+        type="button"
+        aria-expanded={deplie}
+        aria-controls={identifiant}
+        onClick={() => setDeplie((d) => !d)}
+        className={`group flex items-center gap-2 font-display text-[0.72rem] uppercase tracking-[0.16em] transition-colors duration-300 ${
+          courante ? "font-bold text-ink" : "font-medium text-ink/60 hover:text-ink"
+        }`}
+      >
+        <Losange visible={courante} />
+        <span
+          className={`pb-0.5 text-center ${
+            courante ? "border-b border-ink/70" : "border-b border-transparent"
+          }`}
+        >
+          {groupe.libelle}
+        </span>
+        <Pastille compte={compte} />
+        {/* Le chevron dit qu’il y a quelque chose dessous, et dans quel sens
+            ça s’ouvre. Décoratif : `aria-expanded` porte déjà l’information. */}
+        <span
+          aria-hidden="true"
+          className={`text-[0.5rem] leading-none transition-transform duration-300 ${
+            deplie ? "rotate-180" : ""
+          }`}
+        >
+          ▾
+        </span>
+      </button>
+
+      {/* Rendu en permanence, masqué quand il est replié : `hidden` retire les
+          liens de l’ordre de tabulation sans avoir à gérer un `tabIndex`. */}
+      <ul
+        id={identifiant}
+        hidden={!deplie}
+        aria-label={TEXTES_ECOLE.menu.sousMenuAria.replace(
+          "{groupe}",
+          groupe.libelle,
+        )}
+        // Même précaution que l'accordéon : la classe dit ce que l'attribut
+        // dit, pour qu'aucun utilitaire de `display` ne puisse les désaccorder.
+        className={`parchemin absolute left-1/2 top-full z-20 mt-3 min-w-[12rem] -translate-x-1/2 rounded-[2px] border border-ink/20 px-2 py-2 shadow-lg ${
+          deplie ? "block" : "hidden"
+        }`}
+      >
+        {groupe.liens.map((lien) => (
+          <li key={lien.href}>
+            <LienMenuAffiche
+              lien={lien}
+              courante={estLienCourant(lien)}
+              compte={lien.porteUnCompteur ? (compteurs[lien.href] ?? 0) : 0}
+              bloc
+              onClick={() => setDeplie(false)}
+            />
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
+//  Le groupe, sur téléphone — un accordéon
+// ─────────────────────────────────────────────────────────────
+
+/**
+ * Pas de menu flottant sur téléphone : il n’y a pas de survol, et un panneau
+ * qui recouvre le reste sur un écran de six centimètres se referme mal.
+ *
+ * Le groupe qui contient la page courante s’ouvre de lui-même : on vient d’y
+ * naviguer, on veut voir où l’on est.
+ */
+function GroupeAccordeon({
+  groupe,
+  contientLaPageCourante,
+  compte,
+  compteurs,
+  estLienCourant,
+  onNavigation,
+}: {
+  groupe: GroupeMenu;
+  contientLaPageCourante: boolean;
+  compte: number;
+  compteurs: Readonly<Record<string, number>>;
+  estLienCourant: (lien: LienMenu) => boolean;
+  onNavigation: () => void;
+}) {
+  const [deplie, setDeplie] = useState(contientLaPageCourante);
+  const identifiant = useId();
+
+  // La navigation change le groupe courant : on suit, sans écraser un
+  // dépliement fait à la main sur le groupe qu’on regarde déjà.
+  useEffect(() => {
+    if (contientLaPageCourante) setDeplie(true);
+  }, [contientLaPageCourante]);
+
+  return (
+    <>
+      <button
+        type="button"
+        aria-expanded={deplie}
+        aria-controls={identifiant}
+        onClick={() => setDeplie((d) => !d)}
+        className={`flex w-full items-center gap-2 rounded-sm px-1 py-2 text-left font-display text-[0.72rem] uppercase tracking-[0.16em] transition-colors duration-300 ${
+          contientLaPageCourante
+            ? "font-bold text-ink"
+            : "font-medium text-ink/60"
+        }`}
+      >
+        <Losange visible={contientLaPageCourante} />
+        <span
+          className={`pb-0.5 text-left ${
+            contientLaPageCourante
+              ? "border-b border-ink/70"
+              : "border-b border-transparent"
+          }`}
+        >
+          {groupe.libelle}
+        </span>
+        <Pastille compte={compte} />
+        <span
+          aria-hidden="true"
+          className={`ml-auto text-[0.5rem] leading-none transition-transform duration-300 ${
+            deplie ? "rotate-180" : ""
+          }`}
+        >
+          ▾
+        </span>
+      </button>
+
+      <ul
+        id={identifiant}
+        hidden={!deplie}
+        aria-label={TEXTES_ECOLE.menu.sousMenuAria.replace(
+          "{groupe}",
+          groupe.libelle,
+        )}
+        // `hidden` seul ne suffit pas : une classe utilitaire qui pose un
+        // `display` — ici `flex` — l'écrase en silence, et le sous-menu reste
+        // ouvert en permanence. La classe doit donc porter la même décision
+        // que l'attribut.
+        className={`mb-1 ml-4 flex-col gap-0.5 border-l border-ink/15 pl-3 ${
+          deplie ? "flex" : "hidden"
+        }`}
+      >
+        {groupe.liens.map((lien) => (
+          <li key={lien.href}>
+            <LienMenuAffiche
+              lien={lien}
+              courante={estLienCourant(lien)}
+              compte={lien.porteUnCompteur ? (compteurs[lien.href] ?? 0) : 0}
+              bloc
+              onClick={onNavigation}
+            />
+          </li>
+        ))}
+      </ul>
+    </>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
+//  Les pièces communes
+// ─────────────────────────────────────────────────────────────
+
 /**
  * L’entrée courante ne se signale pas par la seule couleur : elle porte
  * `aria-current`, une graisse plus forte, un trait sous le mot et un losange
  * en tête. Un daltonien la voit, un lecteur d’écran l’annonce.
  */
-function LienMenu({
-  entree,
+function LienMenuAffiche({
+  lien,
   courante,
   compte,
   bloc = false,
   onClick,
 }: {
-  entree: EntreeMenu;
+  lien: LienMenu;
   courante: boolean;
   /** Les non-lus à annoncer. Zéro = pas de pastille du tout. */
   compte: number;
   bloc?: boolean;
   onClick?: () => void;
 }) {
-  const aCompter = entree.porteUnCompteur === true && compte > 0;
   return (
     <Link
-      href={entree.href}
+      href={lien.href}
       onClick={onClick}
       aria-current={courante ? "page" : undefined}
       className={`group relative flex items-center gap-2 font-display text-[0.72rem] uppercase tracking-[0.16em] transition-colors duration-300 ${
         bloc ? "rounded-sm px-1 py-2" : ""
       } ${
-        courante
-          ? "font-bold text-ink"
-          : "font-medium text-ink/60 hover:text-ink"
+        courante ? "font-bold text-ink" : "font-medium text-ink/60 hover:text-ink"
       }`}
     >
-      <span
-        aria-hidden="true"
-        className={`text-[0.5rem] transition-opacity duration-300 ${
-          courante ? "opacity-100" : "opacity-0"
-        }`}
-      >
-        ◆
-      </span>
+      <Losange visible={courante} />
       {/* `text-center` : les entrées du bandeau tiennent sur deux lignes —
           « MON / BUREAU », « LES / CORBEAUX » —, et les deux mots doivent
           s’aligner l’un sous l’autre plutôt que de se caler à gauche.
-          Le déroulé de téléphone, lui, est une liste verticale : le texte y
-          reste au fer à gauche, comme n’importe quelle liste de liens. */}
+          Les listes déroulées, elles, restent au fer à gauche. */}
       <span
         className={`pb-0.5 ${bloc ? "text-left" : "text-center"} ${
           courante ? "border-b border-ink/70" : "border-b border-transparent"
         }`}
       >
-        {entree.libelle}
+        {lien.libelle}
       </span>
-
-      {/* La pastille des non-lus.
-          Elle ne se signale pas par la seule couleur : le nombre est écrit
-          dedans, et un lecteur d’écran lit « Les Corbeaux, 3 non lus » grâce
-          au texte hors écran — la pastille elle-même est décorative, sans
-          quoi le chiffre serait annoncé deux fois.
-          Au-delà de neuf, « 9+ » : la pastille reste ronde, et le compte
-          exact n’apprend plus rien à ce stade. */}
-      {aCompter ? (
-        <>
-          <span
-            aria-hidden="true"
-            className="ml-0.5 inline-flex min-w-[1.15rem] items-center justify-center rounded-full border border-ink/40 bg-ink px-1.5 py-0.5 font-display text-[0.58rem] font-bold leading-none tracking-normal text-parchment"
-          >
-            {compte > 9 ? "9+" : compte}
-          </span>
-          <span className="sr-only">
-            {compte === 1
-              ? TEXTES_CORBEAUX.liste.unNonLuAria
-              : TEXTES_CORBEAUX.liste.nonLusAria.replace("{n}", String(compte))}
-          </span>
-        </>
-      ) : null}
+      <Pastille compte={compte} />
     </Link>
+  );
+}
+
+function Losange({ visible }: { visible: boolean }) {
+  return (
+    <span
+      aria-hidden="true"
+      className={`text-[0.5rem] transition-opacity duration-300 ${
+        visible ? "opacity-100" : "opacity-0"
+      }`}
+    >
+      ◆
+    </span>
+  );
+}
+
+/**
+ * La pastille des non-lus.
+ *
+ * Elle ne se signale pas par la seule couleur : le nombre est écrit dedans, et
+ * un lecteur d’écran lit « Les Corbeaux, 3 non lus » grâce au texte hors écran
+ * — la pastille elle-même est décorative, sans quoi le chiffre serait annoncé
+ * deux fois. Au-delà de neuf, « 9+ » : elle reste ronde, et le compte exact
+ * n’apprend plus rien à ce stade.
+ */
+function Pastille({ compte }: { compte: number }) {
+  if (compte <= 0) return null;
+  return (
+    <>
+      <span
+        aria-hidden="true"
+        className="ml-0.5 inline-flex min-w-[1.15rem] items-center justify-center rounded-full border border-ink/40 bg-ink px-1.5 py-0.5 font-display text-[0.58rem] font-bold leading-none tracking-normal text-parchment"
+      >
+        {compte > 9 ? "9+" : compte}
+      </span>
+      <span className="sr-only">
+        {compte === 1
+          ? TEXTES_CORBEAUX.liste.unNonLuAria
+          : TEXTES_CORBEAUX.liste.nonLusAria.replace("{n}", String(compte))}
+      </span>
+    </>
   );
 }

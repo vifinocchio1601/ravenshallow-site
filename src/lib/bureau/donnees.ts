@@ -1,6 +1,8 @@
 import "server-only";
 import { TEXTES_CORBEAUX } from "@/lib/corbeaux/constantes";
 import { listerConversations } from "@/lib/corbeaux/depot";
+import { compterScenesOuvertes, listerScenesDe } from "@/lib/forum/depot";
+import { auDelaDuRepere, reperDeScenes } from "@/lib/forum/scenes";
 import { libelleBaguette } from "@/lib/ecole/baguette";
 import { TEXTES_ECOLE } from "@/lib/ecole/constantes";
 import { ROUTES } from "@/lib/ecole/menu";
@@ -91,11 +93,46 @@ export type Annonce = {
   extrait: string;
 };
 
-/** Lot « scènes » — table à créer. */
+/**
+ * Les scènes où ce joueur a écrit et qui ne sont pas closes.
+ *
+ * **Le deuxième panneau du bureau à cesser d’être vide**, et il n’a pas eu à
+ * bouger — c’était le plan depuis le lot du bureau.
+ *
+ * Un compte sans fiche n’a rien écrit : liste vide, jamais d’exception.
+ */
 export async function scenesEnCours(
-  _compte: CompteConnecte,
+  compte: CompteConnecte,
 ): Promise<SceneEnCours[]> {
-  return [];
+  if (!compte.eleveId) return [];
+  return listerScenesDe(compte.eleveId);
+}
+
+/**
+ * Le repère de l’article 17.3 — trois scènes, cinq dès la troisième année.
+ *
+ * **Affiché, jamais opposé.** Le joueur a tranché le 26 août 2026 : la limite
+ * est un principe de confiance. Ce compte dit où l’on en est, et donne au
+ * modérateur le fait dont il a besoin le jour de la remontrance — sans lui,
+ * elle tomberait de nulle part.
+ */
+export type RepereScenes = {
+  ouvertes: number;
+  repere: number;
+  auDela: boolean;
+};
+
+export async function repereDeScenes(
+  compte: CompteConnecte,
+): Promise<RepereScenes> {
+  const ouvertes = compte.eleveId
+    ? await compterScenesOuvertes(compte.eleveId)
+    : 0;
+  return {
+    ouvertes,
+    repere: reperDeScenes(compte.fonction),
+    auDela: auDelaDuRepere(compte.fonction, ouvertes),
+  };
 }
 
 /**
