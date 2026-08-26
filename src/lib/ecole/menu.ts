@@ -6,6 +6,8 @@
  * banni se déduisent tous de cette liste.
  */
 
+import { NOM_COURT } from "@/lib/corbeaux/constantes";
+
 export const ROUTES = {
   accueil: "/",
   inscription: "/inscription",
@@ -22,6 +24,13 @@ export const ROUTES = {
   fiche: "/fiche",
   cours: "/cours",
   ecole: "/ecole",
+  corbeaux: "/corbeaux",
+  // Deux adresses de la Tour qui ne sont pas un fil. Elles n’ont pas besoin
+  // de figurer dans `ROUTES_HORS_MENU` : `routeAutorisee` reconnaît déjà tout
+  // ce qui commence par `/corbeaux/`.
+  corbeauxNouveau: "/corbeaux/nouveau",
+  corbeauxAdministration: "/corbeaux/administration",
+  corbeauxBloques: "/corbeaux/bloques",
 
   // L’école, hors bandeau
   bjornstav: "/bjornstav",
@@ -44,6 +53,15 @@ export type EntreeMenu = {
    * la liste des premiers pas, sans que personne ait à y penser.
    */
   avantPremiersPas?: true;
+  /**
+   * L’entrée affiche un compte à côté de son libellé — les corbeaux non lus.
+   *
+   * Déclaré ici plutôt que deviné par le bandeau : celui-ci ne connaît aucune
+   * adresse en particulier, il affiche le compte qu’on lui remet pour ce
+   * `href`. Le jour où les scènes en auront un, ce sera une ligne de plus,
+   * pas une condition de plus.
+   */
+  porteUnCompteur?: true;
 };
 
 export const ENTREES_MENU: readonly EntreeMenu[] = [
@@ -58,6 +76,23 @@ export const ENTREES_MENU: readonly EntreeMenu[] = [
     libelle: "Ma fiche",
     pendantBannissement: true,
     avantPremiersPas: true,
+  },
+  {
+    // La Tour aux Corbeaux s’ouvre dès le premier jour, et reste ouverte
+    // pendant une suspension — non pour continuer à bavarder, mais parce que
+    // c’est par là qu’on écrit à l’administration. L’article 8.5 donne quinze
+    // jours pour contester une sanction : la lui fermer reviendrait à
+    // supprimer ce recours pour la seule personne à qui il sert.
+    //
+    // Ce que le membre suspendu y trouve — le fil de l’administration, et rien
+    // d’autre — se décide dans `lib/corbeaux/droits.ts`. Un drapeau de menu ne
+    // sait dire qu’ouvert ou fermé ; la nuance vit ailleurs, comme pour la
+    // boutique et le Miroir.
+    href: ROUTES.corbeaux,
+    libelle: NOM_COURT,
+    pendantBannissement: true,
+    avantPremiersPas: true,
+    porteUnCompteur: true,
   },
   { href: ROUTES.cours, libelle: "Les cours" },
   { href: ROUTES.ecole, libelle: "L’école" },

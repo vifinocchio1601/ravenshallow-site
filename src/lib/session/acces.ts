@@ -100,12 +100,25 @@ export function estConcerneParLaBoutique(compte: {
  * Ajouter « et réparti » ici fermerait le bureau au nouvel arrivant, donc la
  * liste qui l’envoie devant le Miroir : il ne pourrait plus jamais y aller.
  */
-export function peutEntrerDansLEcole(compte: EtatAcces): boolean {
+export function peutEntrerDansLEcole(compte: {
+  statut: StatutDossier;
+  statutAcces: StatutAcces;
+}): boolean {
   return compte.statut === "ACCEPTE" && compte.statutAcces === "VALIDE";
 }
 
-/** Dossier accepté, mais accès suspendu : le bureau et la fiche, rien d’autre. */
-export function estBanni(compte: EtatAcces): boolean {
+/**
+ * Dossier accepté, mais accès suspendu : le bureau et la fiche, rien d’autre.
+ *
+ * Comme les six questions ci-dessus, ces deux-là ne prennent que les cases
+ * dont elles ont besoin : la Tour aux Corbeaux les interroge avec un compte
+ * réduit à deux champs, sans avoir à porter une maison ni une baguette qui
+ * ne la regardent pas.
+ */
+export function estBanni(compte: {
+  statut: StatutDossier;
+  statutAcces: StatutAcces;
+}): boolean {
   return compte.statut === "ACCEPTE" && compte.statutAcces === "EN_BANNISSEMENT";
 }
 

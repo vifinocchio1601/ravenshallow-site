@@ -1,5 +1,7 @@
 import MenuParchemin from "@/components/ecole/MenuParchemin";
+import { compterNonLus } from "@/lib/corbeaux/depot";
 import { blasonAffiche, mentionMaison } from "@/lib/ecole/blasons";
+import { ROUTES } from "@/lib/ecole/menu";
 import { entreesVisibles } from "@/lib/session/acces";
 import { exigerConnexion } from "@/lib/session/garde";
 
@@ -18,6 +20,11 @@ export default async function EcoleLayout({
 }) {
   const compte = await exigerConnexion();
 
+  // Les corbeaux non lus, relus à chaque page de l’école — c’est le prix d’un
+  // compteur qui ne ment jamais. Une seule requête, et elle rend zéro sans
+  // toucher la base pour un compte à qui la Tour est fermée.
+  const nonLus = await compterNonLus(compte);
+
   return (
     <div className="min-h-[100svh] bg-void">
       {/* Le bandeau ne montre que ce que ce compte peut réellement ouvrir.
@@ -32,6 +39,7 @@ export default async function EcoleLayout({
         blason={blasonAffiche(compte)}
         mention={mentionMaison(compte)}
         entrees={entreesVisibles(compte)}
+        compteurs={{ [ROUTES.corbeaux]: nonLus }}
       />
       {children}
     </div>

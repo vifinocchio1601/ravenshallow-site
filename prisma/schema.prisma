@@ -2,9 +2,10 @@
 //
 // Le dossier d'admission (compte joueur + fiche élève), le registre des
 // visages, la lecture des dossiers par l'administration, la Cérémonie du
-// Miroir (répartition en maison) et la boutique Bjornstav (la baguette).
+// Miroir (répartition en maison), la boutique Bjornstav (la baguette) et la
+// Tour aux Corbeaux (la messagerie entre joueurs).
 //
-// Quatre règles de ce schéma ne sont PAS exprimables en Prisma et vivent en
+// Des règles de ce schéma ne sont PAS exprimables en Prisma et vivent en
 // SQL brut. Les rejouer depuis ce fichier seul les perdrait :
 //   `20260825200000_baguette_definitive` — la cohérence des trois colonnes de
 //       la baguette, et son immuabilité une fois posée
@@ -12,6 +13,10 @@
 //       rôle affiché, et la propreté de son texte
 //   `20260825220000_etat_maison_baguette` — l'accord entre chaque état et sa
 //       valeur, et le refus d'inscrire une baguette à un compte non concerné
+//   `20260826100000_tour_aux_corbeaux`   — l'accord entre le type d'une
+//       conversation et sa clé, **le type qui ne change jamais**, le corps
+//       d'un message qui n'est ni vide ni démesuré, et la copie figée d'un
+//       signalement, qui ne se réécrit pas
 
 generator client {
   provider = "prisma-client-js"
@@ -85,6 +90,19 @@ model Utilisateur {
   decisionsPrises JournalMembre[] @relation("DecisionsPrises")
 
   reinitialisations JetonReinitialisation[]
+
+  // ── La Tour aux Corbeaux ──
+  /// Les fils où ce membre figure, et ce qu'il en a lu. La table est séparée
+  /// pour que trois participants soient possibles un jour sans migration.
+  participations        Participation[]
+  conversationsOuvertes Conversation[]  @relation("ConversationsOuvertes")
+  corbeauxEnvoyes       Message[]       @relation("CorbeauxEnvoyes")
+  /// Ce qu'il a retiré de sa vue — ou ce qui ne lui est jamais parvenu.
+  messagesMasques       MessageMasque[]
+  blocagesPoses         Blocage[]       @relation("BlocagesPoses")
+  blocagesSubis         Blocage[]       @relation("BlocagesSubis")
+  signalementsEnvoyes   Signalement[]   @relation("SignalementsEnvoyes")
+  signalementsRecus     Signalement[]   @relation("SignalementsRecus")
 
   creeLe DateTime @default(now())
   majLe  DateTime @updatedAt
@@ -518,4 +536,235 @@ enum BaguetteCoeur {
   NERF_LOUP_DES_FJORDS
   GRIFFE_OURS_DES_CAVERNES
   CRISTAL_DE_GLACE
+}
+
+// ─────────────────────────────────────────────────────────────
+//  La Tour aux Corbeaux — la messagerie entre joueurs (art. 3.6, 8.6)
+// ─────────────────────────────────────────────────────────────
+
+/// Un fil entre deux membres — ou entre un membre et l'Administration.
+///
+/// **Aucune colonne « destinataire ».** Les participants vivent dans une
+/// table séparée : c'est ce qui laisse la porte ouverte à trois personnes ou
+/// plus sans rien casser le jour venu. L'interface, elle, n'en propose que
+/// deux dans ce lot.
+model Conversation {
+  id String @id @default(cuid())
+
+  /// Entre deux membres, ou adressée au staff.
+  ///
+  /// **Ce champ ne change JAMAIS après la création** — un déclencheur le
+  /// refuse. Sans ce verrou, basculer une conversation privée en
+  /// `AVEC_ADMINISTRATION` la donnerait à lire au staff, ce que le site
+  /// promet de ne jamais faire.
+  type TypeConversation @default(ENTRE_MEMBRES)
+
+  /// Les deux identifiants triés et collés — « idA:idB » —, ou
+  /// « administration:idDuMembre ».
+  ///
+  /// C'est le verrou en base contre les fils en double : deux membres qui
+  /// s'écrivent au même instant depuis deux onglets ne peuvent pas ouvrir
+  /// deux conversations parallèles, où chacun croirait que l'autre se tait.
+  /// Une contrainte, et non une condition dans le code, qui ne vaudrait que
+  /// pour les chemins qui pensent à l'écrire.
+  clePaire String @unique
+
+  /// Qui l'a ouverte. C'est de cette colonne et de `creeLe` que l'anti-
+  /// démarchage tire son compte (art. 3.6) : pas de table de compteurs.
+  ouvertParId String?
+  ouvertPar   Utilisateur? @relation("ConversationsOuvertes", fields: [ouvertParId], references: [id], onDelete: SetNull)
+
+  /// Dénormalisé, et indexé : c'est le tri « par activité récente » de la
+  /// liste des conversations. Le recalculer à chaque affichage obligerait à
+  /// balayer tous les messages de tous les fils.
+  dernierMessageLe DateTime @default(now())
+
+  participations Participation[]
+  messages       Message[]
+
+  creeLe DateTime @default(now())
+
+  @@index([dernierMessageLe])
+  @@map("conversations")
+}
+
+enum TypeConversation {
+  ENTRE_MEMBRES
+  AVEC_ADMINISTRATION
+}
+
+/// Un membre dans un fil, et ce qu'il en a lu.
+///
+/// Les deux dates sont **personnelles** : ce que j'ai lu et ce que j'ai
+/// retiré de ma vue ne regardent que moi. C'est le principe de tout ce lot —
+/// personne n'efface rien chez autrui.
+model Participation {
+  id             String       @id @default(cuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  utilisateurId  String
+  utilisateur    Utilisateur  @relation(fields: [utilisateurId], references: [id], onDelete: Cascade)
+
+  /// Jusqu'où ce membre a lu. Les non-lus sont les messages postérieurs dont
+  /// il n'est pas l'auteur **et qui ne sont pas masqués pour lui** — cette
+  /// dernière condition est ce qui empêche le corbeau d'une personne bloquée
+  /// de faire sonner le compteur.
+  luJusquau DateTime?
+
+  /// « Supprimer la conversation », de sa vue seule. Les messages antérieurs
+  /// disparaissent pour lui, le fil sort de sa liste — et y revient si l'autre
+  /// réécrit, vidé de l'ancien. Sans ce retour, on pourrait faire disparaître
+  /// quelqu'un de sa boîte pour de bon, et c'est un piège pour un membre
+  /// harcelé qui ne verrait plus rien arriver.
+  masqueeLe DateTime?
+
+  rejointLe DateTime @default(now())
+
+  @@unique([conversationId, utilisateurId])
+  @@index([utilisateurId, masqueeLe])
+  @@map("participations")
+}
+
+/// Un corbeau. Texte brut, échappé à l'affichage ; les retours à la ligne
+/// sont conservés, les liens ne sont jamais rendus cliquables.
+///
+/// Pas de colonne `modifieLe` : **un corbeau parti ne se réécrit pas.** Pas
+/// de sujet non plus — la Tour n'en a pas.
+model Message {
+  id             String       @id @default(cuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  /// Nul si le compte a été supprimé depuis. Le fil reste lisible chez celui
+  /// qui l'a reçu : effacer son compte n'efface pas ce qu'on a écrit chez
+  /// autrui, exactement comme la suppression d'un message.
+  auteurId String?
+  auteur   Utilisateur? @relation("CorbeauxEnvoyes", fields: [auteurId], references: [id], onDelete: SetNull)
+
+  corps String @db.Text
+
+  envoyeLe DateTime @default(now())
+
+  masques      MessageMasque[]
+  signalements Signalement[]
+
+  @@index([conversationId, envoyeLe])
+  @@map("messages")
+}
+
+/// « Ce message est caché pour cette personne. »
+///
+/// **Une seule table pour deux règles**, et c'est ce qui les rend sûres :
+///
+///   SUPPRIME_PAR_SOI — j'ai retiré ce message de ma vue. La copie de l'autre
+///                      est intacte : je n'ai touché ni au message ni à sa
+///                      ligne à lui. C'est ce qui protège un membre harcelé
+///                      dont l'agresseur voudrait effacer ses traces.
+///   BLOQUE           — le message d'une personne bloquée. Il est bel et bien
+///                      écrit, puis masqué pour le destinataire dans la même
+///                      écriture. L'expéditeur voit son corbeau partir et le
+///                      relit dans son fil : rien ne lui dit qu'il est bloqué.
+///                      C'est délibéré — un refus explicite déclenche
+///                      l'escalade, qui est le vrai risque.
+model MessageMasque {
+  id            String      @id @default(cuid())
+  messageId     String
+  message       Message     @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  utilisateurId String
+  utilisateur   Utilisateur @relation(fields: [utilisateurId], references: [id], onDelete: Cascade)
+
+  raison RaisonMasquage
+
+  creeLe DateTime @default(now())
+
+  @@unique([messageId, utilisateurId])
+  @@index([utilisateurId])
+  @@map("messages_masques")
+}
+
+enum RaisonMasquage {
+  SUPPRIME_PAR_SOI
+  BLOQUE
+}
+
+/// « Je ne veux plus rien recevoir de cette personne. »
+///
+/// Rien d'autre n'est stocké : ni motif, ni état. Tout le reste s'en déduit —
+/// le fil clos côté bloqueur, le refus d'en ouvrir un nouveau, le masquage
+/// automatique, l'absence du bloqué dans la recherche.
+///
+/// Un motif appellerait à en faire quelque chose, et bloquer ne doit rien
+/// déclencher : signaler et bloquer sont deux gestes distincts.
+model Blocage {
+  id         String      @id @default(cuid())
+  bloqueurId String
+  bloqueur   Utilisateur @relation("BlocagesPoses", fields: [bloqueurId], references: [id], onDelete: Cascade)
+  bloqueId   String
+  bloque     Utilisateur @relation("BlocagesSubis", fields: [bloqueId], references: [id], onDelete: Cascade)
+
+  creeLe DateTime @default(now())
+
+  @@unique([bloqueurId, bloqueId])
+  @@index([bloqueId])
+  @@map("blocages")
+}
+
+/// Un signalement, et **la seule fenêtre du staff sur les échanges privés**.
+///
+/// Tout tient dans `contexte` : le message visé et une dizaine autour,
+/// recopiés tels quels au moment du clic. Jamais la conversation entière,
+/// jamais la boîte du membre.
+///
+/// Deux conséquences, et la seconde est l'essentiel :
+///
+///   1. Le message signalé survit à tout — à sa suppression par son auteur, à
+///      l'effacement du compte, à celui du fil. Sans cela le signalement ne
+///      servirait à rien.
+///   2. **L'écran de modération n'a aucun besoin de lire `Message`.** Il lit
+///      cette colonne, et rien d'autre. « Aucun membre du staff ne lit les
+///      conversations privées » cesse d'être une intention à tenir : il
+///      n'existe aucun chemin de `/admin` vers les messages, et un test le
+///      vérifie en relisant le code source.
+///
+/// Art. 8.6 — les signalements sont confidentiels : la personne visée ne sait
+/// jamais qui l'a signalée. `parId` ne quitte pas cette table.
+model Signalement {
+  id String @id @default(cuid())
+
+  /// Pointeur vivant, pour le seul cas où le message existe encore. Ce n'est
+  /// PAS la source de ce que lit la modération : `contexte` l'est.
+  messageId String?
+  message   Message? @relation(fields: [messageId], references: [id], onDelete: SetNull)
+
+  parId  String?
+  par    Utilisateur? @relation("SignalementsEnvoyes", fields: [parId], references: [id], onDelete: SetNull)
+  viseId String?
+  vise   Utilisateur? @relation("SignalementsRecus", fields: [viseId], references: [id], onDelete: SetNull)
+
+  /// Facultatif — signaler doit rester un clic.
+  motif String? @db.Text
+
+  /// **La copie figée.** Un tableau JSON : auteur, date et texte de chaque
+  /// message du contexte, celui qui est visé compris. Un déclencheur en
+  /// interdit toute réécriture — une preuve qui se retouche n'en est pas une.
+  contexte Json
+
+  statut         StatutSignalement @default(EN_ATTENTE)
+  traiteLe       DateTime?
+  /// « Administration », tant que la zone d'administration n'est qu'un mot de
+  /// passe partagé sans comptes distincts : le site n'a personne d'autre à
+  /// nommer. Même convention que `roleAffichePosePar`.
+  traitePar      String?
+  noteTraitement String?           @db.Text
+
+  creeLe DateTime @default(now())
+
+  @@index([statut, creeLe])
+  @@map("signalements")
+}
+
+enum StatutSignalement {
+  EN_ATTENTE
+  TRAITE
+  CLASSE_SANS_SUITE
 }

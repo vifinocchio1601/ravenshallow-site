@@ -7,6 +7,7 @@ import { useState } from "react";
 import BoutonDeconnexion from "@/components/connexion/BoutonDeconnexion";
 import { BLASON_ECOLE } from "@/lib/ecole/blasons";
 import { ROUTES, type EntreeMenu } from "@/lib/ecole/menu";
+import { TEXTES_CORBEAUX } from "@/lib/corbeaux/constantes";
 import { TEXTES_ECOLE } from "@/lib/ecole/constantes";
 
 /**
@@ -26,6 +27,7 @@ export default function MenuParchemin({
   blason,
   mention,
   entrees,
+  compteurs,
 }: {
   prenomNom: string;
   /**
@@ -44,6 +46,13 @@ export default function MenuParchemin({
    * donne, et il peut n’en recevoir qu’une seule.
    */
   entrees: readonly EntreeMenu[];
+  /**
+   * Ce qu’il y a à annoncer sur une entrée, indexé par son adresse — les
+   * corbeaux non lus, aujourd’hui. Le bandeau ne connaît aucune adresse en
+   * particulier : il affiche le compte qu’on lui remet, et rien si on ne lui
+   * en remet pas.
+   */
+  compteurs: Readonly<Record<string, number>>;
 }) {
   const chemin = usePathname();
   const [ouvert, setOuvert] = useState(false);
@@ -87,7 +96,11 @@ export default function MenuParchemin({
             <ul className="hidden items-center gap-8 md:flex">
               {entrees.map((entree) => (
                 <li key={entree.href}>
-                  <LienMenu entree={entree} courante={estCourante(entree)} />
+                  <LienMenu
+                    entree={entree}
+                    courante={estCourante(entree)}
+                    compte={compteurs[entree.href] ?? 0}
+                  />
                 </li>
               ))}
             </ul>
@@ -144,6 +157,7 @@ export default function MenuParchemin({
                     <LienMenu
                       entree={entree}
                       courante={estCourante(entree)}
+                      compte={compteurs[entree.href] ?? 0}
                       bloc
                       onClick={() => setOuvert(false)}
                     />
@@ -189,14 +203,18 @@ export default function MenuParchemin({
 function LienMenu({
   entree,
   courante,
+  compte,
   bloc = false,
   onClick,
 }: {
   entree: EntreeMenu;
   courante: boolean;
+  /** Les non-lus à annoncer. Zéro = pas de pastille du tout. */
+  compte: number;
   bloc?: boolean;
   onClick?: () => void;
 }) {
+  const aCompter = entree.porteUnCompteur === true && compte > 0;
   return (
     <Link
       href={entree.href}
@@ -227,6 +245,29 @@ function LienMenu({
       >
         {entree.libelle}
       </span>
+
+      {/* La pastille des non-lus.
+          Elle ne se signale pas par la seule couleur : le nombre est écrit
+          dedans, et un lecteur d’écran lit « Les Corbeaux, 3 non lus » grâce
+          au texte hors écran — la pastille elle-même est décorative, sans
+          quoi le chiffre serait annoncé deux fois.
+          Au-delà de neuf, « 9+ » : la pastille reste ronde, et le compte
+          exact n’apprend plus rien à ce stade. */}
+      {aCompter ? (
+        <>
+          <span
+            aria-hidden="true"
+            className="ml-0.5 inline-flex min-w-[1.15rem] items-center justify-center rounded-full border border-ink/40 bg-ink px-1.5 py-0.5 font-display text-[0.58rem] font-bold leading-none tracking-normal text-parchment"
+          >
+            {compte > 9 ? "9+" : compte}
+          </span>
+          <span className="sr-only">
+            {compte === 1
+              ? TEXTES_CORBEAUX.liste.unNonLuAria
+              : TEXTES_CORBEAUX.liste.nonLusAria.replace("{n}", String(compte))}
+          </span>
+        </>
+      ) : null}
     </Link>
   );
 }

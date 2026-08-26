@@ -3,6 +3,8 @@ import Link from "next/link";
 import { ExternalLink } from "lucide-react";
 import AdminCard from "@/components/AdminCard";
 import AdminEmptyState from "@/components/AdminEmptyState";
+import { TEXTES_CORBEAUX } from "@/lib/corbeaux/constantes";
+import { signalementsEnAttente } from "@/lib/corbeaux/moderation";
 
 export const metadata: Metadata = {
   title: "Administration — Ravenshallow",
@@ -13,7 +15,11 @@ export const metadata: Metadata = {
 // (https://vercel.com/<équipe>/<projet>/analytics).
 const VERCEL_ANALYTICS_URL = "https://vercel.com/dashboard";
 
-export default function AdminPage() {
+export const dynamic = "force-dynamic";
+
+export default async function AdminPage() {
+  const enAttente = await signalementsEnAttente();
+
   return (
     <main className="relative min-h-[100svh] bg-void">
       <div
@@ -88,6 +94,36 @@ export default function AdminPage() {
             </p>
             <Link href="/admin/membres" className="btn btn-ghost mt-6">
               Ouvrir la liste
+            </Link>
+          </AdminCard>
+
+          {/* Les signalements.
+              Le compteur est relu à chaque affichage — la page est
+              `force-dynamic` —, et ne dit rien du contenu : combien attendent,
+              rien de plus. */}
+          <AdminCard
+            rune="ᚱᚨᚡ"
+            eyebrow={TEXTES_CORBEAUX.moderation.eyebrow}
+            title={TEXTES_CORBEAUX.moderation.titre}
+          >
+            <p className="leading-[1.7] text-parchment-dim">
+              {TEXTES_CORBEAUX.moderation.accroche}
+            </p>
+            <p className="mt-3 font-body text-sm italic leading-relaxed text-silver">
+              {TEXTES_CORBEAUX.moderation.limite}
+            </p>
+            {enAttente > 0 ? (
+              <p className="mt-4 font-display text-[0.68rem] uppercase tracking-[0.18em] text-aurora-teal">
+                {enAttente === 1
+                  ? TEXTES_CORBEAUX.moderation.unEnAttente
+                  : TEXTES_CORBEAUX.moderation.enAttente.replace(
+                      "{n}",
+                      String(enAttente),
+                    )}
+              </p>
+            ) : null}
+            <Link href="/admin/signalements" className="btn btn-ghost mt-6">
+              {TEXTES_CORBEAUX.moderation.lien}
             </Link>
           </AdminCard>
 

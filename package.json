@@ -9,6 +9,7 @@
     "lint": "next lint",
     "test": "vitest run",
     "test:watch": "vitest",
+    "corbeaux:essai": "vitest run --config vitest.essai.mts",
     "courriel:verifier": "node scripts/verifier-courriel.mjs",
     "postinstall": "prisma generate",
     "base:importer": "node scripts/importer-dossiers.mjs",

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Image from "next/image";
+import Link from "next/link";
 import Panneau from "@/components/ecole/Panneau";
 import PremiersPas from "@/components/ecole/PremiersPas";
 import {
@@ -9,6 +10,7 @@ import {
   progression,
   scenesEnCours,
 } from "@/lib/bureau/donnees";
+import { TEXTES_CORBEAUX } from "@/lib/corbeaux/constantes";
 import { libellePlace } from "@/lib/dossier/etats";
 import { estConcerneParLeMiroir } from "@/lib/session/acces";
 import { TEXTES_ECOLE } from "@/lib/ecole/constantes";
@@ -33,8 +35,9 @@ export default async function BureauPage() {
   const compte = await exigerAcces(ROUTES.bureau);
   const t = TEXTES_ECOLE.bureau;
 
-  // Quatre sources, aucune n’existe encore : elles rendent des listes vides,
-  // et les panneaux savent quoi en faire.
+  // Quatre sources. Le courrier lit maintenant la Tour aux Corbeaux ; les
+  // trois autres rendent encore des listes vides, et les panneaux savent quoi
+  // en faire.
   const [scenes, courrier, avancee, hall, pas] = await Promise.all([
     scenesEnCours(compte),
     courrierNonLu(compte),
@@ -107,20 +110,52 @@ export default async function BureauPage() {
             ) : null}
           </Panneau>
 
-          {/* 2 — Le courrier. */}
-          <Panneau titre={t.courrier.titre} aide={t.courrier.aide} vide={t.courrier.vide}>
+          {/* 2 — Le courrier.
+              Le premier panneau du bureau à cesser d’être vide : il lit
+              vraiment la Tour aux Corbeaux. Le raccourci vers la Tour reste
+              là dans les deux cas — c’est aussi par ici qu’on va écrire,
+              pas seulement lire. */}
+          <Panneau titre={t.courrier.titre} aide={t.courrier.aide}>
             {courrier.length > 0 ? (
               <ul className="divide-y divide-silver/10">
-                {courrier.map((message) => (
-                  <li key={message.id} className="flex flex-wrap justify-between gap-2 py-3">
-                    <span className="font-body text-parchment">{message.sujet}</span>
-                    <span className="font-display text-[0.66rem] uppercase tracking-[0.12em] text-silver">
-                      {message.expediteur}
-                    </span>
+                {courrier.map((corbeau) => (
+                  <li key={corbeau.conversationId} className="py-3">
+                    <Link
+                      href={`${ROUTES.corbeaux}/${corbeau.conversationId}`}
+                      className="group block"
+                    >
+                      <div className="flex flex-wrap items-baseline justify-between gap-2">
+                        <span className="font-display text-[0.7rem] font-bold uppercase tracking-[0.12em] text-parchment">
+                          {corbeau.expediteur}
+                        </span>
+                        <span className="font-display text-[0.62rem] uppercase tracking-[0.12em] text-silver">
+                          {corbeau.nonLus === 1
+                            ? TEXTES_CORBEAUX.liste.unNonLuAria
+                            : TEXTES_CORBEAUX.liste.nonLusAria.replace(
+                                "{n}",
+                                String(corbeau.nonLus),
+                              )}
+                        </span>
+                      </div>
+                      <p className="mt-1 truncate font-body text-sm text-parchment-dim group-hover:text-parchment">
+                        {corbeau.extrait}
+                      </p>
+                    </Link>
                   </li>
                 ))}
               </ul>
-            ) : null}
+            ) : (
+              <p className="font-body leading-relaxed text-parchment-dim">
+                {t.courrier.vide}
+              </p>
+            )}
+
+            <Link
+              href={ROUTES.corbeaux}
+              className="mt-5 inline-block font-display text-[0.64rem] uppercase tracking-[0.14em] text-silver transition-colors duration-300 hover:text-aurora-teal"
+            >
+              {TEXTES_CORBEAUX.liste.versLaTour} →
+            </Link>
           </Panneau>
 
           {/* 3 — La progression. */}

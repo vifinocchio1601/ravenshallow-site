@@ -374,9 +374,14 @@ describe("« Administratrice » n’accorde aucun droit", () => {
       expect(routeAutorisee(suspendue, ferme), ferme).toBe(false);
     }
 
+    // Les corbeaux restent ouverts à un membre suspendu — c’est par là qu’on
+    // conteste une sanction (art. 8.5). Le titre « Administratrice » n’y est
+    // pour rien : un élève suspendu sans aucun rôle a exactement les mêmes
+    // trois entrées.
     expect(entreesVisibles(suspendue).map((e) => e.href)).toEqual([
       ROUTES.bureau,
       ROUTES.fiche,
+      ROUTES.corbeaux,
     ]);
   });
 

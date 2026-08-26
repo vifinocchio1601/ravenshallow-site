@@ -161,10 +161,20 @@ describe("où atterrit chaque compte", () => {
 });
 
 describe("le nouvel arrivant", () => {
-  it("n’a que son bureau et sa fiche au bandeau", () => {
+  /**
+   * Trois entrées, et non deux : la Tour aux Corbeaux s’ouvre dès le premier
+   * jour. C’est un choix du joueur, et il se tient — le moment où l’on a le
+   * plus besoin d’écrire à quelqu’un, c’est celui où l’on ne connaît encore
+   * personne et où l’on ne sait pas comment le forum fonctionne.
+   *
+   * Les cours et l’école, eux, restent fermés : ils demandent une baguette et
+   * une maison.
+   */
+  it("a son bureau, sa fiche et les corbeaux — rien d’autre", () => {
     expect(entreesVisibles(NOUVEL_ARRIVANT).map((e) => e.href)).toEqual([
       ROUTES.bureau,
       ROUTES.fiche,
+      ROUTES.corbeaux,
     ]);
   });
 
@@ -223,11 +233,23 @@ describe("l’élève réparti", () => {
 });
 
 describe("le membre banni", () => {
-  it("garde son bureau et sa fiche, réparti ou non", () => {
+  /**
+   * L’entrée des corbeaux reste au bandeau pendant une suspension, et c’est
+   * une exception raisonnée à « le bureau et la fiche, rien d’autre » :
+   * l’article 8.5 donne quinze jours pour contester une sanction, par message
+   * privé à un administrateur. Fermer la Tour supprimerait ce recours pour la
+   * seule personne à qui il sert.
+   *
+   * Ce qu’il y trouve — le fil de l’administration, et lui seul — ne se décide
+   * pas ici : c’est `lib/corbeaux/droits.ts` qui en répond, et ses propres
+   * tests le vérifient. Un drapeau de menu ne sait dire qu’ouvert ou fermé.
+   */
+  it("garde son bureau, sa fiche et la voie de recours, réparti ou non", () => {
     for (const etat of [BANNI, BANNI_REPARTI]) {
       expect(entreesVisibles(etat).map((e) => e.href)).toEqual([
         ROUTES.bureau,
         ROUTES.fiche,
+        ROUTES.corbeaux,
       ]);
     }
   });

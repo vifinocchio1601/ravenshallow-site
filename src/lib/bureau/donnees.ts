@@ -1,4 +1,6 @@
 import "server-only";
+import { TEXTES_CORBEAUX } from "@/lib/corbeaux/constantes";
+import { listerConversations } from "@/lib/corbeaux/depot";
 import { libelleBaguette } from "@/lib/ecole/baguette";
 import { TEXTES_ECOLE } from "@/lib/ecole/constantes";
 import { ROUTES } from "@/lib/ecole/menu";
@@ -17,11 +19,14 @@ import type { CompteConnecte } from "@/lib/session/garde";
 /**
  * Ce que Mon bureau affiche.
  *
- * Les scènes, la messagerie, les points et les annonces n’existent pas
- * encore. Plutôt que de laisser chaque panneau deviner quoi faire d’une
- * source absente, tout passe par ici : les fonctions rendent aujourd’hui des
- * listes vides, et chaque lot à venir en remplacera **une seule**, sans
- * toucher aux panneaux.
+ * Les scènes, les points et les annonces n’existent pas encore. Plutôt que de
+ * laisser chaque panneau deviner quoi faire d’une source absente, tout passe
+ * par ici : les fonctions rendent des listes vides, et chaque lot à venir en
+ * remplace **une seule**, sans toucher aux panneaux.
+ *
+ * La Tour aux Corbeaux vient d’en remplacer une : `courrierNonLu` lit
+ * vraiment la base. C’était le plan depuis le lot du bureau, et le panneau
+ * n’a pas eu à bouger.
  *
  * Aucune ne lève d’exception. Un bureau qui s’effondre parce que la
  * messagerie n’est pas construite serait le pire des accueils.
@@ -35,11 +40,21 @@ export type SceneEnCours = {
   auteurDernierMessage: string;
 };
 
-export type MessageNonLu = {
-  id: string;
+/**
+ * Un fil de la Tour aux Corbeaux où quelque chose attend d’être lu.
+ *
+ * Pas de `sujet` : la Tour n’en a pas. C’est un outil de coordination entre
+ * joueurs, pas un courrier administratif — on y écrit à quelqu’un, pas à
+ * propos de quelque chose.
+ */
+export type CorbeauNonLu = {
+  /** Le fil, pour y aller d’un clic. */
+  conversationId: string;
+  /** Le nom du personnage, ou « L’Administration ». */
   expediteur: string;
-  sujet: string;
+  extrait: string;
   recuLe: string;
+  nonLus: number;
 };
 
 export type Progression = {
@@ -83,11 +98,31 @@ export async function scenesEnCours(
   return [];
 }
 
-/** Lot « messagerie » — table à créer. */
+/**
+ * Ce qui attend dans la Tour aux Corbeaux.
+ *
+ * **Le premier panneau du bureau à cesser d’être vide.** Il ne recopie
+ * aucune règle : `listerConversations` a déjà écarté ce qui est masqué, ce
+ * qui vient d’une personne bloquée et ce qu’un membre suspendu ne doit pas
+ * voir. Ici, on ne fait que garder les fils qui ont quelque chose à annoncer,
+ * et on s’arrête aux quatre premiers — le bureau est un aperçu, pas la Tour.
+ */
 export async function courrierNonLu(
-  _compte: CompteConnecte,
-): Promise<MessageNonLu[]> {
-  return [];
+  compte: CompteConnecte,
+): Promise<CorbeauNonLu[]> {
+  const conversations = await listerConversations(compte);
+
+  return conversations
+    .filter((conv) => conv.nonLus > 0)
+    .slice(0, 4)
+    .map((conv) => ({
+      conversationId: conv.id,
+      expediteur:
+        conv.correspondant?.prenomNom ?? TEXTES_CORBEAUX.administration.nom,
+      extrait: conv.extrait ?? TEXTES_CORBEAUX.liste.videExtrait,
+      recuLe: conv.dernierMessageLe,
+      nonLus: conv.nonLus,
+    }));
 }
 
 /**

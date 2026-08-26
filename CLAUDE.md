@@ -11,7 +11,12 @@ déploiement automatique au push sur `main`.
 ## Avant d'écrire quoi que ce soit
 
 **La documentation de référence n'est pas dans le dépôt.** Deux `.docx`, deux
-niveaux au-dessus, dans `Perso/Ravenshallow/` :
+niveaux au-dessus, dans `Perso/Ravenshallow/` — **et ils n'y sont plus au
+26 août 2026** : le dossier ne contient que `Logos/`, `Site/` et `images/`.
+Une recherche dans tout `Dropbox/Perso` ne les retrouve pas. Le règlement
+reste intégralement lisible dans `src/lib/reglement.ts` ; **la bible du lore,
+elle, n'est plus consultable** — la redemander au joueur avant toute question
+de lore.
 
 - `Bible du LORE.docx` — le monde, les quatre maisons, la magie, le bestiaire,
   la structure scolaire
@@ -32,17 +37,27 @@ joueur, pas des choix d'implémentation. Ne pas les réécrire sans demander.
 
 ```bash
 npm run dev              # http://localhost:3000
-npm test                 # vitest, 308 tests
+npm test                 # vitest, 482 tests — ne touche JAMAIS la base
 npm run lint
 npx tsc --noEmit
 npm run build            # à passer avant tout déploiement
 npm run courriel:verifier # teste l'authentification SMTP sans rien envoyer
 npm run base:importer     # reprend .donnees/dossiers.json dans la base
 npm run base:migrer       # applique les migrations en attente
+npm run corbeaux:essai    # exerce la Tour aux Corbeaux SUR LA VRAIE BASE
 ```
 
 `base:migrer` existe parce que la CLI Prisma ne lit pas `.env.local` : le
 script fait le pont, sans jamais afficher la chaîne de connexion.
+
+`corbeaux:essai` est à part, et son nom de fichier — `en-base.essai.ts`, et
+non `.test.ts` — l'exclut de `npm test` **à dessein** : il écrit vraiment en
+base. Il crée deux comptes `essai.*@ravenshallow.invalid`, les fait s'écrire,
+se bloquer, se chercher, puis efface ce qu'il a écrit — conversations
+comprises, sans quoi celles dont les deux comptes disparaissent resteraient
+orphelines. Son ménage vise `essai.*` **et** `.invalid` : la première version
+n'avait que la seconde condition, et emportait les comptes de démonstration
+créés à côté.
 
 `.env.local` porte cinq variables : `ADMIN_PASSWORD`, `AUTH_SECRET`,
 `MAIL_EXPEDITEUR`, `MAIL_APP_PASSWORD`, `DATABASE_URL`. Les mêmes existent sur
@@ -52,8 +67,8 @@ Vercel, environnement Production — avec là-bas la chaîne Neon **pooled**.
 
 ## Les coutures uniques
 
-Dix endroits concentrent chacun une décision. Ne pas recopier leur logique
-ailleurs, l'y ajouter.
+Quatorze endroits concentrent chacun une décision. Ne pas recopier leur
+logique ailleurs, l'y ajouter.
 
 | Fichier | Ce qu'il décide, seul |
 | --- | --- |
@@ -67,6 +82,10 @@ ailleurs, l'y ajouter.
 | `lib/ecole/baguette.ts` | les dix codes, les dix noms, et la validation de ce qu'envoie le navigateur |
 | `lib/dossier/role-affiche.ts` | ce qu'on peut écrire dans le rôle particulier — **partagé mot pour mot** entre le champ de saisie et l'action serveur |
 | `lib/ecole/tournoi.ts` | **qui marque pour sa maison**, et le compteur des quatre. Ne compte rien aujourd'hui : la règle est posée avant le premier total |
+| `lib/corbeaux/droits.ts` | **qui peut écrire à qui**, et ce qu'un corbeau devient — `PART`, `PART_DANS_LE_VIDE`, `REFUSE` |
+| `lib/corbeaux/depot.ts` | l'accès aux conversations. **Seul endroit qui compose une requête** sur les messages |
+| `lib/corbeaux/schema.ts` | ce qu'un corbeau a le droit de porter — **partagé mot pour mot** entre le champ et la route |
+| `lib/corbeaux/constantes.ts` | tous les textes de la Tour, **et aucun import** : c'est ce qui permet à `ecole/menu.ts` d'y prendre le nom de l'entrée sans ouvrir un cycle |
 
 **L'accès se joue à deux étages**, tous deux dans `acces.ts` :
 
@@ -158,6 +177,170 @@ d'API se contourne en l'appelant.
 
 ---
 
+## La Tour aux Corbeaux
+
+La messagerie entre joueurs. **Hors RP** : aucune règle d'écriture ne s'y
+applique — pas de minimum de lignes, pas d'avertissement de contenu, pas de
+balise, et **aucun point**. La mise en scène tient tout entière dans le
+vocabulaire : on envoie un corbeau, jamais un message.
+
+Entrée du bandeau **« Les Corbeaux »**, titre de page **« La Tour aux
+Corbeaux »**. Route `/corbeaux`, plus `/corbeaux/nouveau` et
+`/corbeaux/administration`, qui n'ont pas besoin de figurer dans
+`ROUTES_HORS_MENU` — `routeAutorisee` reconnaît déjà tout ce qui commence par
+`/corbeaux/`.
+
+**Elle s'ouvre à trois degrés, et `porteeDeLaTour` est seule à trancher :**
+
+| | Ce que le compte voit |
+| --- | --- |
+| `TOUT` | dossier accepté, accès en règle |
+| `ADMINISTRATION_SEULE` | **suspendu** : le fil du staff, et rien d'autre. Ses conversations entre joueurs l'attendent sans s'afficher |
+| `RIEN` | dossier en attente, à corriger ou refusé |
+
+L'entrée du menu porte **les deux drapeaux** — `pendantBannissement` et
+`avantPremiersPas` —, et c'est une exception raisonnée à « le bureau et la
+fiche, rien d'autre » : l'article 8.5 donne quinze jours pour contester une
+sanction par message privé. La fermer supprimerait ce recours pour la seule
+personne à qui il sert. Un drapeau de menu ne sait dire qu'ouvert ou fermé ;
+la nuance vit dans `droits.ts`.
+
+Elle ne regarde **ni la maison ni la baguette** : un nouvel arrivant écrit dès
+le premier jour, et c'est le moment où il en a le plus besoin.
+
+**Le blocage ne se voit pas de la même façon des deux côtés, et c'est tout le
+dispositif :**
+
+| | Ce qu'il voit |
+| --- | --- |
+| celui qui a bloqué | le fil est clos, on le lui dit |
+| **celui qui est bloqué** | **rien ne change** — il écrit, son corbeau part, il le relit dans son fil |
+
+`PART_DANS_LE_VIDE` doit rester **indiscernable de `PART`** : la route rend le
+même code, les mêmes champs, le même corps. Un refus explicite déclenche
+l'escalade, qui est le vrai risque — un second compte, un message ailleurs.
+`route.test.ts` compare les deux réponses octet pour octet ; `droits.test.ts`
+vérifie que le verdict ne porte aucun champ de plus. **Ne jamais ajouter
+`|| ilMaBloque` à `conversationClosePourMoi` « par symétrie ».**
+
+**Une seule table porte deux règles** — `messages_masques`, avec sa raison :
+
+- `SUPPRIME_PAR_SOI` — j'ai retiré ce corbeau de **ma** vue. La copie de
+  l'autre est intacte. C'est ce qui protège un membre harcelé dont l'agresseur
+  voudrait effacer ses traces, et **il faut le dire au moment du geste** :
+  quelqu'un qui croit avoir effacé des deux côtés se trompe.
+- `BLOQUE` — le corbeau est écrit, puis masqué pour le destinataire **dans la
+  même transaction**. Il ne doit exister aucun instant où il serait visible.
+
+**Le staff ne lit aucune conversation privée.** Il n'existe aucun écran
+d'administration qui affiche une boîte, aucune recherche, aucun export. Son
+seul accès passe par `Signalement.contexte` — une copie figée du message visé
+et d'une dizaine autour, recopiée au clic. Deux conséquences : le message
+survit à sa suppression, à celle de son auteur et à celle du fil ; et **l'écran
+de modération n'a aucun besoin de lire `Message`**.
+
+`etancheite.test.ts` **relit le code source de `src/app/admin/`** et échoue si
+un fichier y touche aux conversations — même procédé que `role-affiche.test.ts`.
+La règle cesse d'être une intention à tenir. Vérifié : y ajouter
+`prisma.message` fait tomber le test.
+
+**Bloquer se propose depuis la conversation**, et la liste des personnes
+bloquées vit dans la Tour — `/corbeaux/bloques` —, faute de « réglages du
+compte » sur ce site. Elle ira les rejoindre le jour où il y en aura : elle
+n'a aucune logique propre. **Débloquer ne ramène rien** : les corbeaux partis
+dans le vide ont été masqués à leur arrivée, et le restent.
+
+**L'anti-démarchage (art. 3.6) ne pèse que sur les fils NOUVEAUX.** Répondre
+n'est jamais limité, écrire à l'administration non plus — la plafonner
+fermerait le recours de l'article 8.5 à celui qui en a besoin, le jour où il
+en a besoin.
+
+| | par heure | par jour |
+| --- | --- | --- |
+| dossier accepté depuis moins de 7 jours | **3** | **10** |
+| au-delà | **10** | **40** |
+
+L'ancienneté se compte depuis **l'acceptation du dossier** (`Eleve.decideLe`),
+jamais depuis la création du compte : quelqu'un dont la candidature a mis trois
+semaines à être lue est un nouveau venu le jour où on lui ouvre la porte.
+
+**`ATTENDRE` n'est pas un refus**, et ne se range donc pas dans `RaisonRefus` :
+la route répond **429**, jamais 403, et donne le délai en clair. Un corbeau
+refusé ne partira jamais ; celui-ci partira dans un quart d'heure. Confondre
+les deux ferait lire « vous n'avez pas le droit » là où il faut lire « pas si
+vite » — et le joueur écrirait à l'administration pour comprendre ce qu'il a
+cassé. Deux plafonds qui bloquent ensemble : c'est **le plus long** qui vaut.
+
+Le calcul est **pur** (`etatDuPlafond`, dans `droits.ts`) : il reçoit les
+ouvertures et l'instant, ne lit ni horloge ni base, et se teste donc sur une
+journée entière sans attendre. Deux ouvertures simultanées peuvent passer
+toutes les deux — assumé : ce plafond ralentit un démarcheur, il ne garde pas
+une porte.
+
+**Aucune fonction ne répond à « qui m'a bloqué ? »**, et il ne faut jamais en
+écrire une. `listerBlocages` ne va que dans un sens ; `blocages/route.test.ts`
+relit le code source du dépôt et échoue si une requête sur les blocages part
+de `bloqueId`. Vérifié : y ajouter un `quiMaBloque` fait tomber le test.
+
+**Un personnage peut être de n'importe quel genre, et `Correspondant` ne le
+porte pas.** Les textes qui parlent de quelqu'un passent donc par **« cette
+personne »** — féminin en français — plutôt que d'accorder au jugé : « cette
+personne ne pourra plus vous écrire », et non « elle ne pourra plus ». Un
+accord posé en dur est faux une fois sur deux.
+
+**Une date ne se colle pas dans une phrase.** `journeeDe` rend « Aujourd'hui »,
+titre d'un groupe de corbeaux ; `quandDansUnePhrase` rend « aujourd'hui » ou
+« le 12 août », avec la préposition quand il en faut une. Le premier donnait
+« Blocage posé le Aujourd'hui ».
+
+**Un fil dont AUCUN corbeau ne m'est visible ne figure pas dans ma liste**, et
+cette condition n'est pas décorative. Une personne bloquée qui ouvre un fil
+**neuf** voit bien son corbeau masqué à l'arrivée — mais la conversation, elle,
+est créée, avec une participation pour le bloqueur. Sans ce filtre, il voyait
+surgir dans sa liste un fil vide au nom de quelqu'un qu'il venait de bloquer :
+exactement ce qu'il avait demandé à ne plus voir. Le cas ne saute pas aux yeux
+et n'a été trouvé qu'en le jouant sur la vraie base.
+
+**Retirer ne retire que de SA vue.** Un corbeau, un fil entier : la copie de
+l'autre reste intacte, et l'interface le dit **au moment du geste**. La route
+s'appelle `masquages` et répond à un `POST`, jamais à un `DELETE` — un verbe
+qui promettrait une suppression mentirait sur ce qui se passe.
+
+**Le signalement se fait en un clic**, motif facultatif. Un champ vide, absent
+ou fait d'espaces vaut `null`, jamais une erreur : quelqu'un qui subit des
+messages pénibles n'a pas à rédiger un dossier pour être entendu.
+
+Le contexte est recopié **au moment du clic**, tel que le signalant le voit —
+cinq corbeaux avant, celui qui est visé, cinq après. Ce qu'il a retiré de sa
+vue n'y figure pas : c'est lui qui transmet, il ne transmet que ce qu'il voit.
+Les corbeaux **postérieurs** voyagent aussi, et ce n'est pas un détail : une
+plaisanterie entre amis et une menace se ressemblent, hors de leur suite.
+
+La copie ne porte **ni identifiant de fil ni identifiant de corbeau**. La
+modération n'a pas le droit d'ouvrir la conversation ; elle n'en a pas non
+plus le moyen.
+
+**`lib/corbeaux/moderation.ts` est séparé de `depot.ts`, et cette séparation
+est la mesure elle-même.** Il ne nomme qu'une table — `signalement` — et
+n'emprunte à l'autre qu'un **type**, effacé à la compilation. Il n'existe donc
+aucun chemin de `/admin` vers une conversation : pas une requête qu'on
+s'interdirait d'écrire, un chemin qui n'existe pas.
+
+`etancheite.test.ts` le vérifie de trois façons : la zone d'administration ne
+nomme aucune table interdite, `moderation.ts` ne nomme que `signalement`, et
+son import du dépôt est bien un `import type`. **Les trois ont été éprouvés en
+introduisant la faute** — chacun tombe.
+
+Si un besoin d'accès plus large se présente un jour, **c'est une décision du
+joueur**, pas un ajout de commodité. Le dire au lieu de l'écrire.
+
+**Le rafraîchissement est une interrogation périodique, et rien d'autre.**
+`useRafraichissement` : quinze secondes, **arrêt quand l'onglet est caché**,
+rattrapage au retour, jamais deux appels en même temps. Pas de WebSocket —
+et le jour où il en faudrait un, c'est ce fichier-là qui changerait, seul.
+
+---
+
 ## Authentification
 
 Trois mécanismes distincts, à ne pas confondre :
@@ -228,7 +411,15 @@ encore ce traitement**, et c'est le seul écart connu entre les deux scènes.
 
 **Composants réutilisables** : `dossier/Champ.tsx` (libellé lié, message en
 `role="alert"`, hauteur réservée), `dossier/ReglesMotDePasse.tsx`,
-`dossier/EcranEtat.tsx`, `ecole/Panneau.tsx`.
+`dossier/EcranEtat.tsx`, `ecole/Panneau.tsx`, `corbeaux/ChampCorbeau.tsx`
+(validation partagée, Entrée va à la ligne, Ctrl/⌘+Entrée envoie),
+`corbeaux/BlasonCorrespondant.tsx`.
+
+**Le texte d'un corbeau est rendu par React, donc échappé d'office.** Les
+retours à la ligne sont conservés par `whitespace-pre-wrap`, jamais par une
+conversion en `<br>` — qui obligerait à assembler du HTML à la main,
+c'est-à-dire exactement ce qu'on veut éviter. Les liens ne sont pas rendus
+cliquables.
 
 ---
 
@@ -286,6 +477,23 @@ encore ce traitement**, et c'est le seul écart connu entre les deux scènes.
 - **Le choix de la baguette est définitif**, comme la maison. Deux verrous
   applicatifs (`updateMany` conditionné, garde de page et de route) **et**
   deux verrous en base — voir ci-dessous.
+- **Une personne bloquée n'apprend jamais qu'elle l'est.** Son corbeau part,
+  s'affiche chez elle, et n'arrive pas. La réponse de la route est identique à
+  celle d'un envoi ordinaire — même code, mêmes champs. **C'est la mesure de
+  protection elle-même** : un refus explicite déclenche l'escalade.
+- **Aucun membre du staff ne lit les conversations privées**, quel que soit
+  son rôle. Le seul accès passe par un signalement, et se limite au contexte
+  transmis avec lui. Si un chemin de contournement apparaît, **le signaler au
+  joueur plutôt que de l'implémenter**.
+- **Supprimer ne retire un corbeau que de sa propre vue.** Personne ne peut
+  effacer ce qu'il a écrit chez autrui — c'est ce qui protège un membre
+  harcelé. **L'interface doit le dire au moment du geste.**
+- **Un signalement conserve le message même si son auteur le supprime
+  ensuite**, et sa copie ne se réécrit pas — un déclencheur le refuse. Une
+  preuve qui se retouche n'en est pas une.
+- **Signaler et bloquer sont deux gestes distincts**, proposés côte à côte.
+  L'un ne déclenche jamais l'autre. Les signalements sont confidentiels
+  (art. 8.6) : la personne visée ne sait pas qui l'a signalée.
 
 ---
 
@@ -306,7 +514,7 @@ brume s'est peinte en transparent une bonne demi-heure avant qu'on comprenne.
 **Prisma CLI lit `.env`, pas `.env.local`.** Passer `DATABASE_URL` en variable
 d'environnement à la commande.
 
-**Sept règles de la base ne sont pas dans `schema.prisma`** et ne s'en
+**Onze règles de la base ne sont pas dans `schema.prisma`** et ne s'en
 déduiraient jamais. Régénérer le schéma depuis Prisma seul les perdrait.
 
 Dans `20260825200000_baguette_definitive` : la cohérence des trois colonnes de
@@ -331,6 +539,16 @@ inscrit pas une à un compte marqué sans objet**. Sans elle, un professeur venu
 de l'extérieur — colonnes vides, comme un nouvel élève — restait écrivable par
 une requête forgée.
 
+Dans `20260826100000_tour_aux_corbeaux` : l'accord entre le type d'une
+conversation et sa clé (`administration:<id>` d'un côté, `idA:idB` de
+l'autre), **le type qui ne change jamais** — sans quoi une conversation privée
+pourrait se déguiser en fil du staff, qui la lirait —, le corps d'un message
+ni vide ni démesuré, l'interdiction de se bloquer soi-même, et la copie figée
+d'un signalement, qui ne se réécrit pas. Le déclencheur du signalement laisse
+**effacer** la personne visée sans jamais la **remplacer** : refuser aussi
+l'effacement rendrait un compte indestructible, un vieux signalement empêchant
+pour toujours de le fermer.
+
 **Les deux verrous anti-rejeu portent sur l'ÉTAT, pas sur la case vide.**
 `enregistrerRepartition` et `inscrireBaguette` conditionnent leur `updateMany`
 à `NON_FAIT`, et écrivent l'état dans la même requête — la base refuserait une
@@ -342,6 +560,26 @@ en ont été retirés par cette même migration — Postgres ne sachant pas ôte
 valeur d'un enum, il a fallu recréer le type. Les rôles au château se saisissent
 maintenant en toutes lettres. Ne pas les réintroduire dans la liste : deux
 façons d'écrire « directrice » finiraient par se contredire.
+
+**`btrim` de Postgres ne retire que les ESPACES.** Pas les retours à la ligne,
+pas les tabulations. `length(btrim(corps)) > 0` laissait donc passer un message
+de six lignes vides, qui s'affichait comme une bulle vide dans le fil. La
+contrainte s'écrit `corps ~ '[^[:space:]]'` — au moins un signe qui ne soit pas
+un blanc. Corrigé par `20260826101000_corbeau_vraiment_non_vide`.
+
+**Une colonne de grille vaut `auto`, un élément de liste `min-width: auto`.**
+Un `<ul class="grid gap-2">` dont les `<li>` portent du texte long s'élargit
+au-delà de l'écran, et sur téléphone la date et la pastille des non-lus
+sortaient du cadre. **Il faut les deux** : `grid-cols-1` — qui vaut
+`minmax(0, 1fr)` — sur la liste, et `min-w-0` sur l'élément. Un `truncate` ne
+peut rien tant que rien ne borne la largeur.
+
+**L'heure d'un corbeau dépend du fuseau de qui l'affiche.** Le serveur de
+Vercel vit en UTC, le joueur non : le même instant s'écrit « 23:40 hier » d'un
+côté et « 01:40 aujourd'hui » de l'autre. Tout ce qui affiche une date porte
+donc `<time dateTime={iso}>` et `suppressHydrationWarning` — l'instant voyage
+en ISO, et c'est la mise en forme du navigateur qui gagne, la seule juste pour
+la personne qui lit.
 
 **La lettrine se recopie sur tous les blocs si on l'y laisse.** La règle est
 écrite `.recit > .recit__narration:first-of-type::first-letter` : sans le
@@ -406,7 +644,14 @@ connexion, mot de passe oublié, protection des routes, bandeau-parchemin,
 Ma fiche, Mon bureau, la note des premiers pas, **la boutique Bjornstav**
 (récit, mur d'étagères, bois, cœur, réaction assemblée côté serveur,
 enregistrement définitif) et **la Cérémonie du Miroir** (récit, brume,
-questionnaire, révélation, enregistrement).
+questionnaire, révélation, enregistrement), et **la Tour aux Corbeaux** —
+envoi, lecture, fil de l'administration, recherche de personnage, non-lus au
+bandeau et au bureau, blocage et déblocage, anti-démarchage, retrait de sa
+vue, **signalement et écran de modération**.
+
+Le panneau « Mon courrier » du bureau est **le premier à cesser d'être vide** :
+`courrierNonLu` lit vraiment la base. Le panneau n'a pas eu à bouger, ce qui
+était le plan depuis le lot du bureau.
 
 **Les deux premiers pas sont dans l'ordre** : la baguette d'abord, le Miroir
 ensuite, et le second est fermé côté serveur tant que le premier n'est pas
@@ -416,15 +661,33 @@ Les comptes qui ne sont pas des élèves — directrice, professeurs — se
 déclarent depuis la fiche du membre : **maison et baguette retirées, sans rien
 effacer**, chacune réversible et tracée au journal.
 
-**Pas encore** : les scènes, la messagerie, les points et les annonces du
-Grand Hall. Le tournoi inter-maisons n'existe pas non plus — mais la règle qui
+**Pas encore** : les scènes, les points et les annonces du Grand Hall.
+
+Le **Registre magique** — l'annuaire des membres, trié par maison et par
+fonction — n'existe pas : c'est lui qui portera « bloquer depuis sa fiche »,
+et c'est pourquoi ce lot-ci ne pose le blocage que depuis la conversation. Le tournoi inter-maisons n'existe pas non plus — mais la règle qui
 dira **qui compte** est déjà posée et testée dans `lib/ecole/tournoi.ts` : le
 lot des points remplacera la valeur, pas la condition. Les quatre panneaux du bureau lisent `lib/bureau/donnees.ts`, dont
 les fonctions rendent des listes vides — chaque lot en remplacera **une
 seule**. `progression()` est la première à rendre autre chose : elle porte
 déjà l'année et la baguette.
 
-**Limite connue** : le format `prenomNom` refuse les prénoms composés
+**Limites connues** — les blasons de `public/crests/` pèsent ~1 Mo pièce, et la
+Tour en affiche **un par ligne de conversation** : c'était déjà « à alléger un
+jour », ça le devient franchement.
+
+Le compteur de non-lus par conversation construit un `OR` d'une clause par
+fil, parce que le seuil de lecture change de l'un à l'autre. Tenable pour la
+trentaine d'une page ; si la liste s'allonge, c'est là — et nulle part
+ailleurs — qu'un compteur tenu à jour prendra sa place. Le total du bandeau,
+lui, est déjà en SQL brut : il est appelé à **chaque page** de l'école et doit
+tenir en un aller-retour.
+
+Une conversation dont **tous** les participants ont été supprimés reste en
+base, rattachée à personne et visible de personne. Sans conséquence, mais un
+ménage la ramasserait.
+
+Le format `prenomNom` refuse les prénoms composés
 (Jean-Luc) et les noms à apostrophe (O'Brien). `schema.test.ts:91-98` fige ces
 refus **par choix** : ces tests casseront le jour où le format évoluera, et
 c'est voulu.
