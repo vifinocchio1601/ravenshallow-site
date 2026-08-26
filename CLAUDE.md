@@ -37,7 +37,7 @@ joueur, pas des choix d'implémentation. Ne pas les réécrire sans demander.
 
 ```bash
 npm run dev              # http://localhost:3000
-npm test                 # vitest, 482 tests — ne touche JAMAIS la base
+npm test                 # vitest, 484 tests — ne touche JAMAIS la base
 npm run lint
 npx tsc --noEmit
 npm run build            # à passer avant tout déploiement
@@ -340,6 +340,31 @@ introduisant la faute** — chacun tombe.
 Si un besoin d'accès plus large se présente un jour, **c'est une décision du
 joueur**, pas un ajout de commodité. Le dire au lieu de l'écrire.
 
+**Le courrier du château a son propre écran**, `/admin/courrier`, séparé des
+signalements — ce ne sont pas les mêmes gestes, et mélanger une question
+anodine avec un signalement de harcèlement dans la même file est le meilleur
+moyen de traiter les deux mal.
+
+Il fallait le construire : la règle « le staff ne lit pas les conversations
+privées » avait été appliquée si strictement qu'elle bloquait aussi **le fil
+qui lui est explicitement adressé**. Un membre écrivait, son corbeau partait
+en base, et personne ne pouvait le lire ni y répondre.
+
+`lib/corbeaux/courrier.ts` touche donc bien aux conversations et aux messages
+— il le faut. Ce qui l'empêche de déborder n'est pas l'absence de requête mais
+le filtre : **chaque lecture écrit `AVEC_ADMINISTRATION` en toutes lettres**,
+jamais factorisé dans une constante, parce que le sortir des `where` le
+rendrait invisible. `etancheite.test.ts` découpe le fichier requête par requête
+et échoue si une seule l'oublie ; un essai en base vérifie qu'on ne peut ni
+ouvrir ni écrire dans un fil entre joueurs en lui passant son identifiant.
+
+**Une réponse du château n'a pas d'auteur**, et c'est ce qui la signe : la zone
+d'administration n'a pas de comptes distincts, il n'y a personne à nommer.
+Dans un fil de courrier il n'y a que deux interlocuteurs — un corbeau sans
+auteur ne peut venir que du second. Ailleurs, le même `auteurId` nul veut dire
+« un membre qui n'est plus là » : le fil décide du libellé, jamais la colonne
+seule.
+
 **Le compteur du bandeau vit par lui-même, et il le faut.** Un layout d'App
 Router n'est pas rendu à nouveau quand on navigue entre deux pages du même
 segment — c'est ce qui le rend rapide, et c'est aussi ce qui figeait la
@@ -613,6 +638,14 @@ BUREAU », « LES / CORBEAUX » : il faut `text-center` sur le libellé pour que
 les deux mots s'alignent l'un sous l'autre. Le déroulé de téléphone, lui, est
 une liste verticale et reste au fer à gauche.
 
+**`not` de Prisma exclut les valeurs nulles**, là où le `IS DISTINCT FROM` du
+SQL les garde. `auteurId: { not: moi }` laissait donc tomber tous les corbeaux
+**sans auteur** — c'est-à-dire les réponses de l'administration. Le bandeau les
+comptait (SQL brut), la liste non (Prisma) : les deux se contredisaient à
+l'écran, et une lettre du château n'apparaissait jamais comme non lue. Le
+filtre s'écrit maintenant `OR: [{ auteurId: null }, { auteurId: { not: moi } }]`.
+C'est le piège des trois valeurs, et il ne se voit pas.
+
 **La lettrine se recopie sur tous les blocs si on l'y laisse.** La règle est
 écrite `.recit > .recit__narration:first-of-type::first-letter` : sans le
 `>`, elle attrape le premier paragraphe de n'importe quel conteneur, et chaque
@@ -679,7 +712,8 @@ enregistrement définitif) et **la Cérémonie du Miroir** (récit, brume,
 questionnaire, révélation, enregistrement), et **la Tour aux Corbeaux** —
 envoi, lecture, fil de l'administration, recherche de personnage, non-lus au
 bandeau et au bureau, blocage et déblocage, anti-démarchage, retrait de sa
-vue, **signalement et écran de modération**.
+vue, signalement et écran de modération, **et le courrier du château, que le
+staff lit et auquel il répond**.
 
 Le panneau « Mon courrier » du bureau est **le premier à cesser d'être vide** :
 `courrierNonLu` lit vraiment la base. Le panneau n'a pas eu à bouger, ce qui

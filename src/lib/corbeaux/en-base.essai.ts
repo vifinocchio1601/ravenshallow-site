@@ -33,6 +33,8 @@ for (const ligne of readFileSync(".env.local", "utf8").split("\n")) {
 const { prisma } = await import("@/lib/prisma");
 const { lireSignalement, listerSignalements, traiterSignalement } =
   await import("./moderation");
+const { courrierEnAttente, lireCourrier, listerCourrier, repondreAuCourrier } =
+  await import("./courrier");
 const {
   bloquer,
   chercherPersonnages,
@@ -415,6 +417,99 @@ describe("l’anti-démarchage", () => {
     if (envoi.verdict.sort !== "ATTENDRE") return;
     expect(envoi.verdict.minutes).toBeGreaterThanOrEqual(1);
     expect(envoi.verdict.minutes).toBeLessThanOrEqual(60);
+  });
+});
+
+describe("le courrier du château, côté staff", () => {
+  it("la lettre d’un membre apparaît dans la file, et elle attend", async () => {
+    const fils = await listerCourrier();
+    const dAlice = fils.find((f) => f.membre === "Alice Essai");
+
+    expect(dAlice).toBeDefined();
+    expect(dAlice?.enAttente).toBe(true);
+    expect(await courrierEnAttente()).toBeGreaterThan(0);
+  });
+
+  /**
+   * ⚠️ **Ce que le code source ne peut pas prouver.**
+   *
+   * Les tests d'étanchéité vérifient que chaque requête écrit le filtre. Seule
+   * la base peut dire ce qui se passe quand on passe malgré tout l'identifiant
+   * d'une conversation entre joueurs — et c'est le cas qui compte, parce
+   * qu'une action serveur est une route publique.
+   */
+  it("un fil entre joueurs ne s’ouvre pas depuis le courrier", async () => {
+    const entreJoueurs = (await listerConversations(alice)).find(
+      (c) => !c.avecAdministration,
+    );
+    expect(entreJoueurs).toBeDefined();
+    if (!entreJoueurs) return;
+
+    expect(await lireCourrier(entreJoueurs.id)).toBeNull();
+  });
+
+  it("et l’on n’y écrit pas non plus", async () => {
+    const entreJoueurs = (await listerConversations(alice)).find(
+      (c) => !c.avecAdministration,
+    );
+    if (!entreJoueurs) return;
+
+    const avant = await lireFil(alice, entreJoueurs.id);
+    expect(await repondreAuCourrier(entreJoueurs.id, "Intrusion.")).toBe(
+      "FIL_INCONNU",
+    );
+    // Rien n'a bougé dans le fil des joueurs.
+    const apres = await lireFil(alice, entreJoueurs.id);
+    expect(apres?.corbeaux.length).toBe(avant?.corbeaux.length);
+  });
+
+  it("le château répond, et sa réponse porte son nom", async () => {
+    const fil = (await listerCourrier()).find((f) => f.membre === "Alice Essai");
+    if (!fil) return;
+
+    expect(await repondreAuCourrier(fil.id, "Bien reçu, nous regardons.")).toBe(
+      "ENVOYEE",
+    );
+
+    const relu = await lireCourrier(fil.id);
+    const derniere = relu?.corbeaux[relu.corbeaux.length - 1];
+    expect(derniere?.corps).toBe("Bien reçu, nous regardons.");
+    // Pas d'auteur : dans ce fil, cela ne peut être que le château.
+    expect(derniere?.deLAdministration).toBe(true);
+    expect(derniere?.auteur).toBeNull();
+
+    // La lettre n'attend plus.
+    expect(relu?.enAttente).toBe(false);
+  });
+
+  it("et le membre la reçoit comme un corbeau non lu", async () => {
+    const filDAlice = (await listerConversations(alice)).find(
+      (c) => c.avecAdministration,
+    );
+    expect(filDAlice).toBeDefined();
+    if (!filDAlice) return;
+
+    expect(filDAlice.nonLus).toBeGreaterThan(0);
+
+    const vu = await lireFil(alice, filDAlice.id);
+    const derniere = vu?.corbeaux[vu.corbeaux.length - 1];
+    expect(derniere?.corps).toBe("Bien reçu, nous regardons.");
+    // Ce n'est pas elle qui l'a écrit : la bulle s'affiche du côté reçu.
+    expect(derniere?.deMoi).toBe(false);
+  });
+
+  /**
+   * L'article 8.5 : contester sa sanction, dans les quinze jours. C'est le
+   * seul canal qui reste ouvert à un membre suspendu — il faut donc qu'il
+   * fonctionne dans les deux sens.
+   */
+  it("un membre suspendu reçoit la réponse du château", async () => {
+    const suspendue = { ...alice, statutAcces: "EN_BANNISSEMENT" as const };
+    const fils = await listerConversations(suspendue);
+
+    expect(fils).toHaveLength(1);
+    expect(fils[0].avecAdministration).toBe(true);
+    expect(await compterNonLus(suspendue)).toBeGreaterThan(0);
   });
 });
 

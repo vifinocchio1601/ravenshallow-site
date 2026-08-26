@@ -4,6 +4,7 @@ import { ExternalLink } from "lucide-react";
 import AdminCard from "@/components/AdminCard";
 import AdminEmptyState from "@/components/AdminEmptyState";
 import { TEXTES_CORBEAUX } from "@/lib/corbeaux/constantes";
+import { courrierEnAttente } from "@/lib/corbeaux/courrier";
 import { signalementsEnAttente } from "@/lib/corbeaux/moderation";
 
 export const metadata: Metadata = {
@@ -18,7 +19,10 @@ const VERCEL_ANALYTICS_URL = "https://vercel.com/dashboard";
 export const dynamic = "force-dynamic";
 
 export default async function AdminPage() {
-  const enAttente = await signalementsEnAttente();
+  const [enAttente, lettresEnAttente] = await Promise.all([
+    signalementsEnAttente(),
+    courrierEnAttente(),
+  ]);
 
   return (
     <main className="relative min-h-[100svh] bg-void">
@@ -94,6 +98,34 @@ export default async function AdminPage() {
             </p>
             <Link href="/admin/membres" className="btn btn-ghost mt-6">
               Ouvrir la liste
+            </Link>
+          </AdminCard>
+
+          {/* Le courrier.
+              Séparé des signalements, et pas par commodité : ce ne sont pas
+              les mêmes gestes, et mélanger une question anodine avec un
+              signalement de harcèlement dans la même file est le meilleur
+              moyen de traiter les deux mal. */}
+          <AdminCard
+            rune="ᛒᚱᛖᚡ"
+            eyebrow={TEXTES_CORBEAUX.courrier.eyebrow}
+            title={TEXTES_CORBEAUX.courrier.titre}
+          >
+            <p className="leading-[1.7] text-parchment-dim">
+              {TEXTES_CORBEAUX.courrier.accroche}
+            </p>
+            {lettresEnAttente > 0 ? (
+              <p className="mt-4 font-display text-[0.68rem] uppercase tracking-[0.18em] text-aurora-teal">
+                {lettresEnAttente === 1
+                  ? TEXTES_CORBEAUX.courrier.unEnAttente
+                  : TEXTES_CORBEAUX.courrier.enAttente.replace(
+                      "{n}",
+                      String(lettresEnAttente),
+                    )}
+              </p>
+            ) : null}
+            <Link href="/admin/courrier" className="btn btn-ghost mt-6">
+              {TEXTES_CORBEAUX.courrier.lien}
             </Link>
           </AdminCard>
 

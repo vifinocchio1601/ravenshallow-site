@@ -316,14 +316,32 @@ async function compterNonLusParConversation(
   const lignes = await prisma.message.groupBy({
     by: ["conversationId"],
     where: {
-      // Mes propres corbeaux ne me sont jamais annoncés comme non lus.
-      auteurId: { not: utilisateurId },
       // Ni ceux que j'ai retirés, ni ceux qui ne me sont jamais parvenus.
       masques: { none: { utilisateurId } },
-      OR: fils.map((f) => ({
-        conversationId: f.conversationId,
-        envoyeLe: { gt: f.depuis ?? AVANT_TOUT },
-      })),
+      AND: [
+        {
+          /**
+           * ⚠️ **`not` de Prisma exclut les valeurs nulles**, là où le
+           * `IS DISTINCT FROM` de `compterNonLus` les garde.
+           *
+           * Écrit `auteurId: { not: moi }`, ce filtre laissait donc tomber
+           * tous les corbeaux **sans auteur** — c'est-à-dire les réponses de
+           * l'administration, qui n'en portent jamais. Le bandeau les
+           * comptait, la liste non : les deux se contredisaient à l'écran, et
+           * une lettre du château n'apparaissait jamais comme non lue.
+           *
+           * Les deux branches sont donc écrites en toutes lettres. Le piège
+           * est celui des trois valeurs du SQL, et il ne se voit pas.
+           */
+          OR: [{ auteurId: null }, { auteurId: { not: utilisateurId } }],
+        },
+        {
+          OR: fils.map((f) => ({
+            conversationId: f.conversationId,
+            envoyeLe: { gt: f.depuis ?? AVANT_TOUT },
+          })),
+        },
+      ],
     },
     _count: { _all: true },
   });

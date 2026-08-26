@@ -256,6 +256,7 @@ export default function Fil({
               }
               // Le fil du staff ne se signale pas et ne se retire pas : ce
               // n’est pas une conversation entre joueurs.
+              avecAdministration={avecAdministration}
               avecActions={!avecAdministration}
               onRetire={() => {
                 signalerLectureCorbeaux();
@@ -301,11 +302,14 @@ export default function Fil({
 function Corbeau({
   corbeau,
   nouvelleJournee,
+  avecAdministration,
   avecActions,
   onRetire,
 }: {
   corbeau: CorbeauAffiche;
   nouvelleJournee: boolean;
+  /** Le fil du château : un corbeau sans auteur y vient de lui, pas d’un absent. */
+  avecAdministration: boolean;
   avecActions: boolean;
   onRetire: () => void;
 }) {
@@ -334,7 +338,16 @@ function Corbeau({
               il n’apprendrait rien. */}
           {!corbeau.deMoi ? (
             <p className="font-display text-[0.62rem] uppercase tracking-[0.14em] text-silver">
-              {corbeau.auteur?.prenomNom ?? TEXTES_CORBEAUX.fil.auteurDisparu}
+              {/* Un corbeau sans auteur veut dire deux choses opposées selon
+                  le fil : dans le courrier du château, c’est lui qui parle —
+                  la zone d’administration n’a pas de comptes, il n’y a
+                  personne d’autre à nommer. Ailleurs, c’est un membre qui
+                  s’en est allé. Écrire « Un membre qui n’est plus là » sous
+                  la réponse de l’administration serait absurde. */}
+              {corbeau.auteur?.prenomNom ??
+                (avecAdministration
+                  ? TEXTES_CORBEAUX.administration.nom
+                  : TEXTES_CORBEAUX.fil.auteurDisparu)}
             </p>
           ) : null}
 

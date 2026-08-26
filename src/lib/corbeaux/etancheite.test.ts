@@ -55,7 +55,14 @@ const TABLES_INTERDITES = [
   '"messages_masques"',
 ];
 
-/** Ce que la zone d’administration n’a aucune raison d’importer. */
+/**
+ * Ce que la zone d’administration n’a aucune raison d’importer.
+ *
+ * `corbeaux/courrier` n’y figure pas, et c’est délibéré : ce fichier-là ne
+ * voit qu’une sorte de conversation — celle qu’un membre a délibérément
+ * ouverte avec le château — et ses propres tests, plus bas, vérifient que
+ * chaque requête porte le filtre qui l’y enferme.
+ */
 const IMPORTS_INTERDITS = [
   "corbeaux/depot",
   "listerConversations",
@@ -123,6 +130,61 @@ describe("le staff ne lit pas les conversations privées", () => {
         );
       }
     }
+  });
+
+  /**
+   * **Le courrier ne voit qu’une sorte de conversation.**
+   *
+   * Ce fichier-ci touche bien aux tables des conversations et des messages —
+   * il le faut, c’est lui qui affiche les lettres adressées au château. Ce qui
+   * l’en empêche de déborder n’est donc pas l’absence de requête, mais le
+   * filtre : **chaque lecture doit écrire `AVEC_ADMINISTRATION` en toutes
+   * lettres**, dans le même appel.
+   *
+   * D’où ce test, qui découpe le fichier requête par requête. Une seule qui
+   * oublierait le filtre ouvrirait au staff les conversations entre joueurs —
+   * la chose exacte que tout ce lot s’emploie à rendre impossible.
+   */
+  it("chaque lecture du courrier porte le filtre AVEC_ADMINISTRATION", () => {
+    const source = readFileSync("src/lib/corbeaux/courrier.ts", "utf8");
+
+    // Chaque `prisma.X.findY({ … })`, avec son bloc d'arguments : on avance
+    // en comptant les accolades, une expression régulière ne sachant pas
+    // équilibrer des parenthèses imbriquées.
+    const lectures: string[] = [];
+    const debut = /prisma\.(conversation|message)\.(findMany|findFirst|findUnique|count)\(/g;
+    let trouve: RegExpExecArray | null;
+    while ((trouve = debut.exec(source)) !== null) {
+      let i = trouve.index + trouve[0].length;
+      let profondeur = 1;
+      while (i < source.length && profondeur > 0) {
+        if (source[i] === "(") profondeur++;
+        else if (source[i] === ")") profondeur--;
+        i++;
+      }
+      lectures.push(source.slice(trouve.index, i));
+    }
+
+    // Le fichier doit vraiment lire quelque chose : sans cette vérification,
+    // un renommage rendrait le test vert en ne trouvant plus aucune requête.
+    expect(lectures.length).toBeGreaterThanOrEqual(3);
+
+    const sansFiltre = lectures.filter(
+      (requete) => !requete.includes("AVEC_ADMINISTRATION"),
+    );
+    expect(sansFiltre).toEqual([]);
+  });
+
+  /**
+   * Et il ne touche à rien d’autre. Une participation, un blocage, un
+   * masquage n’ont aucune raison d’apparaître ici.
+   */
+  it("le courrier ne touche qu’aux conversations et aux messages", () => {
+    const source = readFileSync("src/lib/corbeaux/courrier.ts", "utf8");
+    const tables = [...source.matchAll(/prisma\.(\w+)\./g)].map((m) => m[1]);
+
+    expect(tables.length).toBeGreaterThan(0);
+    expect([...new Set(tables)].sort()).toEqual(["conversation", "message"]);
   });
 
   /**

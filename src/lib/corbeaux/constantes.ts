@@ -223,6 +223,46 @@ export const TEXTES_CORBEAUX = {
   },
 
   /**
+   * Le courrier adressé à l’administration — côté staff.
+   *
+   * Séparé des signalements, et pas par commodité : ce ne sont pas les mêmes
+   * gestes. Mélanger une question anodine et un signalement de harcèlement
+   * dans la même file est le meilleur moyen de traiter les deux mal.
+   */
+  courrier: {
+    eyebrow: "Courrier",
+    titre: "Le courrier",
+    lien: "Ouvrir le courrier",
+    accroche:
+      "Les lettres que des membres ont adressées à l’administration. C’est aussi par là qu’une sanction se conteste, dans les quinze jours (article 8.5).",
+    limite:
+      "Cet écran ne montre que les fils ouverts avec l’administration. Les conversations entre joueurs n’y figurent pas, et rien ici ne permet de les atteindre.",
+    vide: "Aucune lettre.",
+    videAide: "Personne n’a écrit à l’administration.",
+    enAttente: "{n} en attente de réponse",
+    unEnAttente: "1 en attente de réponse",
+    /** Le seul état qui compte : le dernier mot est-il celui du membre ? */
+    badgeEnAttente: "Attend une réponse",
+    badgeRepondu: "Répondu",
+    /** Souvent le motif de la lettre — le staff doit le voir tout de suite. */
+    badgeSuspendu: "Accès suspendu",
+    corbeaux: "Corbeaux",
+    retour: "Retour au courrier",
+    membreInconnu: "Membre sans fiche",
+
+    /** Le fil. */
+    filTitre: "L’échange",
+    signature: "L’Administration",
+    repondre: "Répondre",
+    repondreAide:
+      "Votre réponse s’affichera sous « L’Administration » : la zone d’administration n’a pas de comptes distincts, il n’y a personne d’autre à nommer.",
+    champ: "Votre réponse",
+    invite: "Écrivez ici…",
+    envoyer: "Envoyer la réponse",
+  },
+
+
+  /**
    * L’écran de modération — côté administration.
    *
    * **Il ne montre que ce qu’un joueur a délibérément transmis.** Pas de
