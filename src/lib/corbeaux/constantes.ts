@@ -114,10 +114,30 @@ export const TEXTES_CORBEAUX = {
       "Il disparaîtra de chez vous, et de chez vous seulement. Votre correspondant gardera sa copie : personne ici ne peut effacer ce qu’il a écrit chez quelqu’un d’autre.",
     confirmer: "Retirer de ma vue",
     annuler: "Annuler",
-    /** Le fil entier, même règle. */
+    /**
+     * Le fil entier, même règle — et la phrase du joueur, mot pour mot.
+     *
+     * Elle dit d'abord ce qui va se passer, et **seulement ensuite** que le
+     * fil peut revenir. L'ordre compte : quelqu'un qui lit une ligne et demie
+     * avant de cliquer doit avoir compris l'essentiel — sa copie part, celle
+     * de l'autre reste.
+     */
     conversation: "Retirer cette conversation de ma vue",
+    /**
+     * Le libellé court, pour l'en-tête d'un fil — à côté de « Bloquer », dont
+     * il reprend l'usage : un mot à l'écran, le nom du correspondant dans le
+     * nom accessible. La phrase entière s'écrivait sur trois lignes et
+     * chassait le titre de la conversation hors du cadre.
+     */
+    conversationCourt: "Retirer",
+    conversationTitre: "Retirer cette conversation de votre vue ?",
     conversationAvertissement:
-      "Elle disparaîtra de votre liste, et de la vôtre seulement. Votre correspondant garde la sienne, entière. Si un nouveau corbeau arrive, la conversation revient — vide de ce qui précède.",
+      "Cette conversation disparaîtra de votre Tour aux Corbeaux. Votre correspondant conservera la sienne, entière. Si un nouveau corbeau arrive, elle revient — vide de ce qui précède.",
+    /**
+     * Le nom du correspondant dans le nom du bouton. Dans une liste de trente
+     * fils, « Retirer cette conversation » ne dit pas laquelle à qui écoute.
+     */
+    conversationAria: "Retirer la conversation avec {nom} de ma vue",
   },
 
   nouveau: {

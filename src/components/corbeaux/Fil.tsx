@@ -1,10 +1,12 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import ActionsCorbeau from "@/components/corbeaux/ActionsCorbeau";
 import BlasonCorrespondant from "@/components/corbeaux/BlasonCorrespondant";
 import BoutonBloquer from "@/components/corbeaux/BoutonBloquer";
+import BoutonRetirerFil from "@/components/corbeaux/BoutonRetirerFil";
 import ChampCorbeau from "@/components/corbeaux/ChampCorbeau";
 import { TEXTES_CORBEAUX } from "@/lib/corbeaux/constantes";
 import { heureDe, jourDe, journeeDe } from "@/lib/corbeaux/dates";
@@ -46,6 +48,7 @@ export default function Fil({
    */
   const [vientDeBloquer, setVientDeBloquer] = useState(false);
 
+  const routeur = useRouter();
   const zone = useRef<HTMLDivElement>(null);
   const etaitEnBas = useRef(true);
   const t = TEXTES_CORBEAUX;
@@ -208,6 +211,26 @@ export default function Fil({
             membreId={correspondant.id}
             nom={correspondant.prenomNom}
             onBloque={() => setVientDeBloquer(true)}
+          />
+        ) : null}
+
+        {/* Retirer le fil se propose **aussi** d'ici : quelqu'un qui vient de
+            lire une conversation pénible ne devrait pas avoir à revenir à la
+            liste pour s'en défaire.
+
+            Proposé même sur le fil de l'administration et sur un fil clos :
+            à la différence du blocage, retirer de sa vue n'engage que soi, et
+            n'a aucune raison d'être fermé. */}
+        {conversationId ? (
+          <BoutonRetirerFil
+            conversationId={conversationId}
+            nom={nom}
+            onRetire={() => {
+              // Retour à la liste, et non un simple effacement à l'écran :
+              // la conversation qu'on vient de retirer n'a plus de page.
+              routeur.push(ROUTES.corbeaux);
+              routeur.refresh();
+            }}
           />
         ) : null}
       </header>

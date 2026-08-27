@@ -305,6 +305,28 @@ un fichier y touche aux conversations — même procédé que `role-affiche.test
 La règle cesse d'être une intention à tenir. Vérifié : y ajouter
 `prisma.message` fait tomber le test.
 
+**Retirer une conversation se propose des deux côtés** — au bout de sa ligne
+dans la liste, et dans l'en-tête du fil. Le geste existait côté serveur depuis
+l'ouverture de la Tour, et la route `masquages` acceptait déjà un
+`conversationId` : **aucun écran ne l'appelait**. Il ne manquait que le bouton.
+
+`BoutonRetirerFil` porte les deux formes : une corbeille au bout d'une ligne,
+un mot — « Retirer » — dans l'en-tête, à côté de « Bloquer » dont il reprend
+l'usage. Le nom accessible, lui, est entier : « Retirer la conversation avec
+Sigrid de ma vue » — dans une liste de trente fils, « cette conversation » ne
+dit pas laquelle à qui écoute.
+
+**La carte d'une ligne de la liste est portée par le `<li>`, plus par le
+lien** : un bouton ne s'imbrique pas dans un lien, c'est invalide et le
+clavier ne s'y retrouve pas.
+
+Le retrait est proposé **même sur le fil de l'administration et sur un fil
+clos**, à la différence du blocage : retirer de sa vue n'engage que soi.
+
+**Y réécrire soi-même ramène le fil entier** — `envoyerCorbeau` remet
+`masqueeLe` à nul pour l'expéditeur. « Vidé de ce qui précède » ne vaut que
+pour le retour de l'AUTRE. Les deux comportements sont éprouvés en base.
+
 **Bloquer se propose depuis la conversation**, et la liste des personnes
 bloquées vit dans la Tour — `/corbeaux/bloques` —, faute de « réglages du
 compte » sur ce site. Elle ira les rejoindre le jour où il y en aura : elle

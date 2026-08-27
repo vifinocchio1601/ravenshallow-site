@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import BoutonRetirerFil from "@/components/corbeaux/BoutonRetirerFil";
 import { useEffect, useState } from "react";
 import BlasonCorrespondant from "@/components/corbeaux/BlasonCorrespondant";
 import { TEXTES_CORBEAUX } from "@/lib/corbeaux/constantes";
@@ -63,10 +64,17 @@ export default function ListeConversations({
        la largeur. */
     <ul aria-label={t.aria} className="grid grid-cols-1 gap-2">
       {conversations.map((conv) => (
-        <li key={conv.id} className="min-w-0">
+        // **La carte est portée par l'élément de liste, plus par le lien.**
+        // Un bouton ne s'imbrique pas dans un lien — c'est invalide, et le
+        // clavier ne s'y retrouve pas. Le lien occupe la ligne, le bouton se
+        // range à côté, et le cadre les entoure tous les deux.
+        <li
+          key={conv.id}
+          className="flex min-w-0 items-center gap-1 rounded-sm border border-silver/12 bg-mist/40 pr-2 transition-colors duration-300 hover:border-silver/30 hover:bg-mist/60"
+        >
           <Link
             href={`${ROUTES.corbeaux}/${conv.id}`}
-            className="flex items-center gap-4 rounded-sm border border-silver/12 bg-mist/40 px-4 py-3 transition-colors duration-300 hover:border-silver/30 hover:bg-mist/60 sm:px-5 sm:py-4"
+            className="flex min-w-0 flex-1 items-center gap-4 px-4 py-3 sm:px-5 sm:py-4"
           >
             <BlasonCorrespondant correspondant={conv.correspondant} />
 
@@ -120,6 +128,22 @@ export default function ListeConversations({
               </>
             ) : null}
           </Link>
+
+          {/* Le retrait se propose ici **et** dans la conversation. Depuis la
+              liste, c'est le geste de quelqu'un qui fait le ménage sans
+              vouloir rouvrir ce qu'il retire. */}
+          <BoutonRetirerFil
+            conversationId={conv.id}
+            nom={
+              conv.correspondant?.prenomNom ?? TEXTES_CORBEAUX.administration.nom
+            }
+            variante="liste"
+            onRetire={() =>
+              setConversations((liste) =>
+                liste.filter((autre) => autre.id !== conv.id),
+              )
+            }
+          />
         </li>
       ))}
     </ul>
