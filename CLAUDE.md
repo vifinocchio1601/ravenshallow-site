@@ -780,11 +780,55 @@ masquage : il est rapporté, comme pour les courriels.
 **Masquer relève du staff, et d'aucune permission attribuable.** Ce n'est pas
 un pouvoir qu'on accorde à la carte — ne pas l'ajouter à `Permission`.
 
-### L'avatar dans les scènes
+### La carte de l'auteur, à gauche de chaque post
 
-Chaque post porte **le portrait de son auteur et le blason de sa maison** — le
-premier dit qui parle, le second rend une scène à quatre lisible d'un coup
-d'œil. Décision du joueur, 27 août 2026 : les deux, jamais l'un sans l'autre.
+**Le gabarit est celui des forums de jeu de rôle**, demandé par le joueur le
+27 août 2026 sur l'exemple d'un forum existant : une colonne à gauche du texte,
+et le lecteur y retrouve toujours la même chose au même endroit.
+
+`components/forum/CarteAuteur.tsx` la porte, et elle seule. Cinq lignes, dans
+cet ordre : le portrait en 9:16 — le format déjà imposé par l'art. 6.2 —, le
+nom, le blason en petit avec le nom de la maison, l'année ou le titre au
+château, les points. Sur téléphone la colonne repasse **au-dessus** du texte,
+en bandeau : trois cents pixels ne se partagent pas en deux.
+
+**Trois cas se lisent différemment, et c'est le but :**
+
+| | Ce que la carte montre |
+| --- | --- |
+| une élève répartie | son blason, sa maison, son année, ses points |
+| une professeure | le blason de l'école, « Ravenshallow », son titre, **pas de points** |
+| une fiche sans portrait | le blason en filigrane dans le cadre |
+
+**« Ravenshallow » plutôt que « Répartition à venir ».** La carte reçoit une
+maison déjà tranchée — nulle pour l'élève que le Miroir attend **comme** pour
+la directrice qu'il ne concerne pas —, et ne peut donc pas les distinguer.
+« Répartition à venir » mentirait sur la seconde ; le nom de l'école est vrai
+pour les deux. Ne pas y ajouter la distinction : elle appartient au dépôt.
+
+**Le nom ne se coupe jamais.** Il passe à la ligne — « SIGRID HAVNS… » ne dit
+pas qui parle, et c'est la seule chose que cette carte doit dire à coup sûr.
+Le rôle non plus : « Professeure de défense contre les créatures » est long, et
+c'est un titre, pas une décoration.
+
+**Les points ne s'affichent que si le compte marque**, et la question se
+tranche dans le dépôt, par `maisonQuiCompte` — jamais dans le composant.
+« 0 point » sous le titre d'une directrice serait un chiffre sans objet.
+
+**Le dépôt pose deux questions distinctes sur la même colonne**, et il faut
+qu'elles le restent : `aUneMaison` pour le blason — est-ce que ça s'affiche ? —
+et `maisonQuiCompte` pour les points — est-ce que ça compte ? Elles coïncident
+aujourd'hui ; `tournoi.ts` prévoit lui-même qu'elles divergent un jour, un
+membre suspendu gardant son blason sans plus marquer.
+
+⚠️ **Une fiche sans portrait ne promet plus d'adresse.** `adressePortrait` en
+fabriquait une dès qu'il y avait un auteur, **sans savoir si la fiche portait
+une image** : l'adresse répondait 404 et l'écran montrait un cadre cassé. Le
+défaut ne se voyait pas tant que l'avatar tenait dans trente-six pixels.
+`lireSujet` fait donc une requête de plus, qui ne rend **que des
+identifiants** — surtout ne pas « simplifier » en lisant `portraitUrl` dans la
+requête des posts : elle porte l'image entière, deux cents kilo-octets par
+auteur, tirés de la base à chaque affichage de scène.
 
 ⚠️ **Les portraits sont stockés en base, en texte encodé** — celui de la
 directrice pèse 207 Ko. Le schéma prétend le contraire (« stockée sur Vercel
@@ -1751,11 +1795,31 @@ d'être vide, et il n'a pas eu à bouger.
 **Les deux pages légales sont posées** — mentions légales et politique de
 confidentialité —, liées au pied de page et au moment de la saisie du dossier.
 
-**Pas encore** : les points, les cours, les annonces du Grand Hall, le Registre
-magique, et le contenu des espaces `non-mages` et `maison`. Le point
+**Pas encore** : le lot des points, les cours, les annonces du Grand Hall, le
+Registre magique, et le contenu des espaces `non-mages` et `maison`. Le point
 d'accroche des points est un booléen sur l'espace — `comptePourLesPoints` — et
 le jour venu il se branchera sur `maisonQuiCompte`, jamais sur la colonne
 `maison`.
+
+⚠️ **La colonne `Eleve.points` existe et s'affiche, mais RIEN NE L'ÉCRIT.**
+Posée le 27 août 2026 par `20260827170000_points_de_maison`, sur décision du
+joueur : il voulait les points sur la carte de l'auteur tout de suite, sans
+attendre le lot qui les attribuera. Tout le monde est donc à zéro, et ce n'est
+pas un défaut d'affichage. Il n'existe **aucun** écran, aucune route, aucune
+commande d'administration qui accorde ou retire un point — ni cours, ni
+événement, ni qualité d'écriture (art. 18.1).
+
+Deux choses à savoir avant d'ouvrir ce lot :
+
+- **Aucune contrainte `CHECK` n'est posée sur la colonne**, à dessein. Le
+  règlement fait perdre des points (art. 18.4) et en retirer à une maison
+  (art. 19.1) sans dire si un total individuel peut passer sous zéro. Poser
+  `points >= 0` aujourd'hui trancherait à la place du joueur une règle qu'il
+  n'a pas écrite. La contrainte viendra avec le geste qui écrira vraiment.
+- **Le total d'une maison ne se lit jamais en sommant la colonne.**
+  `totauxParMaison` prend la liste brute et appelle `maisonQuiCompte` : une
+  somme naïve ramasserait la maison d'une directrice, qui reste écrite sous
+  `SANS_OBJET`.
 
 Le **Registre magique** — l'annuaire des membres, trié par maison et par
 fonction — n'existe pas : c'est lui qui portera « bloquer depuis sa fiche »,

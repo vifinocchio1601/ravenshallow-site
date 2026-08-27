@@ -143,6 +143,28 @@ export const TEXTES_FORUM = {
   },
 
   /**
+   * **La carte de celui qui écrit**, à gauche de chaque post.
+   *
+   * Un seul texte, et il n’est pas anodin : c’est ce qu’on écrit sous le
+   * blason quand la maison ne s’affiche pas — un élève que le Miroir attend,
+   * un professeur qu’il ne concerne pas. « Répartition à venir » mentirait sur
+   * le second ; le nom de l’école est vrai pour les deux.
+   */
+  auteur: {
+    ecole: "Ravenshallow",
+
+    /**
+     * Les points — art. 18.2.
+     *
+     * **En français, zéro est au singulier** : « 0 point », « 1 point »,
+     * « 12 points ». Un `n > 1 ? "s" : ""` collé à la volée se trompe une fois
+     * sur deux, et personne ne relit un pluriel.
+     */
+    unPoint: "{n} point",
+    desPoints: "{n} points",
+  },
+
+  /**
    * **Un lieu verrouillé s’affiche, avec sa condition écrite.**
    *
    * Jamais caché : « un site où l’on ne voit rien paraît vide, et voir une

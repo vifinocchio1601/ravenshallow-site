@@ -297,6 +297,19 @@ model Eleve {
   /// joueur — et c'est la maison de la fiche qu'on lit à côté.
   prefectures Prefet[]
 
+  /// Les points de ce personnage — art. 18.1 et 18.2.
+  ///
+  /// **Posée avant ce qui l'écrira**, décision du joueur du 27 août 2026 : la
+  /// carte de l'auteur, à gauche de chaque post, les affiche. Rien ne
+  /// l'incrémente aujourd'hui — ni les cours, ni les événements —, et tout le
+  /// monde est donc à zéro jusqu'au lot des points.
+  ///
+  /// ⚠️ **Le total d'une maison ne se lit jamais en sommant cette colonne.**
+  /// `lib/ecole/tournoi.ts` est le seul endroit qui dit pour qui un compte
+  /// marque : une somme naïve ramasserait la maison d'une directrice, qui
+  /// reste écrite en base sous `SANS_OBJET`.
+  points Int @default(0)
+
   creeLe DateTime @default(now())
   majLe  DateTime @updatedAt
 

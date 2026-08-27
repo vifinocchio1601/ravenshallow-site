@@ -4,6 +4,8 @@ import { ecrireAuMembre } from "@/lib/corbeaux/courrier";
 import { nettoyerTexteLibre } from "@/lib/texte";
 import { libellePlace, type Fonction, type Maison } from "@/lib/dossier/etats";
 import { adressePortrait } from "@/lib/ecole/portrait";
+import { maisonQuiCompte } from "@/lib/ecole/tournoi";
+import { aUneMaison } from "@/lib/session/acces";
 import { TEXTES_FORUM } from "./constantes";
 import {
   validerAvertissement,
@@ -397,6 +399,15 @@ export type PostAffiche = {
    */
   avatar: string | null;
   place: string;
+  /**
+   * Les points de l’auteur — art. 18.2 —, ou **nul s’il ne marque pour
+   * personne** : une directrice, un élève que le Miroir attend. « 0 point »
+   * sous le titre d’une directrice serait un chiffre sans objet.
+   *
+   * Rien ne les incrémente encore : tout le monde est à zéro jusqu’au lot des
+   * points. La colonne existe pour que la carte les porte dès maintenant.
+   */
+  points: number | null;
   corps: string;
   avertissementContenu: string | null;
   publieLe: string;
@@ -490,6 +501,7 @@ export async function lireSujet(
           prenomNom: true,
           maison: true,
           etatMaison: true,
+          points: true,
           fonction: true,
           roleAffiche: true,
           // Pour l'adresse du portrait : une fiche modifiée change d'adresse,
@@ -499,6 +511,27 @@ export async function lireSujet(
       },
     },
   });
+
+  // ── Qui a vraiment un portrait ──
+  //
+  // `adressePortrait` fabrique une adresse dès qu'il y a un auteur, sans savoir
+  // si sa fiche porte une image : une fiche sans portrait donnait donc une
+  // adresse qui répond 404, et l'écran un cadre cassé. Le défaut ne se voyait
+  // pas tant que l'avatar tenait dans trente-six pixels.
+  //
+  // **On ne lit surtout pas `portraitUrl` dans la requête d'au-dessus** : il
+  // porte l'image entière, encodée — deux cents kilo-octets par auteur, tirés
+  // de la base à chaque affichage de scène. Cette requête-ci ne rend que des
+  // identifiants, et pèse le poids d'une poignée de chaînes.
+  const auteurs = [...new Set(posts.map((p) => p.auteurId).filter(Boolean))];
+  const avecPortrait = new Set(
+    (
+      await prisma.eleve.findMany({
+        where: { id: { in: auteurs as string[] }, portraitUrl: { not: null } },
+        select: { id: true },
+      })
+    ).map((e) => e.id),
+  );
 
   return {
     espace: trouve.espace,
@@ -521,12 +554,23 @@ export async function lireSujet(
       auteurId: p.auteurId,
       auteur: p.auteur?.prenomNom ?? null,
       // `blasonAffiche` n’est pas appelé ici : le dépôt ne met pas en forme.
-      // On transporte la maison **au sens des accès** — `FAIT` et rien d’autre.
+      // On transporte la maison **au sens des accès**, en passant par
+      // `aUneMaison` plutôt qu’en comparant l’état à la main : `acces.ts` est
+      // le seul endroit qui compare un état à une valeur.
       maisonAuteur:
-        p.auteur && p.auteur.etatMaison === "FAIT"
+        p.auteur && aUneMaison(p.auteur)
           ? (p.auteur.maison as Maison | null)
           : null,
-      avatar: p.auteur ? adressePortrait(p.auteurId, p.auteur.majLe) : null,
+      // **Les points sont une question de tournoi, pas d’affichage**, et les
+      // deux ne se posent pas au même endroit : `maisonQuiCompte` dit pour qui
+      // ce compte marque. Elles coïncident aujourd’hui — le jour où elles
+      // divergeront, un membre suspendu qui garde son blason sans plus
+      // marquer, cette ligne-ci n’aura pas à changer.
+      points: p.auteur && maisonQuiCompte(p.auteur) ? p.auteur.points : null,
+      avatar:
+        p.auteurId && avecPortrait.has(p.auteurId)
+          ? adressePortrait(p.auteurId, p.auteur?.majLe ?? null)
+          : null,
       place: p.auteur
         ? libellePlace(p.auteur.fonction as Fonction, p.auteur.roleAffiche)
         : "",

@@ -1,0 +1,29 @@
+-- Les points d'un élève — art. 18.1 et 18.2.
+--
+-- **La colonne est posée avant ce qui l'écrira**, décision du joueur du
+-- 27 août 2026 : la carte de l'auteur, à gauche de chaque post, porte les
+-- points comme sur les forums de jeu de rôle dont elle reprend le gabarit.
+-- Tout le monde est donc à zéro, et le restera jusqu'au lot des points.
+--
+-- Ce que cette migration ne fait PAS, et il faut le savoir avant de chercher :
+--
+--   rien ne l'incrémente. Ni les cours, ni les événements, ni la qualité
+--   d'écriture (art. 18.1) : il n'existe aucun écran, aucune route, aucune
+--   commande d'administration qui accorde ou retire un point. Le lot des
+--   points reste entier.
+--
+-- **Aucune contrainte `CHECK` n'est posée, et c'est délibéré.** Le règlement
+-- prévoit qu'on perde des points (art. 18.4, « la perte des points
+-- concernés ») et qu'on en retire à une maison (art. 19.1), sans dire si un
+-- total individuel peut passer sous zéro. Poser `points >= 0` aujourd'hui,
+-- ce serait trancher à la place du joueur une règle qu'il n'a pas écrite —
+-- et bloquer un geste légitime le jour où il la posera. La contrainte
+-- viendra avec le lot qui écrira vraiment dans cette colonne, quand on saura
+-- ce qu'elle doit interdire.
+--
+-- Le total d'une MAISON, lui, ne se lit jamais en sommant cette colonne :
+-- `lib/ecole/tournoi.ts` est le seul endroit qui dit pour qui un compte
+-- marque, et une somme naïve ramasserait la maison d'une directrice, qui
+-- reste écrite en base sous `SANS_OBJET`.
+
+ALTER TABLE "eleves" ADD COLUMN "points" INTEGER NOT NULL DEFAULT 0;
