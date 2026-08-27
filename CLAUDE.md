@@ -1122,6 +1122,39 @@ titres, ni listes, ni code : ils ne figurent pas dans les outils demandés, et
 les laisser accessibles au clavier — `#`, `- ` — ferait disparaître le travail
 du joueur à la publication.
 
+### Les images d'un post
+
+**Par adresse extérieure, en `https` seulement** — décision du joueur,
+27 août 2026. Rien n'est envoyé sur le site : l'image reste chez son
+hébergeur, et disparaît du post si celui-ci ferme. L'envoi de fichiers
+viendra avec le stockage qui servira aussi aux portraits.
+
+**Trois attributs sont reposés d'office par le nettoyage, jamais laissés au
+joueur :**
+
+- `referrerpolicy="no-referrer"` — **le seul qui protège quelqu'un.** Sans
+  lui, l'hébergeur de l'image apprend quelle page du château est en train
+  d'être lue. Le site ne dépose aucun mouchard ; il n'a pas à en laisser
+  poser un par la bande. Il ne peut pas empêcher l'hébergeur de voir l'adresse
+  IP du lecteur — **et la politique de confidentialité le dit**.
+- `loading="lazy"` et `decoding="async"` — une scène de trente posts illustrés
+  ne se télécharge pas d'un coup, et le décodage ne retarde pas le texte.
+
+`srcset` n'est **pas** permis : il porte une liste d'adresses, et une liste
+d'adresses est une liste de choses à filtrer qu'on filtrerait moins bien.
+
+**Trois largeurs, jamais un curseur** — `petite`, `moyenne`, `pleine`, en
+classes comme les couleurs. Une image de trois mille pixels posée à sa taille
+casse la mise en page de tout le monde sur téléphone, et son auteur ne s'en
+aperçoit pas : il l'a vue sur son écran à lui. `max-width: 100%` est posé sous
+les trois, pour que même la pleine largeur ne sorte jamais du cadre.
+
+⚠️ **Une image est du contenu, jamais des lignes.** `porteQuelqueChose` et
+`respecteLeMinimum` répondent à deux questions différentes : « y a-t-il de
+quoi publier ? » — une image suffit — et « y a-t-il dix lignes ? » — une image
+n'y contribue pas. Les confondre refuserait une illustration chez les
+non-mages, ou laisserait une image tenir lieu de scène dans le domaine.
+
 ⚠️ **`onMouseDown` refuse son effet par défaut sur chaque bouton de la barre**,
 et ce n'est pas un détail de style : sans lui, le clic donne le focus au
 bouton, la sélection est perdue, la commande s'applique à côté et la frappe

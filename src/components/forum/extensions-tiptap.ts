@@ -1,13 +1,16 @@
-import { Extension, Mark, mergeAttributes } from "@tiptap/core";
+import { Extension, Mark, Node, mergeAttributes } from "@tiptap/core";
 import StarterKit from "@tiptap/starter-kit";
 import {
   ALIGNEMENTS,
+  LARGEURS_IMAGE,
   COULEURS,
   TAILLES,
   classeAlignement,
   classeCouleur,
+  classeLargeur,
   classeTaille,
   type Alignement,
+  type LargeurImage,
   type Couleur,
   type Taille,
 } from "@/lib/forum/mise-en-forme";
@@ -28,6 +31,7 @@ import {
 const PREFIXE_COULEUR = "rs-c-";
 const PREFIXE_TAILLE = "rs-t-";
 const PREFIXE_ALIGNEMENT = "rs-a-";
+const PREFIXE_LARGEUR = "rs-i-";
 
 /** La classe reconnue sur un élément, si elle appartient bien à la liste. */
 function valeurReconnue(
@@ -180,6 +184,71 @@ export const AlignementTexte = Extension.create({
  * accessibles au clavier — `#` en début de ligne, `- ` pour une puce — serait
  * un piège tendu à qui écrit vite.
  */
+/**
+ * **L'image d'un post.**
+ *
+ * Écrite ici plutôt que reprise de `@tiptap/extension-image`, pour la même
+ * raison que la couleur et l'alignement : l'extension officielle laisse
+ * passer `width`, `height` et le reste, quand celle-ci ne sait poser qu'une
+ * **classe de la palette**. L'éditeur ne peut donc pas produire ce que le
+ * serveur refuserait.
+ *
+ * C'est un bloc, et non une image dans le fil du texte : une illustration au
+ * milieu d'une phrase se comporte mal à toutes les largeurs, et personne ne
+ * l'a demandé.
+ *
+ * L'adresse et la description sont les seuls attributs venus du joueur. Les
+ * trois autres — `referrerpolicy`, `loading`, `decoding` — sont reposés par le
+ * nettoyage à l'enregistrement : les écrire ici ne servirait qu'à l'aperçu.
+ */
+export const ImagePost = Node.create({
+  name: "imagePost",
+  group: "block",
+  atom: true,
+  draggable: true,
+
+  addAttributes() {
+    return {
+      src: { default: null },
+      alt: { default: "" },
+      largeur: {
+        default: "moyenne" as LargeurImage,
+        renderHTML: (attributs) => {
+          const largeur = attributs.largeur as LargeurImage | null;
+          return largeur && (LARGEURS_IMAGE as readonly string[]).includes(largeur)
+            ? { class: classeLargeur(largeur) }
+            : {};
+        },
+      },
+    };
+  },
+
+  parseHTML() {
+    return [
+      {
+        tag: "img[src]",
+        getAttrs: (element) => {
+          const el = element as HTMLElement;
+          const src = el.getAttribute("src") ?? "";
+          // Ce que l'éditeur ne peut pas produire, il ne le relit pas non
+          // plus : une adresse hors https serait refusée à l'enregistrement.
+          if (!/^https:\/\//i.test(src)) return false;
+          return {
+            src,
+            alt: el.getAttribute("alt") ?? "",
+            largeur:
+              valeurReconnue(el, PREFIXE_LARGEUR, LARGEURS_IMAGE) ?? "moyenne",
+          };
+        },
+      },
+    ];
+  },
+
+  renderHTML({ HTMLAttributes }) {
+    return ["img", mergeAttributes(HTMLAttributes)];
+  },
+});
+
 export const EXTENSIONS = [
   StarterKit.configure({
     heading: false,
@@ -201,4 +270,5 @@ export const EXTENSIONS = [
   CouleurTexte,
   TailleTexte,
   AlignementTexte,
+  ImagePost,
 ];

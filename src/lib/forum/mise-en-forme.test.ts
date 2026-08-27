@@ -4,6 +4,8 @@ import {
   ALIGNEMENTS,
   CLASSES_DE_BLOC,
   CLASSES_DE_SPAN,
+  CLASSES_D_IMAGE,
+  LARGEURS_IMAGE,
   COULEURS,
   TAILLES,
   TEXTES_MISE_EN_FORME,
@@ -107,6 +109,15 @@ describe("les classes", () => {
     }
   });
 
+  it("valent aussi pour les images, sur leur propre sélecteur", () => {
+    // Les largeurs se posent sur l'image elle-même — `.post-rendu img.rs-i-…`
+    // — et non sur un conteneur : c'est l'image qu'on redimensionne.
+    for (const classe of CLASSES_D_IMAGE) {
+      expect(CSS).toContain(`.post-rendu img.${classe}`);
+    }
+    expect(CLASSES_D_IMAGE).toHaveLength(LARGEURS_IMAGE.length);
+  });
+
   it("se déduisent des outils, jamais d’une seconde liste", () => {
     expect(CLASSES_DE_SPAN).toHaveLength(COULEURS.length + TAILLES.length - 1);
     expect(CLASSES_DE_BLOC).toHaveLength(ALIGNEMENTS.length);
@@ -114,7 +125,11 @@ describe("les classes", () => {
   });
 
   it("portent toutes le préfixe qui les isole du reste du site", () => {
-    for (const classe of [...CLASSES_DE_SPAN, ...CLASSES_DE_BLOC]) {
+    for (const classe of [
+      ...CLASSES_DE_SPAN,
+      ...CLASSES_DE_BLOC,
+      ...CLASSES_D_IMAGE,
+    ]) {
       expect(classe.startsWith("rs-")).toBe(true);
     }
   });

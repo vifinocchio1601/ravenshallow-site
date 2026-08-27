@@ -5,6 +5,7 @@ import {
   caracteresUtiles,
   lignesAffichees,
   lignesManquantes,
+  porteQuelqueChose,
   proportion,
   respecteLeMinimum,
   sansHorsRP,
@@ -164,5 +165,29 @@ describe("ce que le joueur lit", () => {
     expect(proportion(exactement(SEUIL / 2), LIGNES_MINIMUM_RP)).toBe(0.5);
     expect(proportion(exactement(SEUIL * 3), LIGNES_MINIMUM_RP)).toBe(1);
     expect(proportion("n’importe quoi", null)).toBe(1);
+  });
+});
+
+describe("une image est du contenu, jamais des lignes", () => {
+  const IMAGE = '<img src="https://exemple.net/a.jpg" alt="" class="rs-i-moyenne" />';
+
+  it("ne compte pas un seul signe", () => {
+    expect(caracteresUtiles(IMAGE)).toBe(0);
+    expect(texteQuiCompte(`<p>Un mot.</p>${IMAGE}`)).toBe("Un mot.");
+  });
+
+  it("ne fait donc pas atteindre les dix lignes", () => {
+    expect(respecteLeMinimum(IMAGE.repeat(40), LIGNES_MINIMUM_RP)).toBe(false);
+  });
+
+  /**
+   * Mais elle n'est pas rien : un post fait d'une seule image est un post, là
+   * où aucun minimum ne s'applique — chez les non-mages.
+   */
+  it("suffit pourtant à faire un post là où rien n’est exigé", () => {
+    expect(porteQuelqueChose(IMAGE)).toBe(true);
+    expect(respecteLeMinimum(IMAGE, null)).toBe(true);
+    expect(porteQuelqueChose("<p></p>")).toBe(false);
+    expect(respecteLeMinimum("<p>  </p>", null)).toBe(false);
   });
 });

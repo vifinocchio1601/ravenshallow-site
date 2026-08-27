@@ -2,7 +2,11 @@ import "server-only";
 import { nettoyerTexteLibre, nettoyerUneLigne } from "@/lib/texte";
 import { TEXTES_FORUM } from "./constantes";
 import { AVERTISSEMENT_MAX, POST_MAX, TITRE_MAX } from "./limites";
-import { lignesManquantes, respecteLeMinimum, texteQuiCompte } from "./longueur";
+import {
+  lignesManquantes,
+  porteQuelqueChose,
+  respecteLeMinimum,
+} from "./longueur";
 import { nettoyerHtml } from "./nettoyer-html";
 
 /**
@@ -74,10 +78,14 @@ export function validerPost(
   // réduit le balisage à la liste blanche — et c'est lui qui protège.
   const net = nettoyerHtml(nettoyerTexteLibre(brut));
 
-  // Le vide se juge sur le TEXTE, pas sur la chaîne : « <p></p> » pèse sept
+  // Le vide se juge sur le CONTENU, pas sur la chaîne : « <p></p> » pèse sept
   // signes et ne dit rien. Sans cela, un post vide passerait chez les
   // non-mages, où aucun minimum ne le rattraperait.
-  if (texteQuiCompte(net).length === 0) {
+  //
+  // Une image compte ici — elle est du contenu —, et jamais dans le minimum
+  // de lignes : sinon on atteindrait les dix lignes sans écrire une ligne de
+  // jeu. Les deux questions ne sont pas la même.
+  if (!porteQuelqueChose(net)) {
     return { ok: false, message: E.corpsVide };
   }
   if (net.length > POST_MAX) {

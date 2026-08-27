@@ -11,10 +11,15 @@ import {
   AlignRight,
   Bold,
   Check,
+  ImageOff,
+  ImagePlus,
   Italic,
   Link as LienIcone,
   Link2Off,
+  Maximize2,
+  Minimize2,
   Minus,
+  RectangleHorizontal,
   Quote,
   Strikethrough,
   Type,
@@ -25,9 +30,11 @@ import { useId, useRef, useState, type ReactNode } from "react";
 import {
   ALIGNEMENTS,
   COULEURS,
+  LARGEURS_IMAGE,
   TEXTES_MISE_EN_FORME,
   type Alignement,
   type Couleur,
+  type LargeurImage,
 } from "@/lib/forum/mise-en-forme";
 
 /**
@@ -83,6 +90,20 @@ const ICONES_ALIGNEMENT: Record<Alignement, ReactNode> = {
 const ADRESSE_ACCEPTABLE =
   /^(?:https?:\/\/\S+|mailto:[^\s@]+@[^\s@]+\.[^\s@]+|\/\S*)$/i;
 
+/**
+ * **Une image ne se charge qu'en https.** Le site est servi en https : une
+ * image en http serait bloquée par le navigateur, et le joueur ne verrait
+ * qu'un trou sans comprendre pourquoi. Le serveur refait le tri de toute
+ * façon — celui-ci évite juste de poser une image qui ne s'affichera pas.
+ */
+const IMAGE_ACCEPTABLE = /^https:\/\/\S+$/i;
+
+const ICONES_LARGEUR: Record<LargeurImage, ReactNode> = {
+  petite: <Minimize2 aria-hidden="true" className="h-4 w-4" />,
+  moyenne: <RectangleHorizontal aria-hidden="true" className="h-4 w-4" />,
+  pleine: <Maximize2 aria-hidden="true" className="h-4 w-4" />,
+};
+
 export default function BarreMiseEnForme({
   editeur,
   desactive = false,
@@ -97,6 +118,12 @@ export default function BarreMiseEnForme({
   const [poseLien, setPoseLien] = useState(false);
   const [adresse, setAdresse] = useState("");
   const [erreurLien, setErreurLien] = useState<string | null>(null);
+
+  const [poseImage, setPoseImage] = useState(false);
+  const [adresseImage, setAdresseImage] = useState("");
+  const [descriptionImage, setDescriptionImage] = useState("");
+  const [erreurImage, setErreurImage] = useState<string | null>(null);
+  const idChampImage = useId();
 
   /**
    * Le bouton qui porte le tabindex glissant. Déclaré **avant** le retour
@@ -130,6 +157,11 @@ export default function BarreMiseEnForme({
             alignement:
               (editor.getAttributes("paragraph").alignement as
                 | Alignement
+                | null) ?? null,
+            image: editor.isActive("imagePost"),
+            largeur:
+              (editor.getAttributes("imagePost").largeur as
+                | LargeurImage
                 | null) ?? null,
           }
         : null,
@@ -277,6 +309,43 @@ export default function BarreMiseEnForme({
             },
       ],
     },
+
+    {
+      titre: t.image.poser,
+      outils: [
+        etat?.image
+          ? {
+              cle: "image-retirer",
+              libelle: t.image.retirer,
+              icone: <ImageOff aria-hidden="true" className="h-4 w-4" />,
+              agir: () => enchaine().deleteSelection().run(),
+            }
+          : {
+              cle: "image-poser",
+              libelle: t.image.poser,
+              icone: <ImagePlus aria-hidden="true" className="h-4 w-4" />,
+              actif: poseImage,
+              agir: () => {
+                setErreurImage(null);
+                setPoseImage((ouvert) => !ouvert);
+              },
+            },
+
+        // Les largeurs n'apparaissent **que sur une image choisie** : des
+        // boutons qui ne feraient rien le reste du temps se cliqueraient
+        // quand même, et sans effet visible on croirait à une panne.
+        ...(etat?.image
+          ? LARGEURS_IMAGE.map((largeur) => ({
+              cle: `largeur-${largeur}`,
+              libelle: t.image[largeur],
+              icone: ICONES_LARGEUR[largeur],
+              actif: etat?.largeur === largeur,
+              agir: () =>
+                enchaine().updateAttributes("imagePost", { largeur }).run(),
+            }))
+          : []),
+      ],
+    },
   ];
 
   /** L'ordre de parcours aux flèches : tous les boutons, à plat. */
@@ -303,6 +372,33 @@ export default function BarreMiseEnForme({
     barre.current
       ?.querySelector<HTMLButtonElement>(`[data-outil="${suivant}"]`)
       ?.focus();
+  }
+
+  function poserLImage() {
+    const nette = adresseImage.trim();
+    if (!IMAGE_ACCEPTABLE.test(nette)) {
+      setErreurImage(t.image.invalide);
+      return;
+    }
+    actif
+      .chain()
+      .focus()
+      .insertContent({
+        type: "imagePost",
+        attrs: {
+          src: nette,
+          // Une description vide vaut « image décorative » : `alt=""` le dit,
+          // et un lecteur d'écran l'ignore alors au lieu d'annoncer une
+          // adresse illisible.
+          alt: descriptionImage.trim(),
+          largeur: "moyenne",
+        },
+      })
+      .run();
+    setAdresseImage("");
+    setDescriptionImage("");
+    setErreurImage(null);
+    setPoseImage(false);
   }
 
   function poserLeLien() {
@@ -391,6 +487,80 @@ export default function BarreMiseEnForme({
           </div>
         ))}
       </div>
+
+      {poseImage ? (
+        <div className="grid gap-2 border-x border-silver/25 bg-mist/50 px-2 py-2 sm:grid-cols-[1fr_1fr_auto_auto] sm:items-center">
+          <input
+            id={idChampImage}
+            type="url"
+            value={adresseImage}
+            autoFocus
+            onChange={(e) => {
+              setAdresseImage(e.target.value);
+              setErreurImage(null);
+            }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                poserLImage();
+              }
+              if (e.key === "Escape") {
+                e.preventDefault();
+                setPoseImage(false);
+                actif.chain().focus().run();
+              }
+            }}
+            aria-label={t.image.adresse}
+            aria-describedby={`${idChampImage}-aide`}
+            aria-invalid={erreurImage !== null}
+            placeholder="https://…"
+            className="min-w-0 rounded-sm border border-silver/25 bg-void/40 px-3 py-1.5 font-body text-sm text-parchment placeholder:text-silver/50 focus:border-aurora-teal/70"
+          />
+          <input
+            type="text"
+            value={descriptionImage}
+            onChange={(e) => setDescriptionImage(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                poserLImage();
+              }
+            }}
+            aria-label={t.image.description}
+            placeholder={t.image.description}
+            className="min-w-0 rounded-sm border border-silver/25 bg-void/40 px-3 py-1.5 font-body text-sm text-parchment placeholder:text-silver/50 focus:border-aurora-teal/70"
+          />
+          <button
+            type="button"
+            onClick={poserLImage}
+            aria-label={t.image.poser}
+            className="flex h-8 w-8 items-center justify-center rounded-sm border border-aurora-teal/40 text-parchment hover:bg-aurora-teal/15"
+          >
+            <Check aria-hidden="true" className="h-4 w-4" />
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setPoseImage(false);
+              actif.chain().focus().run();
+            }}
+            aria-label={TEXTES_MISE_EN_FORME.lien.retirer}
+            className="flex h-8 w-8 items-center justify-center rounded-sm border border-silver/25 text-silver hover:text-parchment"
+          >
+            <X aria-hidden="true" className="h-4 w-4" />
+          </button>
+
+          <p
+            id={`${idChampImage}-aide`}
+            role={erreurImage ? "alert" : undefined}
+            className={`font-body text-xs sm:col-span-4 ${
+              erreurImage ? "text-ember" : "italic text-silver"
+            }`}
+          >
+            {erreurImage ?? `${t.image.aide} ${t.image.descriptionAide}`}
+          </p>
+        </div>
+      ) : null}
 
       {poseLien ? (
         <div className="flex flex-wrap items-center gap-2 border-x border-silver/25 bg-mist/50 px-2 py-2">

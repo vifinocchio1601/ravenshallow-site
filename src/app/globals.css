@@ -1551,3 +1551,39 @@
 .post-rendu {
   white-space: normal;
 }
+
+/* — Les images d'un post —
+
+   Trois largeurs, jamais un curseur : une image de trois mille pixels posée à
+   sa taille casse la mise en page de tout le monde sur téléphone, et son
+   auteur ne s'en aperçoit pas — il l'a vue sur son écran à lui.
+
+   `max-width: 100%` en dessous de tout : même la « pleine largeur » ne sort
+   jamais du cadre du post, quelle que soit la taille du fichier d'origine. */
+.post-rendu img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin: 1.2em 0;
+  border-radius: 2px;
+  border: 1px solid rgb(142 160 179 / 0.18);
+}
+
+.post-rendu img.rs-i-petite {
+  width: 12rem;
+}
+
+.post-rendu img.rs-i-moyenne {
+  width: 24rem;
+}
+
+.post-rendu img.rs-i-pleine {
+  width: 100%;
+}
+
+/* Une image sélectionnée dans l'éditeur : le liseré dit ce que les boutons de
+   largeur vont modifier. Sans lui, on clique « petite » sans savoir sur quoi. */
+.post-rendu img.ProseMirror-selectednode {
+  outline: 2px solid var(--aurora-teal);
+  outline-offset: 2px;
+}

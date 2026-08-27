@@ -162,3 +162,82 @@ describe("le texte d’avant la mise en forme", () => {
     expect(nettoyerHtml(texteEnHtml(brut))).toBe(texteEnHtml(brut));
   });
 });
+
+describe("les images", () => {
+  it("accepte une image en https, et repose ses attributs", () => {
+    const propre = nettoyerHtml(
+      '<img src="https://exemple.net/a.jpg" alt="Une falaise" class="rs-i-moyenne" />',
+    );
+    expect(propre).toContain('src="https://exemple.net/a.jpg"');
+    expect(propre).toContain('alt="Une falaise"');
+    expect(propre).toContain('class="rs-i-moyenne"');
+    // Les trois attributs posés d'office.
+    expect(propre).toContain('referrerpolicy="no-referrer"');
+    expect(propre).toContain('loading="lazy"');
+    expect(propre).toContain('decoding="async"');
+  });
+
+  /**
+   * **Le seul attribut qui protège quelqu'un.** Sans lui, l'hébergeur de
+   * l'image apprend quelle page du château est lue, et par quelle adresse IP.
+   */
+  it("pose « no-referrer » même si le joueur a écrit le contraire", () => {
+    const propre = nettoyerHtml(
+      '<img src="https://exemple.net/a.jpg" referrerpolicy="unsafe-url" />',
+    );
+    expect(propre).toContain('referrerpolicy="no-referrer"');
+    expect(propre).not.toContain("unsafe-url");
+  });
+
+  it("refuse une image ailleurs qu’en https", () => {
+    for (const ruse of [
+      '<img src="http://exemple.net/a.jpg" />',
+      '<img src="data:image/png;base64,iVBORw0KGgo=" />',
+      '<img src="javascript:alert(1)" />',
+      '<img src="//exemple.net/a.jpg" />',
+    ]) {
+      const propre = nettoyerHtml(ruse);
+      expect(propre).not.toContain("exemple.net");
+      expect(propre).not.toContain("data:");
+      expect(propre).not.toContain("javascript");
+    }
+  });
+
+  it("retire un gestionnaire d’événement posé sur une image", () => {
+    const propre = nettoyerHtml(
+      '<img src="https://exemple.net/a.jpg" onerror="voler()" onload="x" />',
+    );
+    expect(propre).not.toContain("onerror");
+    expect(propre).not.toContain("voler");
+    expect(propre).not.toContain("onload");
+  });
+
+  /**
+   * `srcset` porte des adresses, et une liste d'adresses est une liste de
+   * choses à filtrer qu'on filtrerait moins bien.
+   */
+  it("refuse srcset, sizes et les dimensions posées à la main", () => {
+    const propre = nettoyerHtml(
+      '<img src="https://exemple.net/a.jpg" srcset="http://ailleurs.example/b.jpg 2x" sizes="100vw" width="4000" style="width:4000px" />',
+    );
+    expect(propre).not.toContain("srcset");
+    expect(propre).not.toContain("ailleurs.example");
+    expect(propre).not.toContain("sizes");
+    expect(propre).not.toContain("4000");
+    expect(propre).not.toContain("style");
+  });
+
+  it("refuse une largeur qui n’est pas de la palette", () => {
+    const propre = nettoyerHtml(
+      '<img src="https://exemple.net/a.jpg" class="rs-i-gigantesque fixed inset-0" />',
+    );
+    expect(propre).not.toContain("gigantesque");
+    expect(propre).not.toContain("fixed");
+  });
+
+  it("ne change plus rien au second passage", () => {
+    const brut = '<img src="https://exemple.net/a.jpg" alt="x" class="rs-i-pleine" />';
+    const une = nettoyerHtml(brut);
+    expect(nettoyerHtml(une)).toBe(une);
+  });
+});

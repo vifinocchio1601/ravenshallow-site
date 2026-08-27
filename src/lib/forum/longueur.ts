@@ -115,6 +115,22 @@ export function texteQuiCompte(corps: string): string {
     .trim();
 }
 
+/**
+ * Le post porte-t-il **quelque chose** ?
+ *
+ * Une image ne compte pas dans les dix lignes — sinon on atteindrait le
+ * minimum sans écrire une ligne de jeu, et l'article 12.2 ne dirait plus
+ * rien. Mais elle n'est pas rien pour autant : un post fait d'une seule image
+ * est un post, là où aucun minimum ne s'applique.
+ *
+ * D'où deux questions distinctes : « y a-t-il de quoi publier ? » et
+ * « y a-t-il dix lignes ? ». Les confondre refuserait une illustration chez
+ * les non-mages, ou laisserait une image tenir lieu de scène dans le domaine.
+ */
+export function porteQuelqueChose(corps: string): boolean {
+  return texteQuiCompte(corps).length > 0 || /<\s*img\b/i.test(corps);
+}
+
 /** Combien de caractères réels le post porte. */
 export function caracteresUtiles(corps: string): number {
   return texteQuiCompte(corps).length;
@@ -148,7 +164,10 @@ export function respecteLeMinimum(
   corps: string,
   lignesMinimum: number | null,
 ): boolean {
-  if (lignesMinimum === null) return texteQuiCompte(corps).length > 0;
+  // Sans minimum, il suffit qu'il y ait quelque chose — une image comprise.
+  if (lignesMinimum === null) return porteQuelqueChose(corps);
+  // Avec un minimum, seuls les caractères comptent : une image ne fait pas
+  // une ligne de jeu.
   return caracteresUtiles(corps) >= seuilEnCaracteres(lignesMinimum);
 }
 

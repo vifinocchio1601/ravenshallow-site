@@ -118,6 +118,7 @@ export const CONFIDENTIALITE: DocumentLegal = {
         "Pas vos conversations privées. Aucun membre du staff ne peut ouvrir la Tour aux Corbeaux de quelqu’un d’autre : il n’existe aucun écran pour le faire, et le site est construit pour que ce chemin n’existe pas. Le seul cas où un message privé parvient à l’administration est celui où vous le lui transmettez vous-même par un signalement, et elle ne reçoit alors que la copie que vous lui envoyez.",
         "Les sociétés qui font tourner le site, et rien de plus : Vercel, qui l’héberge aux États-Unis ; Neon, qui garde la base en Allemagne ; Google, qui achemine les courriels. Aucune donnée n’est vendue, échangée ni transmise à un tiers.",
         "L’hébergement du site et l’envoi des courriels passent par des sociétés établies aux États-Unis. Vos données peuvent donc y transiter.",
+        "Enfin, un membre peut illustrer un message avec une image hébergée ailleurs. En affichant la page, votre navigateur va la chercher chez cet hébergeur, qui voit alors votre adresse IP. Le site lui demande expressément de ne pas lui dire quelle page vous lisez, et n’a aucun autre échange avec lui — mais il ne peut pas empêcher ce contact, et il vaut mieux que vous le sachiez.",
       ],
     },
     {

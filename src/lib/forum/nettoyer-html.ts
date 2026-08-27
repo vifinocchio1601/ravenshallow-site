@@ -1,6 +1,10 @@
 import "server-only";
 import sanitizeHtml from "sanitize-html";
-import { CLASSES_DE_BLOC, CLASSES_DE_SPAN } from "./mise-en-forme";
+import {
+  CLASSES_DE_BLOC,
+  CLASSES_DE_SPAN,
+  CLASSES_D_IMAGE,
+} from "./mise-en-forme";
 
 /**
  * **Le nettoyage du balisage d'un post.** C'est la seule chose qui protège le
@@ -27,10 +31,10 @@ import { CLASSES_DE_BLOC, CLASSES_DE_SPAN } from "./mise-en-forme";
 
 /**
  * Les balises permises. `span` porte les couleurs et les tailles ; `p` et
- * `blockquote` portent l'alignement.
+ * `blockquote` portent l'alignement ; `img` porte sa largeur.
  *
- * Ni `div`, ni `style`, ni `script`, ni `iframe`, ni `img` — les images sont
- * une autre affaire, avec ses propres règles (art. 6), et rien ne presse.
+ * Ni `div`, ni `style`, ni `script`, ni `iframe`, ni `video` : ce qui n'est
+ * pas là ne passe pas, y compris ce qui n'existe pas encore.
  */
 const BALISES = [
   "p",
@@ -43,6 +47,7 @@ const BALISES = [
   "hr",
   "a",
   "span",
+  "img",
 ] as const;
 
 /**
@@ -89,6 +94,48 @@ function refaireLeLien(_balise: string, attributs: sanitizeHtml.Attributes) {
   };
 }
 
+/**
+ * Une image, refaite de zéro — comme les liens, et pour les mêmes raisons.
+ *
+ * On ne garde que l'adresse, la description et la largeur ; **tout le reste
+ * est reposé ici**. Trois attributs sont ajoutés d'office, et aucun n'est
+ * laissé au choix du joueur :
+ *
+ *   `referrerpolicy="no-referrer"` — **le seul qui protège quelqu'un.** Sans
+ *   lui, l'hébergeur de l'image apprend quelle page du château est en train
+ *   d'être lue, et par quelle adresse IP. Le site ne dépose aucun mouchard ;
+ *   il n'a pas à en laisser poser un par la bande.
+ *
+ *   `loading="lazy"` — une scène de trente posts illustrés ne se télécharge
+ *   pas d'un coup.
+ *
+ *   `decoding="async"` — le décodage ne bloque pas l'affichage du texte, qui
+ *   est ce qu'on vient lire.
+ *
+ * `srcset` n'est **pas** permis : il porte des adresses, et une liste
+ * d'adresses est une liste de choses à filtrer qu'on filtrerait moins bien.
+ */
+function refaireLImage(_balise: string, attributs: sanitizeHtml.Attributes) {
+  const adresse = typeof attributs.src === "string" ? attributs.src : "";
+  const description = typeof attributs.alt === "string" ? attributs.alt : "";
+  const classe =
+    typeof attributs.class === "string" ? attributs.class : "";
+
+  return {
+    tagName: "img",
+    attribs: {
+      src: adresse,
+      // Une image sans description est décorative — `alt=""` le dit, et un
+      // lecteur d'écran l'ignore alors au lieu d'annoncer une adresse.
+      alt: description,
+      class: classe,
+      referrerpolicy: "no-referrer",
+      loading: "lazy",
+      decoding: "async",
+    },
+  };
+}
+
 const REGLAGES: sanitizeHtml.IOptions = {
   allowedTags: [...BALISES],
 
@@ -97,6 +144,7 @@ const REGLAGES: sanitizeHtml.IOptions = {
     p: ["class"],
     blockquote: ["class"],
     span: ["class"],
+    img: ["src", "alt", "class", "referrerpolicy", "loading", "decoding"],
   },
 
   // Les classes viennent de `mise-en-forme.ts`, déduites des listes d'outils.
@@ -106,11 +154,20 @@ const REGLAGES: sanitizeHtml.IOptions = {
     span: [...CLASSES_DE_SPAN],
     p: [...CLASSES_DE_BLOC],
     blockquote: [...CLASSES_DE_BLOC],
+    img: [...CLASSES_D_IMAGE],
   },
 
   // Ni `javascript:`, ni `data:`, ni `vbscript:`, ni rien d'autre.
   allowedSchemes: ["http", "https", "mailto"],
-  allowedSchemesAppliedToAttributes: ["href"],
+  allowedSchemesAppliedToAttributes: ["href", "src"],
+
+  /**
+   * **Une image ne se charge qu'en `https`.** Le site est servi en `https` :
+   * une image en `http` serait bloquée par le navigateur, et le joueur ne
+   * verrait qu'un trou sans comprendre. `data:` est écarté du même geste —
+   * une image encodée dans le texte pèserait le poids d'un post entier.
+   */
+  allowedSchemesByTag: { img: ["https"] },
   // `//ailleurs.example` emprunte le schéma de la page : c'est une adresse
   // extérieure qui n'en a pas l'air.
   allowProtocolRelative: false,
@@ -139,6 +196,7 @@ const REGLAGES: sanitizeHtml.IOptions = {
 
   transformTags: {
     a: refaireLeLien,
+    img: refaireLImage,
     ...Object.fromEntries(
       Object.entries(EQUIVALENCES).map(([ancienne, moderne]) => [
         ancienne,

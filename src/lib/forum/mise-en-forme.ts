@@ -52,12 +52,23 @@ export type Taille = (typeof TAILLES)[number];
 export const ALIGNEMENTS = ["gauche", "centre", "droite", "justifie"] as const;
 export type Alignement = (typeof ALIGNEMENTS)[number];
 
+/**
+ * **Trois largeurs, jamais un curseur.**
+ *
+ * Même raison que la palette : une image de trois mille pixels posée à sa
+ * taille casse la mise en page de tout le monde sur téléphone, et son auteur
+ * ne s'en aperçoit pas — il l'a vue sur son écran à lui.
+ */
+export const LARGEURS_IMAGE = ["petite", "moyenne", "pleine"] as const;
+export type LargeurImage = (typeof LARGEURS_IMAGE)[number];
+
 /** Le préfixe, pour qu'une classe de post ne croise jamais une classe du site. */
 const P = "rs";
 
 export const classeCouleur = (c: Couleur) => `${P}-c-${c}`;
 export const classeTaille = (t: Exclude<Taille, "normal">) => `${P}-t-${t}`;
 export const classeAlignement = (a: Alignement) => `${P}-a-${a}`;
+export const classeLargeur = (l: LargeurImage) => `${P}-i-${l}`;
 
 /**
  * Toutes les classes permises, déduites des listes ci-dessus.
@@ -77,6 +88,10 @@ export const CLASSES_DE_SPAN: readonly string[] = [
 export const CLASSES_DE_BLOC: readonly string[] = ALIGNEMENTS.map(
   classeAlignement,
 );
+
+/** Les classes qu'une image a le droit de porter, et rien d'autre. */
+export const CLASSES_D_IMAGE: readonly string[] =
+  LARGEURS_IMAGE.map(classeLargeur);
 
 /** La classe du conteneur, qui porte les styles. Hors d'elle, rien ne peint. */
 export const CLASSE_CONTENEUR = "post-rendu";
@@ -124,6 +139,26 @@ export const TEXTES_MISE_EN_FORME = {
 
   citation: "Mettre en citation",
   separateur: "Insérer un filet",
+
+  image: {
+    poser: "Insérer une image",
+    adresse: "Adresse de l’image",
+    /**
+     * L'article 6.1 est une règle entre joueurs — le site ne peut pas la
+     * vérifier. La rappeler au moment du geste est tout ce qu'il peut faire,
+     * et c'est le bon moment.
+     */
+    aide: "Une adresse en https. L’image doit être libre de droits, créditée, ou de toi (article 6.1) — et elle reste chez son hébergeur : si celui-ci ferme, elle disparaît du post.",
+    invalide: "Seules les adresses en https sont acceptées.",
+    description: "Description de l’image",
+    descriptionAide:
+      "Pour qui ne la voit pas. Laisse vide si l’image n’est là que pour l’ambiance.",
+    largeur: "Largeur de l’image",
+    petite: "Image petite",
+    moyenne: "Image moyenne",
+    pleine: "Image pleine largeur",
+    retirer: "Retirer l’image",
+  },
 
   lien: {
     poser: "Insérer un lien",
