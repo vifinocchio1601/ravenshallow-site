@@ -141,6 +141,17 @@ export const FOOTER_LINKS: SiteLink[] = [
   { href: "#rejoindre", label: "Rejoindre" },
 ];
 
+/**
+ * Les deux pages que la loi réclame. Séparées de `FOOTER_LINKS`, qui ne porte
+ * que des ancres de l'accueil : celles-ci sont de vraies adresses, et se
+ * rangent sur leur propre ligne, sous la frise.
+ */
+export const LIENS_LEGAUX: SiteLink[] = [
+  { href: "/mentions-legales", label: "Mentions légales" },
+  { href: "/confidentialite", label: "Données personnelles" },
+  { href: "/reglement", label: "Règlement" },
+];
+
 /** Elder Futhark — « RAVENSHALLOW » translittéré, utilisé comme frise. */
 export const RAVENSHALLOW_RUNES = "ᚱ ᚨ ᚡ ᛖ ᚾ ᛊ ᚺ ᚨ ᛚ ᛚ ᛟ ᚹ";
 

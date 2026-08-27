@@ -192,6 +192,13 @@ export const TEXTES = {
     complet: "Le dossier est complet.",
     resteListe: "Il reste : {champs}.",
     resteNombre: "Il reste {n} champs à compléter.",
+    /**
+     * Dit, au moment même où les données sont saisies, ce qu'elles
+     * deviennent. La loi le demande à cet instant précis — pas dans une page
+     * qu'il faudrait penser à aller chercher.
+     */
+    confidentialite: "En envoyant ce dossier, tu confies au château une adresse de courriel et ce que tu écris ici.",
+    confidentialiteLien: "Ce qu'il en garde, et pour combien de temps",
   },
 
   fiche: {

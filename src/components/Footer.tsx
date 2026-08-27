@@ -1,5 +1,6 @@
+import Link from "next/link";
 import RuneDivider from "./RuneDivider";
-import { DISCORD, FOOTER_LINKS } from "@/lib/content";
+import { DISCORD, FOOTER_LINKS, LIENS_LEGAUX } from "@/lib/content";
 
 export default function Footer() {
   return (
@@ -72,7 +73,22 @@ export default function Footer() {
 
         <RuneDivider className="mt-16" />
 
-        <p className="mt-8 text-center text-xs tracking-[0.06em] text-silver/70">
+        <nav aria-label="Pages légales" className="mt-8">
+          <ul className="flex flex-wrap items-center justify-center gap-x-7 gap-y-3">
+            {LIENS_LEGAUX.map((lien) => (
+              <li key={lien.href}>
+                <Link
+                  href={lien.href}
+                  className="font-display text-[0.62rem] uppercase tracking-[0.22em] text-silver/70 transition-colors duration-300 hover:text-aurora-teal"
+                >
+                  {lien.label}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </nav>
+
+        <p className="mt-7 text-center text-xs tracking-[0.06em] text-silver/70">
           Ravenshallow — document évolutif. Le monde continue de s&apos;écrire.
         </p>
       </div>

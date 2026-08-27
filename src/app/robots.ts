@@ -20,7 +20,15 @@ export default function robots(): MetadataRoute.Robots {
   return {
     rules: {
       userAgent: "*",
-      allow: ["/$", "/reglement", "/inscription", "/_next/", "/crests/"],
+      allow: [
+        "/$",
+        "/reglement",
+        "/inscription",
+        "/mentions-legales",
+        "/confidentialite",
+        "/_next/",
+        "/crests/",
+      ],
       disallow: "/",
     },
   };

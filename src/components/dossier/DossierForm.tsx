@@ -677,6 +677,17 @@ export default function DossierForm() {
 
         {/* ═══════ Envoi ═══════ */}
         <div className="flex flex-col items-center gap-4 border-t border-silver/10 pt-10 text-center">
+          <p className="max-w-lg font-body text-sm leading-relaxed text-silver">
+            {TEXTES.envoi.confidentialite}{" "}
+            <Link
+              href="/confidentialite"
+              className="text-aurora-teal underline decoration-aurora-teal/40 underline-offset-4 transition-colors hover:decoration-aurora-teal"
+            >
+              {TEXTES.envoi.confidentialiteLien}
+            </Link>
+            .
+          </p>
+
           <button
             type="submit"
             disabled={!complet || envoi}

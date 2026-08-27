@@ -729,6 +729,60 @@ rendu carré sur le fond `void`.
 
 ---
 
+## Les deux pages que la loi réclame
+
+`/mentions-legales` et `/confidentialite`, leurs textes dans `lib/legal.ts`,
+rendues par un gabarit unique — `components/PageLegale.tsx`. Deux mises en
+forme qui divergeraient finiraient par se contredire à l'œil.
+
+**Rien n'y est inventé.** L'essentiel découle du règlement écrit par le joueur
+— l'âge d'entrée (art. 2.2), le sort des écrits d'un partant (art. 2.5), le
+format des avatars (art. 6.2) — et de ce que le code fait réellement, vérifié
+fichier par fichier le 27 août 2026. **Ne jamais y ajouter une promesse que le
+site ne tient pas** : une politique de confidentialité fausse est pire
+qu'absente.
+
+Ce que ces pages affirment, et qui doit rester vrai :
+
+| Ce qui est écrit | Ce qui le garantit |
+| --- | --- |
+| l'âge réel n'est pas conservé | seul `majeur16` survit (art. 2.3) |
+| l'IP n'est pas conservée | `connexion/tentatives.ts` n'écrit qu'un HMAC, effacé au bout d'une heure |
+| aucun mouchard, **donc aucun bandeau de cookies** | aucune dépendance d'analytique ; le seul cookie est celui de session, dispensé de consentement |
+| l'avatar n'est pas le visage du joueur | art. 6.2 — célébrité majeure, IA ou illustration |
+| le staff ne lit pas les conversations privées | `etancheite.test.ts` |
+
+**Deux décisions du joueur, prises le 27 août 2026 :** le site est publié
+**sous pseudonyme** — permis à un éditeur non professionnel dont l'hébergeur
+connaît l'identité, et c'est le cas —, et un compte est effacé après **trois
+ans sans connexion**, précédé d'un courriel et d'un mois de délai. Ne pas
+changer ces deux valeurs sans lui.
+
+**L'information est donnée au moment de la saisie**, pas seulement dans une
+page qu'il faudrait penser à ouvrir : `DossierForm` porte la mention et le
+lien juste au-dessus du bouton d'envoi. C'est là que la loi la veut.
+
+`robots.ts` ouvre les deux pages : une politique de confidentialité
+introuvable ne vaut rien.
+
+⚠️ **Une promesse est écrite et n'est pas encore tenue par le code** :
+l'effacement d'un compte après trois ans sans connexion, courriel
+d'avertissement puis un mois de délai. Rien ne le déclenche aujourd'hui —
+aucune tâche planifiée, aucun écran. Le premier compte concerné ne le sera
+pas avant août 2029, mais **c'est un engagement écrit** : soit on l'outille
+avant, soit on relit la date à la main. Le signaler au joueur plutôt que de
+laisser la page mentir. Les deux autres durées, elles, sont tenues par le
+code : les empreintes de connexion s'effacent d'elles-mêmes au fil des
+connexions, et la copie d'un signalement est protégée par un déclencheur.
+
+**L'adresse de l'hébergeur est vérifiée, non écrite de mémoire** — Vercel
+Inc., 440 N Barranca Ave #4133, Covina, CA 91723, relevée sur leurs conditions
+le 27 août 2026. Neon (Francfort) et Gmail sont cités dans la politique de
+confidentialité comme sous-traitants, pas dans les mentions légales : l'hébergeur
+du *site* est Vercel.
+
+---
+
 ## Authentification
 
 Trois mécanismes distincts, à ne pas confondre :
@@ -1234,6 +1288,9 @@ masqué sept jours pour correction — avec le corbeau du château qui prévient
 
 Le panneau **« Mes scènes en cours »** du bureau est le deuxième à cesser
 d'être vide, et il n'a pas eu à bouger.
+
+**Les deux pages légales sont posées** — mentions légales et politique de
+confidentialité —, liées au pied de page et au moment de la saisie du dossier.
 
 **Pas encore** : les points, les cours, les annonces du Grand Hall, le Registre
 magique, et le contenu des espaces `non-mages` et `maison`. Le point
