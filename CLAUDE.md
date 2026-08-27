@@ -952,6 +952,37 @@ croie pas l'avoir oubliée.
 
 ---
 
+## L'endormissement de la base
+
+**Le premier visiteur après une accalmie attend quinze à trente secondes**, et
+peut tomber sur une erreur. Mesuré le 27 août 2026 sur `ravenshallow.com` :
+30 s en échec, puis 14,7 s, puis 0,4 s — et 0,4 à 0,7 s une fois chaud.
+
+Deux causes qui s'additionnent : Neon suspend le calcul après **cinq minutes**
+sans requête (formule gratuite, non modifiable), et Vercel laisse refroidir
+une fonction inutilisée.
+
+**Le code a fait tout ce qu'il pouvait** — `connect_timeout` et les délais de
+transaction empêchent l'erreur 500 franche, ils n'empêchent pas l'attente.
+**Le seul remède restant est d'empêcher l'endormissement**, et il vient de
+l'extérieur : `/api/reveil` existe pour être appelé toutes les quelques
+minutes par un service de surveillance gratuit.
+
+- **Pas de secret sur ce point d'entrée**, et ce n'est pas un oubli : Neon
+  facture **le temps d'éveil**, pas le nombre de requêtes. Mille appels sur
+  une base déjà éveillée coûtent ce que coûte le fait qu'elle soit éveillée —
+  ce qui est le but. Un secret n'ajouterait qu'une variable à tenir.
+- ⚠️ **Ce qui se surveille, c'est le quota.** La formule gratuite donne un
+  nombre fini d'heures de calcul par mois ; garder la base éveillée
+  vingt-quatre heures sur vingt-quatre le consomme intégralement. D'où l'appel
+  **restreint à une plage horaire** — les heures où des joueurs écrivent — et
+  non aux vingt-quatre heures. Une visite à quatre heures du matin attendra,
+  et c'est le bon compromis.
+- `robots.ts` ferme tout sauf trois pages : ce point d'entrée n'est donc pas
+  indexé, sans qu'on ait eu à le nommer.
+
+---
+
 ## La sauvegarde
 
 **Le filet de Neon fait six heures.** Formule gratuite, curseur « History
