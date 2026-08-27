@@ -1028,14 +1028,31 @@ le réveil dépasse le délai d'attente de Prisma (5 s par défaut), la page tom
 sur `Can't reach database server at ep-….neon.tech:5432`. Ce n'est pas une
 panne — mais c'est arrivé assez souvent pour être corrigé.
 
-**`connect_timeout=15` est posé sur `DATABASE_URL` dans `.env.local`** depuis
-le 26 août 2026 : Prisma patiente au lieu d'abandonner. Le paramètre s'ajoute
-proprement avec la classe `URL` de Node, sans jamais afficher la chaîne — et le
-fichier se sauvegarde avant d'être réécrit.
+**`connect_timeout=15` est maintenant posé par le code**, dans
+`lib/base/adresse.ts`, appelé par `lib/prisma.ts` — le seul endroit qui ouvre
+une connexion. Prisma patiente au lieu d'abandonner, **partout à la fois** :
+le poste de développement, Vercel, et tout environnement à venir.
 
-⚠️ **Le même paramètre manque encore sur Vercel**, où `DATABASE_URL` est la
-chaîne Neon *pooled* et se règle dans le tableau de bord du projet. À faire
-avec le joueur, clic par clic, avant l'ouverture.
+Il est posé aussi dans `.env.local` depuis le 26 août 2026, et **c'est la
+valeur écrite à la main qui gagne** : `adresseAvecDelaiDeConnexion` ne touche
+pas une adresse qui porte déjà un délai, quelle qu'en soit la valeur.
+
+**L'adresse n'est jamais réécrite, seulement allongée.** Ne pas « simplifier »
+en la reconstruisant avec la classe `URL` : un mot de passe fait de signes
+inhabituels en ressortirait ré-encodé, et la connexion échouerait sans que
+rien n'indique pourquoi. Seule la partie après le `?` est relue, par
+`URLSearchParams`, pour savoir si le délai s'y trouve déjà. Un essai fige ce
+choix.
+
+**Pourquoi le code plutôt que le tableau de bord Vercel** : la variable y est
+de type *Secret*, donc en **écriture seule**. Elle ne se relit plus une fois
+enregistrée, et l'allonger de quinze caractères obligerait à retaper l'adresse
+entière — mot de passe compris, recopié de Neon à la main, une faute de frappe
+suffisant à faire tomber le site. Constaté à l'écran le 27 août 2026.
+
+`scripts/importer-dossiers.mjs` ouvre son propre client et n'en bénéficie
+pas : c'est un script local lancé à la main, où l'échec est visible et se
+relance. Ne pas y voir un oubli.
 
 **Ne jamais lancer `npm run build` pendant que `npm run dev` tourne.** Les deux
 écrivent dans `.next` : le build périme le manifeste du serveur de
