@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
 import { TEXTES_FORUM } from "@/lib/forum/constantes";
-import { demasquerPost, masquerPost } from "@/lib/forum/depot";
+import {
+  demasquerPost,
+  masquerPost,
+  retirerSonPost,
+} from "@/lib/forum/depot";
 import { pouvoirsDe } from "@/lib/forum/depot-pouvoirs";
 import { peutEntrerDansLEcole } from "@/lib/session/acces";
 import { compteConnecte } from "@/lib/session/garde";
@@ -33,8 +37,28 @@ export async function PATCH(
   const corps = (await requete.json().catch(() => null)) as {
     masque?: unknown;
     motif?: unknown;
+    retire?: unknown;
   } | null;
-  if (!corps || typeof corps.masque !== "boolean") {
+  if (!corps) {
+    return NextResponse.json({ erreur: "Requête vide." }, { status: 422 });
+  }
+
+  // **Retirer son post n'est pas masquer le post d'un autre.** Ce chemin-ci ne
+  // regarde aucun pouvoir : il demande seulement si le post est le sien.
+  if (corps.retire === true) {
+    if (!compte.eleveId) {
+      return NextResponse.json(
+        { erreur: TEXTES_FORUM.erreurs.refuse },
+        { status: 403 },
+      );
+    }
+    const resultat = await retirerSonPost({ eleveId: compte.eleveId }, params.id);
+    return resultat.ok
+      ? NextResponse.json({ ok: true })
+      : NextResponse.json({ erreur: resultat.message }, { status: 403 });
+  }
+
+  if (typeof corps.masque !== "boolean") {
     return NextResponse.json({ erreur: "Requête vide." }, { status: 422 });
   }
 

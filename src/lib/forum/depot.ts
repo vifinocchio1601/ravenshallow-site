@@ -29,6 +29,12 @@ import {
   peutEpinglerUnSujet,
   type Pouvoirs,
 } from "./pouvoirs";
+import {
+  peutRetirerLaScene,
+  peutRetirerSonPost,
+  type RaisonDeRefus,
+} from "./suppression";
+import { transaction } from "@/lib/base/transaction";
 
 /**
  * L’accès au forum — la seule porte vers `espaces`, `sections`, `sujets` et
@@ -316,7 +322,13 @@ export async function listerSujets(
   avant?: Date,
 ): Promise<SujetAffiche[]> {
   const lignes = await prisma.sujet.findMany({
-    where: { sectionId, ...(avant ? { dernierPostLe: { lt: avant } } : {}) },
+    // Une scène retirée sort des listes et de son adresse, mais reste en
+    // base : rien ne part définitivement sur un clic.
+    where: {
+      sectionId,
+      supprimeLe: null,
+      ...(avant ? { dernierPostLe: { lt: avant } } : {}),
+    },
     orderBy: [{ epingle: "desc" }, { dernierPostLe: "desc" }],
     take: SUJETS_PAR_PAGE,
     select: {
@@ -361,6 +373,7 @@ export async function compterScenesOuvertes(eleveId: string): Promise<number> {
   return prisma.sujet.count({
     where: {
       closLe: null,
+      supprimeLe: null,
       section: { espace: { compteLesScenes: true } },
       OR: [{ auteurId: eleveId }, { posts: { some: { auteurId: eleveId } } }],
     },
@@ -385,6 +398,13 @@ export type PostAffiche = {
   masque: boolean;
   motifMasquage: string | null;
   corrigerAvantLe: string | null;
+  /**
+   * **Retiré par son auteur** — un autre geste que le masquage. N’arrive ici
+   * que si sa place est gardée ; sinon le post n’est pas transporté du tout.
+   * `corps` est alors vide : ce que l’auteur a retiré ne traverse pas le
+   * réseau, même vers un écran qui ne l’afficherait pas.
+   */
+  retire: boolean;
 };
 
 export type SujetCharge = {
@@ -397,9 +417,11 @@ export type SujetCharge = {
 /**
  * Un sujet et ses posts.
  *
- * Rend `null` si le sujet n’existe pas **ou** si le lieu n’est pas lisible par
- * ce membre : la même réponse dans les deux cas. « Il existe mais pas pour
- * vous » se lit comme une confirmation — c’est déjà le choix fait dans la Tour.
+ * Rend `null` si le sujet n’existe pas, **si le lieu n’est pas lisible par ce
+ * membre**, ou **s’il a été retiré** : la même réponse dans les trois cas.
+ * « Il existe mais pas pour vous » se lit comme une confirmation — c’est déjà
+ * le choix fait dans la Tour. Une scène retirée qui rendrait autre chose
+ * qu’un 404 dirait qu’elle a existé, et à qui la cherche cela suffit.
  */
 export async function lireSujet(
   sujetId: string,
@@ -413,6 +435,7 @@ export async function lireSujet(
       epingle: true,
       closLe: true,
       closPar: true,
+      supprimeLe: true,
       anneeRequiseALOuverture: true,
       dernierPostLe: true,
       creeLe: true,
@@ -422,7 +445,8 @@ export async function lireSujet(
       _count: { select: { posts: true } },
     },
   });
-  if (!ligne) return null;
+  // Retirée = introuvable. Voir le commentaire de la fonction.
+  if (!ligne || ligne.supprimeLe) return null;
 
   // On repasse par `lireSection` plutôt que de relire les colonnes ici : c’est
   // lui qui résout les règles et qui refuse un lieu illisible, et le recopier
@@ -435,7 +459,12 @@ export async function lireSujet(
   if (!trouve) return null;
 
   const posts = await prisma.post.findMany({
-    where: { sujetId },
+    // Un post retiré ne remonte que s’il garde sa place — et son texte, lui,
+    // ne remonte jamais : voir plus bas.
+    where: {
+      sujetId,
+      OR: [{ retireLe: null }, { placeConservee: true }],
+    },
     orderBy: { publieLe: "asc" },
     take: POSTS_PAR_PAGE,
     select: {
@@ -447,6 +476,7 @@ export async function lireSujet(
       masqueLe: true,
       motifMasquage: true,
       corrigerAvantLe: true,
+      retireLe: true,
       auteurId: true,
       auteur: {
         select: {
@@ -489,13 +519,16 @@ export async function lireSujet(
       place: p.auteur
         ? libellePlace(p.auteur.fonction as Fonction, p.auteur.roleAffiche)
         : "",
-      corps: p.corps,
-      avertissementContenu: p.avertissementContenu,
+      // Le texte d’un post retiré ne quitte pas le serveur. L’écran n’en
+      // montrerait rien, mais il serait dans la page — et une page se lit.
+      corps: p.retireLe ? "" : p.corps,
+      avertissementContenu: p.retireLe ? null : p.avertissementContenu,
       publieLe: p.publieLe.toISOString(),
       modifieLe: p.modifieLe?.toISOString() ?? null,
       masque: p.masqueLe !== null,
-      motifMasquage: p.motifMasquage,
+      motifMasquage: p.retireLe ? null : p.motifMasquage,
       corrigerAvantLe: p.corrigerAvantLe?.toISOString() ?? null,
+      retire: p.retireLe !== null,
     })),
   };
 }
@@ -630,16 +663,35 @@ export async function repondre(
  * « Une scène sans réponse depuis un mois peut être clôturée par un
  * modérateur ; **les points acquis restent acquis.** » Rien n’est effacé : le
  * sujet reste lisible, il n’accepte simplement plus de réponse.
+ *
+ * **L’auteur clôt la sienne**, sans permission particulière — décision du
+ * joueur, 27 août 2026. C’est la contrepartie du retrait : dès qu’un autre a
+ * écrit, la scène ne lui appartient plus assez pour la retirer, mais assez
+ * pour la fermer. Sans cela, quelqu’un dont la scène s’enlise n’aurait aucun
+ * geste à sa disposition.
+ *
+ * Il peut la rouvrir de même : une scène close par erreur n’a pas à
+ * mobiliser un modérateur.
  */
 export async function changerLaCloture(
   pouvoirs: Pouvoirs,
   sujetId: string,
   clore: boolean,
   parNom: string,
+  parEleveId?: string,
 ): Promise<boolean> {
-  if (!peutCloreUneScene(pouvoirs)) return false;
+  if (!peutCloreUneScene(pouvoirs)) {
+    if (!parEleveId) return false;
+    const sien = await prisma.sujet.findFirst({
+      where: { id: sujetId, auteurId: parEleveId, supprimeLe: null },
+      select: { id: true },
+    });
+    if (!sien) return false;
+  }
+
   const { count } = await prisma.sujet.updateMany({
-    where: { id: sujetId },
+    // Une scène retirée ne se rouvre pas par la petite porte.
+    where: { id: sujetId, supprimeLe: null },
     data: clore
       ? { closLe: new Date(), closPar: parNom }
       : { closLe: null, closPar: null },
@@ -768,6 +820,189 @@ export async function demasquerPost(
   return count > 0;
 }
 
+// ─────────────────────────────────────────────────────────────
+//  Retirer une scène, retirer son post — art. 2.4 et 6.4
+// ─────────────────────────────────────────────────────────────
+
+/** Le refus, dit en français. Une seule table, pour ne pas la recopier. */
+function refus(raison: RaisonDeRefus): string {
+  const E = TEXTES_FORUM.suppression.erreurs;
+  if (raison === "DEJA_ECRIT_PAR_D_AUTRES") return E.dejaEcritParDAutres;
+  if (raison === "DEJA_REPONDU_APRES") return E.dejaEcritParDAutres;
+  return E.pasAMoi;
+}
+
+export type ResultatRetrait =
+  | { ok: true; prevenus: number }
+  | { ok: false; message: string };
+
+/**
+ * **Retirer une scène du forum, sans rien effacer.**
+ *
+ * Le dépôt fournit les faits, `suppression.ts` rend le verdict, et cette
+ * fonction ne fait qu’exécuter. Une seule porte : la route n’a rien à
+ * revérifier, et ne le pourrait pas mieux.
+ *
+ * ── Qui est prévenu, et pourquoi eux ──
+ *
+ * **Tous ceux qui ont écrit dans la scène**, sauf celui qui la retire — décision
+ * du joueur, 27 août 2026. L’auteur de la scène en fait partie : quelqu’un dont
+ * la scène disparaît sans un mot le vivra mal, surtout si la faute vient d’un
+ * autre. Chacun n’est prévenu qu’une fois, quel que soit le nombre de ses posts.
+ *
+ * Un envoi raté **ne défait pas le retrait** : il est seulement compté à part.
+ * Même choix que pour le masquage, et que pour les courriels.
+ */
+export async function retirerLaScene(
+  auteur: { eleveId: string; utilisateurId: string },
+  pouvoirs: Pouvoirs,
+  sujetId: string,
+  motif: unknown,
+  parNom: string,
+): Promise<ResultatRetrait> {
+  const sujet = await prisma.sujet.findUnique({
+    where: { id: sujetId },
+    select: {
+      id: true,
+      titre: true,
+      auteurId: true,
+      supprimeLe: true,
+      auteur: { select: { utilisateurId: true } },
+      section: { select: { nom: true } },
+      posts: {
+        select: { auteurId: true, auteur: { select: { utilisateurId: true } } },
+      },
+    },
+  });
+
+  // Déjà retirée = introuvable. Un second clic ne doit ni échouer bruyamment
+  // ni renvoyer un second corbeau à tout le monde.
+  if (!sujet || sujet.supprimeLe) {
+    return { ok: false, message: TEXTES_FORUM.erreurs.sujetIntrouvable };
+  }
+
+  // Ceux qui ont écrit : les auteurs des posts ET celui de la scène, chacun
+  // une fois, moi retiré. Une `Map` par élève plutôt qu’une liste — six posts
+  // du même joueur ne font pas six corbeaux.
+  const ecrivains = new Map<string, string>();
+  const ajouter = (
+    eleveId: string | null,
+    utilisateurId: string | null | undefined,
+  ) => {
+    if (!eleveId || !utilisateurId) return;
+    if (eleveId === auteur.eleveId) return;
+    ecrivains.set(eleveId, utilisateurId);
+  };
+  ajouter(sujet.auteurId, sujet.auteur?.utilisateurId);
+  for (const p of sujet.posts) ajouter(p.auteurId, p.auteur?.utilisateurId);
+
+  const verdict = peutRetirerLaScene({
+    estStaff: estStaff(pouvoirs),
+    estLAuteur: sujet.auteurId !== null && sujet.auteurId === auteur.eleveId,
+    auteursAutres: ecrivains.size,
+  });
+  if (!verdict.peut) return { ok: false, message: refus(verdict.raison) };
+
+  const motifNet = typeof motif === "string" ? nettoyerTexteLibre(motif) : "";
+  if (verdict.motifRequis && motifNet.length === 0) {
+    return { ok: false, message: TEXTES_FORUM.suppression.erreurs.motifRequis };
+  }
+
+  // Le retrait et sa trace dans la même transaction : sans le journal, il ne
+  // resterait rien d’un geste du staff, et la colonne seule ne dit pas
+  // pourquoi. Même principe que les pouvoirs.
+  await transaction(async (tx) => {
+    await tx.sujet.update({
+      where: { id: sujet.id },
+      data: {
+        supprimeLe: new Date(),
+        supprimePar: parNom,
+        motifSuppression: motifNet.length > 0 ? motifNet : null,
+      },
+    });
+
+    // Le journal est celui d’un membre : on l’écrit chez l’auteur de la scène,
+    // et seulement quand c’est le staff qui agit. Un joueur qui retire sa
+    // propre scène ne se convoque pas lui-même à son journal.
+    if (estStaff(pouvoirs) && sujet.auteur) {
+      await tx.journalMembre.create({
+        data: {
+          utilisateurId: sujet.auteur.utilisateurId,
+          type: "SCENE_SUPPRIMEE",
+          valeurAvant: sujet.titre,
+          note: motifNet,
+          parNom,
+        },
+      });
+    }
+  });
+
+  if (!verdict.previendra) return { ok: true, prevenus: 0 };
+
+  const lettre = TEXTES_FORUM.suppression.courrier.corps
+    .replace("{titre}", sujet.titre)
+    .replace("{lieu}", sujet.section.nom)
+    .replace("{motif}", motifNet);
+
+  let prevenus = 0;
+  for (const utilisateurId of ecrivains.values()) {
+    const envoi = await ecrireAuMembre(utilisateurId, lettre);
+    if (envoi === "ENVOYEE") prevenus += 1;
+  }
+
+  return { ok: true, prevenus };
+}
+
+/**
+ * **Retirer son propre post.**
+ *
+ * Ce qu’un joueur a écrit est à lui (art. 6.4), et ne lui est jamais refusé.
+ * Ce qui change, c’est ce qu’il en reste : le post s’en va sans trace s’il
+ * fermait la scène, et laisse sa place sinon — une réponse qui suit un trou
+ * ne se comprend plus.
+ *
+ * **Le staff ne passe pas par ici.** Masquer est un autre geste, qui laisse le
+ * texte lisible à son auteur pour qu’il le reprenne (art. 19.3).
+ */
+export async function retirerSonPost(
+  auteur: { eleveId: string },
+  postId: string,
+): Promise<ResultatRetrait> {
+  const post = await prisma.post.findUnique({
+    where: { id: postId },
+    select: { id: true, sujetId: true, auteurId: true, publieLe: true, retireLe: true },
+  });
+  if (!post || post.retireLe) {
+    return { ok: false, message: TEXTES_FORUM.erreurs.sujetIntrouvable };
+  }
+
+  // « Répondu après » se compte sur les posts ENCORE LÀ : un post lui-même
+  // retiré ne troue rien, et n’a pas à figer la place de celui d’avant.
+  const apres = await prisma.post.count({
+    where: {
+      sujetId: post.sujetId,
+      publieLe: { gt: post.publieLe },
+      retireLe: null,
+    },
+  });
+
+  const verdict = peutRetirerSonPost({
+    estStaff: false,
+    estLAuteur: post.auteurId !== null && post.auteurId === auteur.eleveId,
+    aDesPostsApres: apres > 0,
+  });
+  if (!verdict.peut) {
+    return { ok: false, message: TEXTES_FORUM.suppression.erreurs.postPasAMoi };
+  }
+
+  await prisma.post.update({
+    where: { id: post.id },
+    data: { retireLe: new Date(), placeConservee: verdict.placeConservee },
+  });
+
+  return { ok: true, prevenus: 0 };
+}
+
 /**
  * Les scènes en cours d’un membre, pour son bureau.
  *
@@ -782,6 +1017,7 @@ export async function listerScenesDe(eleveId: string, combien = 4) {
   const lignes = await prisma.sujet.findMany({
     where: {
       closLe: null,
+      supprimeLe: null,
       section: { espace: { compteLesScenes: true } },
       OR: [{ auteurId: eleveId }, { posts: { some: { auteurId: eleveId } } }],
     },

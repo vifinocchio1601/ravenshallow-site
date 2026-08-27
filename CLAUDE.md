@@ -113,6 +113,7 @@ logique ailleurs, l'y ajouter.
 | `lib/forum/lieux.ts` | **qui lit un lieu, qui y ouvre un sujet, qui y répond.** Et la règle qu'une section ne peut que **resserrer** ce que l'espace ouvre |
 | `lib/forum/longueur.ts` | ce qui fait dix lignes — **partagé mot pour mot** entre le compteur du champ et la route. On y compte des **caractères réels**, jamais des retours à la ligne ; le balisage et le hors-RP sont retirés avant comptage |
 | `lib/forum/scenes.ts` | le repère de scènes simultanées, **qui n'oppose rien** |
+| `lib/forum/suppression.ts` | **qui peut retirer quoi** — une scène, son post — et ce qu'il en reste. Pur, sans base : l'écran et la route posent la même question |
 | `lib/forum/depot.ts` | l'accès au forum. Filtre en **appelant** `peutLireLeLieu`, jamais en recopiant sa condition dans un `where` |
 | `lib/forum/schema.ts` | ce qu'un titre, un post et un avertissement ont le droit d'être — **partagé mot pour mot** entre le champ et la route |
 | `lib/texte.ts` | le ménage sur un texte libre écrit par un joueur, **partagé** par les corbeaux et par les posts |
@@ -777,6 +778,70 @@ masquage : il est rapporté, comme pour les courriels.
 
 **Masquer relève du staff, et d'aucune permission attribuable.** Ce n'est pas
 un pouvoir qu'on accorde à la carte — ne pas l'ajouter à `Permission`.
+
+### Retirer une scène, retirer son post — art. 2.4 et 6.4
+
+**Rien n'est effacé, jamais.** Une scène retirée sort des listes et rend son
+adresse introuvable — la page « Ce couloir ne mène nulle part » —, et reste
+entière en base. Vaut pour l'auteur comme pour le staff : décision du joueur,
+27 août 2026. Un clic malheureux se rattrape, et il n'y a qu'un chemin de code
+à vérifier. Le joueur, lui, ne voit aucune différence : pour lui, c'est
+supprimé, et le vocabulaire de l'écran le dit ainsi.
+
+**La règle vient du règlement**, et concilie deux articles : le 2.4 conserve
+les écrits partagés « pour ne pas mutiler les histoires des autres », le 6.4
+laisse chacun propriétaire de ses textes. D'où : **on retire ce qui n'est qu'à
+soi ; dès qu'un autre a écrit, on ne peut plus que clore.**
+
+| Qui | Quand | Ce qu'il peut |
+| --- | --- | --- |
+| L'auteur de la scène | seul à y avoir écrit | **retirer** |
+| L'auteur de la scène | un autre a écrit | **clore**, et plus rien d'autre |
+| L'auteur d'un post | rien après lui | **retirer**, sans laisser de vide |
+| L'auteur d'un post | on a répondu après | **retirer**, sa place reste |
+| Le staff | toujours | **retirer**, motif obligatoire, trace au journal, corbeau à ceux qui y ont écrit |
+
+**L'auteur clôt la sienne sans permission** — `changerLaCloture` accepte son
+`eleveId` et vérifie que la scène est bien à lui. C'est la contrepartie du
+retrait : sans cela, quelqu'un dont la scène s'enlise n'aurait aucun geste.
+
+**L'écran propose la clôture d'abord** dès qu'un autre a écrit —
+`mieuxVautClore`. Pour l'auteur c'est le seul geste qui lui reste ; pour le
+staff, c'est presque toujours le bon.
+
+**Le motif est obligatoire pour le staff, même sur une scène vide** : c'est
+tout ce qui restera au journal, et « scène supprimée » sans le pourquoi ne se
+relit pas six mois plus tard. Un auteur chez lui n'a personne à qui se
+justifier — **la base ne l'exige donc pas**, c'est le dépôt qui fait la
+différence.
+
+**Tous ceux qui ont écrit reçoivent le corbeau**, l'auteur de la scène compris,
+chacun une fois quel que soit son nombre de posts — et jamais celui qui
+retire. Décision du joueur : quelqu'un dont la scène disparaît sans un mot le
+vivra mal, surtout si la faute vient d'un autre. Un envoi raté **ne défait pas
+le retrait**, il est compté à part.
+
+⚠️ **`placeConservee` se tranche au moment du geste et se garde en base.** La
+recalculer donnerait une autre réponse le jour où quelqu'un écrit après coup,
+et un post retiré reparaîtrait sous une autre forme sans que personne l'ait
+demandé. Même principe que `anneeRequiseALOuverture`.
+
+**Le texte d'un post retiré ne quitte plus le serveur** — `corps` part vide.
+L'écran n'en montrerait rien, mais il serait dans la page, et une page se lit.
+
+**Retirer son post n'est pas masquer celui d'un autre.** Masquer est une
+mesure du staff qui laisse le texte lisible à son auteur pour qu'il le
+reprenne (art. 19.3) ; retirer est le geste de l'auteur, et le texte n'est
+plus lu de personne. Deux colonnes distinctes, deux chemins distincts, et
+`retirerSonPost` ne regarde **aucun pouvoir**.
+
+⚠️ **Le corbeau du château crée un fil, qui survit au compte.** Une
+conversation dont tous les participants sont supprimés reste en base — la
+limite connue du projet. L'essai en base emporte donc le sien en partant, et
+**vérifie qu'il n'en reste aucune** : sans cela, chaque passage en fabriquait
+deux.
+
+---
 
 ### Deux règles qui NE SONT PAS dans le code, et c'est une décision
 

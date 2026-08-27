@@ -5,6 +5,7 @@ import { Verrou } from "@/components/ecole/CartouchePiece";
 import FormulaireScene from "@/components/forum/FormulaireScene";
 import Post from "@/components/forum/Post";
 import { ActionsSujet } from "@/components/forum/ActionsStaff";
+import BoutonRetirerScene from "@/components/forum/BoutonRetirerScene";
 import { ROUTES } from "@/lib/ecole/menu";
 import { TEXTES_FORUM } from "@/lib/forum/constantes";
 import { lireSujet } from "@/lib/forum/depot";
@@ -53,6 +54,24 @@ export default async function Page({
   const t = TEXTES_FORUM;
   const staff = estStaff(pouvoirs);
 
+  // **Qui d'autre a écrit ici.** Les auteurs distincts des posts et celui de
+  // la scène, moi retiré : c'est ce dont dépend le droit de retirer, et c'est
+  // la page qui a la liste sous les yeux. Le serveur le recalcule, comme
+  // toujours — ce compte-ci ne sert qu'à savoir quoi proposer.
+  const ecrivains = new Set<string>();
+  for (const p of posts) {
+    if (p.auteurId && p.auteurId !== compte.eleveId) ecrivains.add(p.auteurId);
+  }
+  if (sujet.auteurId && sujet.auteurId !== compte.eleveId) {
+    ecrivains.add(sujet.auteurId);
+  }
+
+  const estLAuteurDeLaScene =
+    sujet.auteurId !== null && sujet.auteurId === compte.eleveId;
+
+  /** Le dernier post encore là : au-delà, retirer ne troue rien. */
+  const dernierVisible = posts.filter((p) => !p.retire).at(-1)?.id ?? null;
+
   return (
     <main className="mx-auto max-w-content px-5 pb-24 pt-10 sm:px-8 sm:pt-14">
       <Link
@@ -85,13 +104,24 @@ export default async function Page({
         </p>
       ) : null}
 
-      <ActionsSujet
-        sujetId={sujet.id}
-        clos={sujet.clos}
-        epingle={sujet.epingle}
-        peutClore={peutCloreUneScene(pouvoirs)}
-        peutEpingler={peutEpinglerUnSujet(pouvoirs)}
-      />
+      <div className="mt-4 flex flex-wrap items-center gap-2">
+        <ActionsSujet
+          sujetId={sujet.id}
+          clos={sujet.clos}
+          epingle={sujet.epingle}
+          // **L'auteur clôt la sienne**, sans permission particulière : c'est
+          // la contrepartie du retrait, refusé dès qu'un autre a écrit.
+          peutClore={peutCloreUneScene(pouvoirs) || estLAuteurDeLaScene}
+          peutEpingler={peutEpinglerUnSujet(pouvoirs)}
+        />
+
+        <BoutonRetirerScene
+          sujetId={sujet.id}
+          estStaff={staff}
+          estLAuteur={estLAuteurDeLaScene}
+          auteursAutres={ecrivains.size}
+        />
+      </div>
 
       <section aria-label="Les posts" className="mt-10 grid gap-5">
         {posts.map((post) => (
@@ -100,6 +130,9 @@ export default async function Page({
             post={post}
             estLAuteur={post.auteurId !== null && post.auteurId === compte.eleveId}
             estStaff={staff}
+            // Retirer le dernier post encore là ne troue rien ; retirer un
+            // post suivi d'une réponse laisse sa place.
+            aDesPostsApres={dernierVisible !== null && post.id !== dernierVisible}
           />
         ))}
       </section>

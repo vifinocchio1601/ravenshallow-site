@@ -205,6 +205,65 @@ export const TEXTES_FORUM = {
     },
   },
 
+  /**
+   * **Retirer une scène, retirer son post.**
+   *
+   * Le vocabulaire est celui du joueur — « supprimer » —, parce que c'est ce
+   * qu'il vit : la scène s'en va. Ce que le site en fait derrière, c'est de la
+   * garder en base, et il n'a pas à s'en encombrer. Le mot n'est mensonger que
+   * dans l'autre sens : promettre une disparition définitive qui n'aurait pas
+   * lieu.
+   */
+  suppression: {
+    scene: {
+      action: "Supprimer la scène",
+      titre: "Supprimer cette scène ?",
+      /** Quand on est seul à y avoir écrit : rien à ménager. */
+      avertissementSeul:
+        "Elle disparaîtra du forum. Personne d’autre n’y a écrit.",
+      /** Pour le staff : ce qui part appartient à plusieurs. */
+      avertissementStaff:
+        "Elle disparaîtra du forum pour tout le monde. Ceux qui y ont écrit seront prévenus par un corbeau du château, avec le motif que tu donnes ici.",
+      motif: "Motif de la suppression",
+      motifAide:
+        "Il figurera au journal, et dans le corbeau envoyé à ceux qui y ont écrit.",
+      /** Proposé avant la suppression dès qu’un autre a écrit. */
+      plutotClore:
+        "Quelqu’un d’autre a écrit dans cette scène. La clore la ferme sans rien retirer à personne.",
+      clore: "Clore la scène",
+      confirmer: "Supprimer la scène",
+      annuler: "Annuler",
+    },
+
+    post: {
+      action: "Retirer mon post",
+      titre: "Retirer ce post ?",
+      /** Il fermait la scène : il s’en va sans laisser de vide à expliquer. */
+      avertissementSeul: "Il disparaîtra de la scène.",
+      /** On a répondu après : le retirer troue la suite. */
+      avertissementSuivi:
+        "Quelqu’un a répondu après lui. Sa place restera, avec la mention qu’un post a été retiré — sans quoi la suite de la scène ne se comprendrait plus.",
+      confirmer: "Retirer",
+      annuler: "Annuler",
+      /** Ce que lisent les autres à sa place. */
+      marque: "Post retiré par son auteur.",
+    },
+
+    /** Le corbeau du château, quand le staff retire une scène. */
+    courrier: {
+      corps:
+        "Bonjour,\n\nUne scène à laquelle tu participais a été retirée du forum par l’administration.\n\nLa scène : « {titre} »\nLe lieu : {lieu}\n\nLe motif :\n{motif}\n\nCe que tu y avais écrit n’est pas perdu, mais il n’est plus lisible sur le forum. Si tu veux en récupérer une copie, ou si le motif ne te paraît pas juste, réponds à ce corbeau.",
+    },
+
+    erreurs: {
+      pasAMoi: "Cette scène n’est pas la tienne.",
+      dejaEcritParDAutres:
+        "Quelqu’un d’autre a écrit dans cette scène : elle ne t’appartient plus seul. Tu peux la clore.",
+      postPasAMoi: "Ce post n’est pas le tien.",
+      motifRequis: "Dis pourquoi : le motif part au journal et aux joueurs.",
+    },
+  },
+
   /** Ce que le staff peut faire sur un sujet, et ce que ça dit. */
   moderation: {
     clore: "Clore la scène",

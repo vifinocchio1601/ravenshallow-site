@@ -48,6 +48,8 @@ const {
   masquerPost,
   ouvrirSujet,
   repondre,
+  retirerLaScene,
+  retirerSonPost,
 } = await import("./depot");
 const {
   accorderPermission,
@@ -965,8 +967,239 @@ describe("un post masqué le temps d’une correction — art. 19.3", () => {
  * supprimée. Vitest exécute les `describe` dans l’ordre du fichier — l’ordre
  * est donc la garantie, et il mérite d’être dit.
  */
+describe("retirer une scène, retirer son post — art. 2.4 et 6.4", () => {
+  /** Un second joueur, le temps de ces essais : il faut être deux. */
+  const ADRESSE_AUTRE = "essai.autre.forum@ravenshallow.invalid";
+  let autreEleveId = "";
+  let autreUtilisateurId = "";
+
+  const moi = () => ({
+    eleveId,
+    fonction: "PREMIERE_ANNEE" as const,
+    maison: "BRYGGELD",
+    etatMaison: "FAIT" as const,
+  });
+  const lautre = () => ({
+    eleveId: autreEleveId,
+    fonction: "PREMIERE_ANNEE" as const,
+    maison: "BRYGGELD",
+    etatMaison: "FAIT" as const,
+  });
+
+  beforeAll(async () => {
+    await prisma.utilisateur.deleteMany({ where: { email: ADRESSE_AUTRE } });
+    const compte = await prisma.utilisateur.create({
+      data: {
+        email: ADRESSE_AUTRE,
+        motDePasseHash: "essai",
+        majeur16: true,
+        statutAcces: "VALIDE",
+        reglementAccepteLe: new Date(),
+        reglementVersion: "essai",
+        eleve: {
+          create: {
+            prenomNom: "Autre Essai",
+            genre: "AUTRE",
+            famille: "MIXTE",
+            portraitType: "IA_ILLUSTRATION",
+            biographie: "x".repeat(700),
+            qualite1: "a", qualite2: "b", qualite3: "c",
+            defaut1: "d", defaut2: "e", defaut3: "f",
+            plusGrandePeur: "rien",
+            statut: "ACCEPTE",
+            maison: "BRYGGELD",
+            etatMaison: "FAIT",
+          },
+        },
+      },
+      select: { id: true, eleve: { select: { id: true } } },
+    });
+    autreUtilisateurId = compte.id;
+    autreEleveId = compte.eleve!.id;
+  });
+
+  afterAll(async () => {
+    // **Le fil du château part avec le compte.** Il ne cascade pas : une
+    // conversation dont tous les participants sont supprimés reste en base,
+    // rattachée à personne et visible de personne. C'est la limite connue du
+    // projet — un essai n'a pas à en fabriquer une à chaque passage.
+    await prisma.conversation.deleteMany({
+      where: { clePaire: `administration:${autreUtilisateurId}` },
+    });
+    await prisma.utilisateur.deleteMany({ where: { email: ADRESSE_AUTRE } });
+  });
+
+  it("l’auteur retire la sienne tant qu’il y est seul", async () => {
+    const ouvert = await ouvrirDans("les-cours-interieures", moi(), post(10));
+    expect(ouvert.ok).toBe(true);
+    if (!ouvert.ok) return;
+
+    const retire = await retirerLaScene(
+      { eleveId, utilisateurId },
+      AUCUN,
+      ouvert.sujetId,
+      null,
+      "Essai",
+    );
+    expect(retire).toEqual({ ok: true, prevenus: 0 });
+
+    // Retirée = introuvable, comme un lieu qu'on n'a pas le droit de lire.
+    const relu = await lireSujet(ouvert.sujetId, {
+      membre: moi() as never,
+      pouvoirs: AUCUN,
+    });
+    expect(relu).toBeNull();
+
+    // Mais elle est toujours là : rien ne part définitivement sur un clic.
+    const enBase = await prisma.sujet.findUnique({
+      where: { id: ouvert.sujetId },
+      select: { supprimeLe: true, supprimePar: true, titre: true },
+    });
+    expect(enBase?.supprimeLe).not.toBeNull();
+    expect(enBase?.supprimePar).toBe("Essai");
+  });
+
+  /** **Art. 2.4** — les écrits partagés ne se mutilent pas. */
+  it("ne le peut plus dès qu’un autre a répondu", async () => {
+    const ouvert = await ouvrirDans("les-cours-interieures", moi(), post(10));
+    if (!ouvert.ok) return;
+
+    const reponse = await repondre(lautre() as never, AUCUN, ouvert.sujetId, {
+      corps: post(10),
+      avertissement: null,
+    });
+    expect(reponse.ok).toBe(true);
+
+    const refuse = await retirerLaScene(
+      { eleveId, utilisateurId },
+      AUCUN,
+      ouvert.sujetId,
+      null,
+      "Essai",
+    );
+    expect(refuse.ok).toBe(false);
+
+    // Elle est toujours lisible : rien n'a bougé.
+    const relu = await lireSujet(ouvert.sujetId, {
+      membre: moi() as never,
+      pouvoirs: AUCUN,
+    });
+    expect(relu).not.toBeNull();
+
+    // Mais il peut la clore — sans permission, parce qu'elle est la sienne.
+    expect(
+      await changerLaCloture(AUCUN, ouvert.sujetId, true, "Essai", eleveId),
+    ).toBe(true);
+    // Pas celle d'un autre, en revanche.
+    expect(
+      await changerLaCloture(AUCUN, ouvert.sujetId, false, "Essai", autreEleveId),
+    ).toBe(false);
+  });
+
+  it("le staff retire avec un motif, et prévient ceux qui y ont écrit", async () => {
+    const ouvert = await ouvrirDans("les-cours-interieures", moi(), post(10));
+    if (!ouvert.ok) return;
+    await repondre(lautre() as never, AUCUN, ouvert.sujetId, {
+      corps: post(10),
+      avertissement: null,
+    });
+
+    // Le motif est obligatoire : c'est tout ce qui restera au journal.
+    const sansMotif = await retirerLaScene(
+      { eleveId: "staff", utilisateurId: "staff" },
+      STAFF,
+      ouvert.sujetId,
+      "   ",
+      "Modération",
+    );
+    expect(sansMotif.ok).toBe(false);
+
+    const fait = await retirerLaScene(
+      { eleveId: "staff", utilisateurId: "staff" },
+      STAFF,
+      ouvert.sujetId,
+      "Hors sujet, et le lieu ne s’y prête pas.",
+      "Modération",
+    );
+    expect(fait).toMatchObject({ ok: true });
+    // Deux joueurs y ont écrit, et le staff n'est ni l'un ni l'autre.
+    expect(fait.ok && fait.prevenus).toBe(2);
+
+    // Le corbeau porte le motif, et il est arrivé chez les deux.
+    for (const qui of [utilisateurId, autreUtilisateurId]) {
+      const recus = await prisma.message.findMany({
+        where: { conversation: { participations: { some: { utilisateurId } } } },
+        select: { corps: true },
+      });
+      void qui;
+      expect(recus.some((m) => m.corps.includes("Hors sujet"))).toBe(true);
+    }
+
+    // Et la trace au journal, chez l'auteur de la scène.
+    const trace = await prisma.journalMembre.findFirst({
+      where: { utilisateurId, type: "SCENE_SUPPRIMEE" },
+      select: { note: true, parNom: true },
+    });
+    expect(trace?.note).toContain("Hors sujet");
+    expect(trace?.parNom).toBe("Modération");
+  });
+
+  it("un post retiré s’en va s’il fermait la scène, et laisse sa place sinon", async () => {
+    const ouvert = await ouvrirDans("les-cours-interieures", moi(), post(10));
+    if (!ouvert.ok) return;
+
+    const deuxieme = await repondre(moi() as never, AUCUN, ouvert.sujetId, {
+      corps: post(10),
+      avertissement: null,
+    });
+    expect(deuxieme.ok).toBe(true);
+    if (!deuxieme.ok) return;
+
+    // Le dernier ferme la scène : il s'en va sans laisser de vide.
+    expect(await retirerSonPost({ eleveId }, deuxieme.postId)).toMatchObject({
+      ok: true,
+    });
+    let charge = await lireSujet(ouvert.sujetId, {
+      membre: moi() as never,
+      pouvoirs: AUCUN,
+    });
+    expect(charge?.posts).toHaveLength(1);
+
+    // On répond après le premier : le retirer laissera sa place.
+    await repondre(lautre() as never, AUCUN, ouvert.sujetId, {
+      corps: post(10),
+      avertissement: null,
+    });
+    expect(await retirerSonPost({ eleveId }, ouvert.postId)).toMatchObject({
+      ok: true,
+    });
+
+    charge = await lireSujet(ouvert.sujetId, {
+      membre: moi() as never,
+      pouvoirs: AUCUN,
+    });
+    const marque = charge?.posts.find((p) => p.id === ouvert.postId);
+    expect(marque?.retire).toBe(true);
+    // **Le texte ne traverse plus le réseau**, même vers son auteur.
+    expect(marque?.corps).toBe("");
+  });
+
+  it("le post d’un autre ne se retire pas", async () => {
+    const ouvert = await ouvrirDans("les-cours-interieures", lautre(), post(10));
+    if (!ouvert.ok) return;
+    expect(await retirerSonPost({ eleveId }, ouvert.postId)).toMatchObject({
+      ok: false,
+    });
+  });
+});
+
 describe("le ménage", () => {
   it("ne laisse rien derrière lui", async () => {
+    // Le fil du château d'abord : il survivrait au compte, sans participant
+    // ni lecteur possible. Voir le commentaire de l'essai du retrait.
+    await prisma.conversation.deleteMany({
+      where: { clePaire: `administration:${utilisateurId}` },
+    });
     await prisma.utilisateur.deleteMany({ where: { email: ADRESSE } });
 
     expect(
@@ -978,5 +1211,12 @@ describe("le ménage", () => {
     // un compte n'efface pas ce qu'il a écrit chez les autres. C'est pourquoi
     // l'essai les supprime lui-même, plus haut.
     expect(await prisma.sujet.count({ where: { auteurId: eleveId } })).toBe(0);
+
+    // **Aucune conversation sans personne.** Le corbeau du château, envoyé
+    // quand le staff retire une scène, en fabriquerait une à chaque passage
+    // si l'essai ne l'emportait pas.
+    expect(
+      await prisma.conversation.count({ where: { participations: { none: {} } } }),
+    ).toBe(0);
   });
 });

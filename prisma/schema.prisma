@@ -20,6 +20,9 @@
 //   `20260826110000_pouvoirs`            — l'accord entre une permission et sa
 //       portée, et l'unicité d'une permission sans maison — que Postgres ne
 //       garantit PAS tout seul, deux NULL lui étant distincts
+//   `20260827160000_retirer_scenes_et_posts` — la cohérence des trois colonnes
+//       d'une scène retirée, et le fait qu'une place gardée n'a de sens que
+//       sur un post retiré
 
 generator client {
   provider = "prisma-client-js"
@@ -486,6 +489,9 @@ enum EvenementMembre {
   PERMISSION_RETIREE
   PREFET_NOMME
   PREFET_DEMIS
+
+  /// Une scène retirée du forum par le staff, avec son motif.
+  SCENE_SUPPRIMEE
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -1088,6 +1094,19 @@ model Sujet {
   /// d'un lieu ne referme pas une scène déjà en cours.
   anneeRequiseALOuverture Fonction?
 
+  /// **Retirée du forum, jamais effacée.** Une scène supprimée disparaît des
+  /// listes et de sa propre adresse, et reste entière en base : rien ne part
+  /// définitivement sur un clic. Vaut pour l'auteur comme pour le staff —
+  /// décision du joueur, 27 août 2026.
+  ///
+  /// `motifSuppression` est **obligatoire pour le staff** et vide pour un
+  /// auteur qui retire sa propre scène : il n'a personne à qui se justifier.
+  /// La base n'exige que la cohérence des deux premières colonnes ; le motif
+  /// se réclame dans le dépôt.
+  supprimeLe       DateTime?
+  supprimePar      String?
+  motifSuppression String?   @db.Text
+
   /// Dénormalisé et indexé — le tri « par activité récente ». Le recalculer à
   /// chaque affichage obligerait à balayer tous les posts de tous les sujets.
   /// Même raison que `Conversation.dernierMessageLe`.
@@ -1132,6 +1151,19 @@ model Post {
   masquePar       String?
   motifMasquage   String?   @db.Text
   corrigerAvantLe DateTime?
+
+  /// **Retiré par son auteur** — à ne pas confondre avec le masquage
+  /// ci-dessus, qui est une mesure du staff et laisse le texte lisible à son
+  /// auteur pour qu'il le reprenne (art. 19.3). Ici le texte n'est plus lu de
+  /// personne, et reste en base.
+  retireLe DateTime?
+
+  /// La place est-elle gardée à l'écran ? Vrai quand un post plus récent
+  /// existait au moment du retrait : une réponse qui suit un trou ne se
+  /// comprend plus. **Tranché au moment du geste et gardé ici** — le
+  /// recalculer donnerait une autre réponse le jour où quelqu'un écrit après
+  /// coup, et le post reparaîtrait sans que personne l'ait demandé.
+  placeConservee Boolean @default(false)
 
   @@index([sujetId, publieLe])
   @@index([auteurId])

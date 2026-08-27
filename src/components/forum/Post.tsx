@@ -1,5 +1,6 @@
 import Image from "next/image";
 import { ActionsPost } from "@/components/forum/ActionsStaff";
+import BoutonRetirerPost from "@/components/forum/BoutonRetirerPost";
 import { blasonDe } from "@/lib/ecole/blasons";
 import { CLASSE_CONTENEUR } from "@/lib/forum/mise-en-forme";
 import { nettoyerHtml } from "@/lib/forum/nettoyer-html";
@@ -25,18 +26,29 @@ import type { PostAffiche } from "@/lib/forum/depot";
  *
  * Montrer le texte aux autres viderait la mesure de son sens ; le cacher à son
  * auteur l’empêcherait de le reprendre.
+ *
+ * ── Un post retiré par son auteur ──
+ *
+ * **À ne pas confondre avec le masquage.** Ici le texte n’est lu de personne,
+ * pas même de son auteur : il n’arrive pas jusqu’ici, le dépôt ne l’envoie
+ * plus. La ligne qui reste n’est là que pour que la suite de la scène se
+ * comprenne — un post retiré qui ne gardait pas sa place n’est pas rendu du
+ * tout.
  */
 export default function Post({
   post,
   estLAuteur,
   estStaff,
+  aDesPostsApres = false,
 }: {
   post: PostAffiche;
   estLAuteur: boolean;
   estStaff: boolean;
+  /** Pour dire à son auteur ce qu’il restera du sien s’il le retire. */
+  aDesPostsApres?: boolean;
 }) {
   const t = TEXTES_FORUM;
-  const peutLireLeTexte = !post.masque || estLAuteur || estStaff;
+  const peutLireLeTexte = !post.retire && (!post.masque || estLAuteur || estStaff);
   const blason = blasonDe(post.maisonAuteur);
 
   return (
@@ -113,6 +125,12 @@ export default function Post({
 
             La classe `post-rendu` porte les styles de la mise en forme, et
             **les borne** : hors d'elle, une classe de post ne peint rien. */}
+        {post.retire ? (
+          <p className="font-body text-sm italic text-silver">
+            {t.suppression.post.marque}
+          </p>
+        ) : null}
+
         {peutLireLeTexte ? (
           <div
             className={`${CLASSE_CONTENEUR} font-body leading-[1.85] text-parchment-dim`}
@@ -124,7 +142,22 @@ export default function Post({
       {/* Les commandes du staff. Le composant est caché aux autres, mais c'est
           la route qui protège — un composant absent n'a jamais gardé une
           adresse. */}
-      {estStaff ? <ActionsPost postId={post.id} masque={post.masque} /> : null}
+      {estStaff || (estLAuteur && !post.retire) ? (
+        <div className="flex flex-wrap items-center gap-2 border-t border-silver/10 px-5 py-3">
+          {estStaff ? (
+            <ActionsPost postId={post.id} masque={post.masque} />
+          ) : null}
+
+          {/* Retirer le sien n'est pas masquer celui d'un autre : ce bouton
+              n'appartient qu'à son auteur, et ne regarde aucun pouvoir. */}
+          {estLAuteur && !post.retire ? (
+            <BoutonRetirerPost
+              postId={post.id}
+              aDesPostsApres={aDesPostsApres}
+            />
+          ) : null}
+        </div>
+      ) : null}
     </article>
   );
 }
