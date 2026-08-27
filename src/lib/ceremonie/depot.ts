@@ -1,5 +1,6 @@
 import "server-only";
 import { prisma } from "@/lib/prisma";
+import { transaction } from "@/lib/base/transaction";
 import type { Maison } from "@/lib/dossier/etats";
 import type { Repartition } from "./repartition";
 import { lireMelange, tirerMelange } from "./repartition";
@@ -81,7 +82,7 @@ export async function enregistrerRepartition(
   reponses: readonly string[],
   repartition: Repartition,
 ): Promise<{ enregistree: boolean }> {
-  return prisma.$transaction(async (tx) => {
+  return transaction(async (tx) => {
     const ecrit = await tx.eleve.updateMany({
       // La condition porte sur l'ÉTAT, et non sur la maison vide. Un compte
       // que la répartition ne concerne pas peut très bien n'avoir aucune

@@ -1,5 +1,6 @@
 import "server-only";
 import { prisma } from "@/lib/prisma";
+import { transaction } from "@/lib/base/transaction";
 import type { Maison, Role } from "@/lib/dossier/etats";
 import { MAISONS } from "@/lib/dossier/etats";
 import {
@@ -210,7 +211,7 @@ export async function accorderPermission(
     : [null];
   if (portees.length === 0) return 0;
 
-  return prisma.$transaction(async (tx) => {
+  return transaction(async (tx) => {
     // On regarde ce qui est DÉJÀ détenu avant d'écrire, plutôt que de deviner
     // après coup ce que l'insertion a posé : dans une transaction, toutes les
     // lignes portent le même instant, et un tri par date ne les départage pas.
@@ -268,7 +269,7 @@ export async function retirerPermission(
     : [null];
   if (portees.length === 0) return 0;
 
-  return prisma.$transaction(async (tx) => {
+  return transaction(async (tx) => {
     // On relit avant d'effacer : après, il ne resterait rien à consigner.
     const existantes = await tx.permissionAccordee.findMany({
       where: {
@@ -329,7 +330,7 @@ export async function nommerPrefet(
   });
   if (!eleve) return false;
 
-  return prisma.$transaction(async (tx) => {
+  return transaction(async (tx) => {
     const { count } = await tx.prefet.createMany({
       data: [{ eleveId, maison, nommePar: parNom }],
       skipDuplicates: true,
@@ -360,7 +361,7 @@ export async function demettrePrefet(
   });
   if (!eleve) return false;
 
-  return prisma.$transaction(async (tx) => {
+  return transaction(async (tx) => {
     const { count } = await tx.prefet.deleteMany({ where: { eleveId, maison } });
     if (count === 0) return false;
 

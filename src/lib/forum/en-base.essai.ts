@@ -38,6 +38,9 @@ for (const ligne of readFileSync(".env.local", "utf8").split("\n")) {
 }
 
 const { prisma } = await import("@/lib/prisma");
+// Ce qu'une ligne vaut : le même nombre que le compteur et que la route, lu
+// à la source plutôt que recopié ici.
+const { CARACTERES_PAR_LIGNE } = await import("./longueur");
 const {
   changerLaCloture,
   demasquerPost,
@@ -474,22 +477,28 @@ describe("L’école est meublée : cinq sections, vingt pièces", () => {
   });
 
   /**
-   * **Le contenu de la grotte est confidentiel staff** (bible §3). Une
-   * description de lieu est un document que les joueurs lisent : elle rappelle
-   * l’interdit de l’article 13.1 et ne dit rien de ce que le sceau retient.
+   * **Aucune description de lieu ne nomme la grotte ni le sceau.**
+   *
+   * La règle s’est inversée le 27 août 2026. Les souterrains rappelaient
+   * l’article 13.1 en toutes lettres ; le joueur l’a retiré, et sa raison est
+   * meilleure que la mienne : rappeler l’interdit dans cette pièce-là, c’est
+   * dire aux joueurs où il s’applique, **donc où regarder**. Un interdit posé
+   * sur une porte est une flèche.
+   *
+   * La règle n’en est pas affaiblie : l’article 13.1 vit dans le règlement,
+   * approuvé à l’inscription. Ce qui protège la pièce, c’est qu’elle est
+   * sans intérêt — des casiers vides, rien à y chercher.
    */
-  it("les souterrains rappellent l’interdit sans rien révéler", async () => {
-    const s = await prisma.section.findFirst({
-      where: { nom: "Les souterrains" },
-      select: { description: true },
+  it("aucun lieu ne nomme la grotte ni le sceau, pas même pour l’interdire", async () => {
+    const lieux = await prisma.section.findMany({
+      select: { nom: true, description: true },
     });
-    const texte = s!.description.toLowerCase();
-    expect(texte).toContain("sceau");
-    expect(texte).toContain("administration");
-    // Rien de ce que la grotte renferme, sous aucune forme.
-    for (const interdit of ["magie noire", "absorb", "source de", "pouvoir qui"]) {
-      expect(texte, interdit).not.toContain(interdit);
-    }
+
+    const bavards = lieux
+      .filter((l) => /grotte|sceau|scell/i.test(`${l.nom} ${l.description}`))
+      .map((l) => l.nom);
+
+    expect(bavards).toEqual([]);
   });
 
   /**
@@ -516,8 +525,15 @@ describe("L’école est meublée : cinq sections, vingt pièces", () => {
       select: { nom: true, description: true },
     });
     expect(banquet?.nom).toBe("La Salle de Banquet");
-    // L'image des quatre longues tables était le même emprunt que le nom.
-    expect(banquet?.description).not.toContain("Quatre longues tables");
+
+    // **Le nom ne bouge plus ; la description, elle, est revenue en arrière**
+    // le 27 août 2026. « Quatre longues tables » avait été retiré comme étant
+    // l'image qu'on fuit — mais le texte de la Cérémonie du Miroir la porte
+    // déjà, et il est en ligne depuis des semaines. Seule la description de la
+    // pièce l'évitait, si bien que la salle décrite n'était pas celle qu'on
+    // traverse le soir du Miroir. Deux textes qui se contredisent coûtent plus
+    // cher qu'une image reconnaissable.
+    expect(banquet?.description).toContain("Quatre longues tables");
   });
 
   it("la Tour aux Corbeaux reste ouverte à tous, malgré l’aile de Kaldrafn", async () => {
@@ -721,9 +737,22 @@ describe("le ménage du moteur", () => {
 const AUCUN = { role: "JOUEUR" as const, permissions: [], prefetDe: [] };
 const STAFF = { role: "MODERATEUR" as const, permissions: [], prefetDe: [] };
 
-/** Un post de `n` lignes qui portent du texte. */
+/**
+ * Un post de `n` lignes **au sens du compteur** — soit `n` fois la largeur
+ * d’une ligne, en caractères réels.
+ *
+ * Il valait autrefois `n` courtes phrases séparées par des retours à la
+ * ligne : suffisant quand on comptait les sauts de ligne, plus depuis le
+ * 27 août 2026. Le remplissage se fait avec des points et non des espaces —
+ * les blancs sont réduits avant comptage, et une ligne complétée d’espaces ne
+ * pèserait pas ce qu’elle prétend.
+ */
 const post = (n: number) =>
-  Array.from({ length: n }, (_, i) => `Ligne ${i + 1} de la scène.`).join("\n");
+  Array.from({ length: n }, (_, i) =>
+    `Ligne ${i + 1} de la scène, écrite pour occuper toute la largeur permise`
+      .padEnd(CARACTERES_PAR_LIGNE, ".")
+      .slice(0, CARACTERES_PAR_LIGNE),
+  ).join("\n");
 
 async function ouvrirDans(lieu: string, membre: Record<string, unknown>, corps: string, titre = "Une scène (LIBRE)") {
   const r = await ouvrirSujet(

@@ -1,6 +1,7 @@
 import "server-only";
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { transaction } from "@/lib/base/transaction";
 import { normaliserVisage } from "./schema";
 import { ConflitDossier } from "./modele";
 import type {
@@ -301,7 +302,7 @@ export async function modifierFiche(
     throw new ConflitDossier("acteurNom");
   }
 
-  await prisma.$transaction(async (tx) => {
+  await transaction(async (tx) => {
     await tx.utilisateur.update({
       where: { id },
       data: {
@@ -493,7 +494,7 @@ export async function modifierMembre(
 
   if (entrees.length === 0 && !dateChange) return;
 
-  await prisma.$transaction(async (tx) => {
+  await transaction(async (tx) => {
     if (Object.keys(fiche).length > 0) {
       await tx.eleve.update({ where: { id: eleve.id }, data: fiche });
     }

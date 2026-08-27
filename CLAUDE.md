@@ -51,6 +51,7 @@ npm run base:importer     # reprend .donnees/dossiers.json dans la base
 npm run base:migrer       # applique les migrations en attente
 npm run corbeaux:essai    # exerce la Tour aux Corbeaux SUR LA VRAIE BASE
 npm run base:sauvegarder  # recopie toute la base dans un fichier, hors du dépôt
+npm run forum:essai       # exerce les pouvoirs ET le forum SUR LA VRAIE BASE
 ```
 
 `base:migrer` existe parce que la CLI Prisma ne lit pas `.env.local` : le
@@ -797,6 +798,36 @@ Les **dix lignes**, elles, restent bloquantes : ça ne concerne que celui qui
 écrit, et ça se vérifie sans rien interpréter. Le hors-RP est retiré **avant**
 comptage (art. 12.3) — sinon on atteindrait dix lignes sans écrire une ligne de
 jeu, et la règle ne dirait plus rien.
+
+---
+
+## Les transactions
+
+**Toute transaction interactive passe par `transaction()`**, dans
+`lib/base/transaction.ts`, et c'est le seul endroit qui fixe ses délais.
+
+Prisma abandonne une transaction interactive au bout de **cinq secondes**, et
+n'attend que **deux secondes** pour obtenir une connexion. Neon s'endort après
+cinq minutes ; son réveil dépasse largement les deux. Le résultat n'est pas
+une lenteur mais une **erreur 500** — `P2028`, « Transaction not found ».
+Rencontré pour de bon le 27 août 2026 en envoyant un corbeau, le second essai
+passant sans rien changer. Pour un joueur, cela se voit comme une panne : il
+écrit, il reçoit une erreur, et il ne sait pas si son message est parti — ou
+s'il est parti deux fois.
+
+C'est **le cousin exact de `connect_timeout`** : la même cause, un autre
+délai, et il n'était pas couvert.
+
+**Une fonction plutôt qu'un objet d'options passé neuf fois.** Le second
+marcherait aujourd'hui et se perdrait au dixième. Ici, écrire une transaction
+sans délai demande de contourner la couture, et `transaction.test.ts` relit le
+code source pour refuser tout `prisma.$transaction(async …)` ailleurs —
+éprouvé en le réintroduisant, il tombe et nomme le fichier.
+
+⚠️ **La forme en tableau — `$transaction([…])` — n'est pas concernée** :
+Prisma ne lui laisse régler que le niveau d'isolation. Elle part en un seul
+aller-retour, ce qui l'expose moins. Un essai le rappelle, pour qu'on ne
+croie pas l'avoir oubliée.
 
 ---
 

@@ -1,6 +1,7 @@
 import "server-only";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { transaction } from "@/lib/base/transaction";
 import type { EtatEtape, StatutAcces, StatutDossier } from "@/lib/dossier/etats";
 import {
   AUCUN_BLOCAGE,
@@ -591,7 +592,7 @@ export async function envoyerCorbeau(
     }
   }
 
-  const ecrit = await prisma.$transaction(async (tx) => {
+  const ecrit = await transaction(async (tx) => {
     const conversationId = await filExistantOuNeuf(tx, {
       cle,
       versAdministration,

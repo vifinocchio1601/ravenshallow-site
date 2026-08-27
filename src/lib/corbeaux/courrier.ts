@@ -1,5 +1,6 @@
 import "server-only";
 import { prisma } from "@/lib/prisma";
+import { transaction } from "@/lib/base/transaction";
 import { cleAdministration } from "./droits";
 
 /**
@@ -221,7 +222,7 @@ export async function repondreAuCourrier(
   });
   if (!fil) return "FIL_INCONNU";
 
-  await prisma.$transaction(async (tx) => {
+  await transaction(async (tx) => {
     const corbeau = await tx.message.create({
       data: { conversationId: fil.id, auteurId: null, corps },
       select: { envoyeLe: true },
