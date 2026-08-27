@@ -1,5 +1,6 @@
 /**
- * **Qui peut retirer quoi, et à quelles conditions.**
+ * **Ce qu'un auteur peut faire à ses propres écrits — et ce que le staff peut
+ * faire à ceux des autres.**
  *
  * Le calcul est **pur** : il reçoit un état, ne lit ni base ni horloge, et se
  * teste donc cas par cas. Le dépôt lui fournit les faits, l'écran lui demande
@@ -119,4 +120,33 @@ export type VerdictPost =
 export function peutRetirerSonPost(etat: EtatPost): VerdictPost {
   if (!etat.estLAuteur) return { peut: false, raison: "PAS_A_MOI" };
   return { peut: true, placeConservee: etat.aDesPostsApres };
+}
+
+
+/** Ce que le dépôt sait d'un post au moment où son auteur veut le reprendre. */
+export type EtatModification = {
+  estLAuteur: boolean;
+  /** Retiré : il n'y a plus de texte à reprendre. */
+  retire: boolean;
+};
+
+/**
+ * Peut-on modifier ce post ?
+ *
+ * **Son auteur, toujours, et sans limite de temps** — décision du joueur,
+ * 27 août 2026. Ce qu'il a écrit est à lui (art. 6.4), et une coquille se
+ * corrige six mois plus tard. Ce qui protège les autres n'est pas un délai
+ * mais **la marque « modifié le »**, visible de tous : on voit qu'un texte a
+ * bougé depuis qu'on y a répondu.
+ *
+ * **Le staff ne modifie rien.** Il masque le temps d'une correction
+ * (art. 19.3) et c'est l'auteur qui reprend. Réécrire le texte d'un joueur à
+ * sa place serait lui faire dire ce qu'il n'a pas dit.
+ *
+ * ⚠️ **Modifier ne démasque pas.** Un post masqué reste masqué après
+ * correction : c'est le staff qui rouvre, après avoir relu. Sinon il
+ * suffirait de changer une virgule pour annuler la mesure.
+ */
+export function peutModifierSonPost(etat: EtatModification): boolean {
+  return etat.estLAuteur && !etat.retire;
 }

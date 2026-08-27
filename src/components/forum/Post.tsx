@@ -1,6 +1,7 @@
 import Image from "next/image";
 import { ActionsPost } from "@/components/forum/ActionsStaff";
 import BoutonRetirerPost from "@/components/forum/BoutonRetirerPost";
+import ModifierPost from "@/components/forum/ModifierPost";
 import { blasonDe } from "@/lib/ecole/blasons";
 import { CLASSE_CONTENEUR } from "@/lib/forum/mise-en-forme";
 import { nettoyerHtml } from "@/lib/forum/nettoyer-html";
@@ -40,12 +41,15 @@ export default function Post({
   estLAuteur,
   estStaff,
   aDesPostsApres = false,
+  lignesMinimum = null,
 }: {
   post: PostAffiche;
   estLAuteur: boolean;
   estStaff: boolean;
   /** Pour dire à son auteur ce qu’il restera du sien s’il le retire. */
   aDesPostsApres?: boolean;
+  /** Le minimum du lieu, pour que le champ de reprise compte comme la route. */
+  lignesMinimum?: number | null;
 }) {
   const t = TEXTES_FORUM;
   const peutLireLeTexte = !post.retire && (!post.masque || estLAuteur || estStaff);
@@ -73,17 +77,38 @@ export default function Post({
             <p className="font-body text-xs italic text-silver">{post.place}</p>
           ) : null}
         </div>
-        <time
-          dateTime={post.publieLe}
-          suppressHydrationWarning
-          className="ml-auto font-body text-xs italic text-silver"
-        >
-          {new Date(post.publieLe).toLocaleDateString("fr-FR", {
-            day: "numeric",
-            month: "long",
-            year: "numeric",
-          })}
-        </time>
+        <div className="ml-auto text-right">
+          <time
+            dateTime={post.publieLe}
+            suppressHydrationWarning
+            className="font-body text-xs italic text-silver"
+          >
+            {new Date(post.publieLe).toLocaleDateString("fr-FR", {
+              day: "numeric",
+              month: "long",
+              year: "numeric",
+            })}
+          </time>
+
+          {/* **La marque « modifié le » est ce qui protège les autres.** Une
+              modification sans limite de temps n'est acceptable que parce
+              qu'elle se voit : quelqu'un qui a répondu doit pouvoir constater
+              que le texte a bougé depuis. */}
+          {post.modifieLe && !post.retire ? (
+            <time
+              dateTime={post.modifieLe}
+              suppressHydrationWarning
+              className="block font-body text-[0.68rem] italic text-silver/70"
+            >
+              {t.modification.marque}{" "}
+              {new Date(post.modifieLe).toLocaleDateString("fr-FR", {
+                day: "numeric",
+                month: "long",
+                year: "numeric",
+              })}
+            </time>
+          ) : null}
+        </div>
       </header>
 
       <div className="px-5 py-4">
@@ -151,10 +176,18 @@ export default function Post({
           {/* Retirer le sien n'est pas masquer celui d'un autre : ce bouton
               n'appartient qu'à son auteur, et ne regarde aucun pouvoir. */}
           {estLAuteur && !post.retire ? (
-            <BoutonRetirerPost
-              postId={post.id}
-              aDesPostsApres={aDesPostsApres}
-            />
+            <>
+              <ModifierPost
+                postId={post.id}
+                corpsInitial={post.corps}
+                avertissementInitial={post.avertissementContenu}
+                lignesMinimum={lignesMinimum}
+              />
+              <BoutonRetirerPost
+                postId={post.id}
+                aDesPostsApres={aDesPostsApres}
+              />
+            </>
           ) : null}
         </div>
       ) : null}

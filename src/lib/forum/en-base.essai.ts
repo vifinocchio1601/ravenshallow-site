@@ -46,6 +46,7 @@ const {
   demasquerPost,
   lireSujet,
   masquerPost,
+  modifierSonPost,
   ouvrirSujet,
   repondre,
   retirerLaScene,
@@ -1190,6 +1191,105 @@ describe("retirer une scène, retirer son post — art. 2.4 et 6.4", () => {
     expect(await retirerSonPost({ eleveId }, ouvert.postId)).toMatchObject({
       ok: false,
     });
+  });
+});
+
+describe("reprendre son post — art. 6.4", () => {
+  const moi = () => ({
+    eleveId,
+    fonction: "PREMIERE_ANNEE" as const,
+    maison: "BRYGGELD",
+    etatMaison: "FAIT" as const,
+  });
+
+  it("son auteur le reprend, et la marque reste", async () => {
+    const ouvert = await ouvrirDans("les-cours-interieures", moi(), post(10));
+    expect(ouvert.ok).toBe(true);
+    if (!ouvert.ok) return;
+
+    const repris = await modifierSonPost({ eleveId }, ouvert.postId, {
+      corps: `<p>${post(10)}</p><p>Et une phrase de plus, ajoutée après coup.</p>`,
+      avertissement: "violence",
+    });
+    expect(repris.ok).toBe(true);
+
+    const charge = await lireSujet(ouvert.sujetId, {
+      membre: moi() as never,
+      pouvoirs: AUCUN,
+    });
+    const relu = charge?.posts[0];
+    expect(relu?.corps).toContain("ajoutée après coup");
+    expect(relu?.avertissementContenu).toBe("violence");
+    // **La marque est ce qui protège les autres** : sans limite de temps, il
+    // faut au moins qu'on voie que le texte a bougé.
+    expect(relu?.modifieLe).not.toBeNull();
+  });
+
+  it("passe par la même porte que la publication", async () => {
+    const ouvert = await ouvrirDans("les-cours-interieures", moi(), post(10));
+    if (!ouvert.ok) return;
+
+    // Trop court : la reprise ne peut pas faire passer un post sous le seuil.
+    const court = await modifierSonPost({ eleveId }, ouvert.postId, {
+      corps: "<p>Trois mots.</p>",
+      avertissement: null,
+    });
+    expect(court.ok).toBe(false);
+
+    // Et le balisage est nettoyé comme à la publication.
+    const sale = await modifierSonPost({ eleveId }, ouvert.postId, {
+      corps: `<p>${post(10)}</p><script>alert("pris")</script>`,
+      avertissement: null,
+    });
+    expect(sale.ok).toBe(true);
+
+    const charge = await lireSujet(ouvert.sujetId, {
+      membre: moi() as never,
+      pouvoirs: AUCUN,
+    });
+    expect(charge?.posts[0]?.corps).not.toContain("script");
+    expect(charge?.posts[0]?.corps).not.toContain("alert");
+  });
+
+  it("ne s’ouvre ni au staff, ni sur un post retiré", async () => {
+    const ouvert = await ouvrirDans("les-cours-interieures", moi(), post(10));
+    if (!ouvert.ok) return;
+
+    // Le staff masque, il ne réécrit pas.
+    const parLeStaff = await modifierSonPost({ eleveId: "staff" }, ouvert.postId, {
+      corps: `<p>${post(10)}</p>`,
+      avertissement: null,
+    });
+    expect(parLeStaff.ok).toBe(false);
+
+    await retirerSonPost({ eleveId }, ouvert.postId);
+    const apresRetrait = await modifierSonPost({ eleveId }, ouvert.postId, {
+      corps: `<p>${post(10)}</p>`,
+      avertissement: null,
+    });
+    expect(apresRetrait.ok).toBe(false);
+  });
+
+  /**
+   * ⚠️ **Modifier ne démasque pas.** Sinon il suffirait de changer une virgule
+   * pour annuler une mesure de modération.
+   */
+  it("ne démasque pas un post masqué pour correction", async () => {
+    const ouvert = await ouvrirDans("les-cours-interieures", moi(), post(10));
+    if (!ouvert.ok) return;
+
+    await masquerPost(STAFF, ouvert.postId, "À reprendre.", "Modération");
+    await modifierSonPost({ eleveId }, ouvert.postId, {
+      corps: `<p>${post(10)}</p><p>Corrigé.</p>`,
+      avertissement: null,
+    });
+
+    const enBase = await prisma.post.findUnique({
+      where: { id: ouvert.postId },
+      select: { masqueLe: true, modifieLe: true },
+    });
+    expect(enBase?.masqueLe).not.toBeNull();
+    expect(enBase?.modifieLe).not.toBeNull();
   });
 });
 

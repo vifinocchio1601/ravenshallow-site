@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   mieuxVautClore,
+  peutModifierSonPost,
   peutRetirerLaScene,
   peutRetirerSonPost,
 } from "./suppression";
@@ -131,5 +132,19 @@ describe("retirer son post", () => {
       peut: false,
       raison: "PAS_A_MOI",
     });
+  });
+});
+
+describe("modifier son post", () => {
+  it("est toujours ouvert à son auteur, sans limite de temps", () => {
+    expect(peutModifierSonPost({ estLAuteur: true, retire: false })).toBe(true);
+  });
+
+  it("n’appartient qu’à lui", () => {
+    expect(peutModifierSonPost({ estLAuteur: false, retire: false })).toBe(false);
+  });
+
+  it("n’a plus de sens sur un post retiré", () => {
+    expect(peutModifierSonPost({ estLAuteur: true, retire: true })).toBe(false);
   });
 });

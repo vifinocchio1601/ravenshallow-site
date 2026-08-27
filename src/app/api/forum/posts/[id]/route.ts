@@ -3,6 +3,7 @@ import { TEXTES_FORUM } from "@/lib/forum/constantes";
 import {
   demasquerPost,
   masquerPost,
+  modifierSonPost,
   retirerSonPost,
 } from "@/lib/forum/depot";
 import { pouvoirsDe } from "@/lib/forum/depot-pouvoirs";
@@ -38,9 +39,42 @@ export async function PATCH(
     masque?: unknown;
     motif?: unknown;
     retire?: unknown;
+    corps?: unknown;
+    avertissement?: unknown;
   } | null;
   if (!corps) {
     return NextResponse.json({ erreur: "Requête vide." }, { status: 422 });
+  }
+
+  // **Reprendre son propre post.** Comme le retrait, ce chemin ne regarde
+  // aucun pouvoir : il demande seulement si le post est le sien, puis fait
+  // repasser le texte par la porte de la publication.
+  if (corps.corps !== undefined) {
+    if (!compte.eleveId) {
+      return NextResponse.json(
+        { erreur: TEXTES_FORUM.erreurs.refuse },
+        { status: 403 },
+      );
+    }
+
+    const resultat = await modifierSonPost({ eleveId: compte.eleveId }, params.id, {
+      corps: corps.corps,
+      avertissement: corps.avertissement,
+    });
+
+    if (!resultat.ok) {
+      // 404 le lieu ou la scène, 403 ce qui n'est pas à moi, 422 le reste :
+      // « il a le droit, mais pas comme ça ».
+      const statut =
+        resultat.message === TEXTES_FORUM.erreurs.sujetIntrouvable
+          ? 404
+          : resultat.message === TEXTES_FORUM.suppression.erreurs.postPasAMoi
+            ? 403
+            : 422;
+      return NextResponse.json({ erreur: resultat.message }, { status: statut });
+    }
+
+    return NextResponse.json({ ok: true });
   }
 
   // **Retirer son post n'est pas masquer le post d'un autre.** Ce chemin-ci ne

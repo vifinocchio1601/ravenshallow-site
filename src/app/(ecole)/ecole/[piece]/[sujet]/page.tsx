@@ -133,6 +133,9 @@ export default async function Page({
             // Retirer le dernier post encore là ne troue rien ; retirer un
             // post suivi d'une réponse laisse sa place.
             aDesPostsApres={dernierVisible !== null && post.id !== dernierVisible}
+            // Le champ de reprise compte comme la route : le minimum du lieu,
+            // jamais une valeur recopiée.
+            lignesMinimum={section.regles.lignesMinimum}
           />
         ))}
       </section>

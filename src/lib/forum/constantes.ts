@@ -206,6 +206,22 @@ export const TEXTES_FORUM = {
   },
 
   /**
+   * **Reprendre son propre post.**
+   *
+   * Sans limite de temps — décision du joueur, 27 août 2026. Ce qui protège
+   * les autres n'est pas un délai mais la marque, visible de tous : on voit
+   * qu'un texte a bougé depuis qu'on y a répondu.
+   */
+  modification: {
+    action: "Modifier",
+    enregistrer: "Enregistrer",
+    enCours: "Enregistrement…",
+    annuler: "Annuler",
+    /** La marque, à côté de la date de publication. */
+    marque: "modifié",
+  },
+
+  /**
    * **Retirer une scène, retirer son post.**
    *
    * Le vocabulaire est celui du joueur — « supprimer » —, parce que c'est ce

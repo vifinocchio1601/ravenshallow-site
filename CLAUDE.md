@@ -779,6 +779,32 @@ masquage : il est rapporté, comme pour les courriels.
 **Masquer relève du staff, et d'aucune permission attribuable.** Ce n'est pas
 un pouvoir qu'on accorde à la carte — ne pas l'ajouter à `Permission`.
 
+### Reprendre son post — art. 6.4
+
+**Sans limite de temps**, décision du joueur du 27 août 2026. Ce qu'un joueur
+a écrit est à lui, et une coquille se corrige six mois plus tard. Ce qui
+protège les autres n'est pas un délai mais **la marque « modifié le »**,
+visible de tous : on voit qu'un texte a bougé depuis qu'on y a répondu.
+
+La colonne `modifieLe` existait depuis la première migration du forum, déjà
+transportée jusqu'à l'écran — **rien ne l'écrivait ni ne l'affichait**.
+
+- **Le champ de reprise est le même que celui de la publication** —
+  `ChampPost`, donc le même éditeur, la même barre, le même compteur. Deux
+  champs qui divergeraient accepteraient deux textes différents, et la route
+  trancherait trop tard.
+- **Le texte repasse par `validerPost`** : même nettoyage, même minimum de
+  lignes, relu sur le lieu. Une reprise ne peut ni passer sous le seuil, ni
+  glisser ce que la publication aurait refusé.
+- ⚠️ **Modifier ne démasque pas.** Un post masqué pour correction (art. 19.3)
+  le reste après correction : c'est le staff qui rouvre, après avoir relu.
+  Sinon il suffirait de changer une virgule pour annuler la mesure.
+- **Le staff ne modifie rien.** Il masque, et c'est l'auteur qui reprend.
+  Réécrire le texte d'un joueur à sa place serait lui faire dire ce qu'il n'a
+  pas dit.
+
+---
+
 ### Retirer une scène, retirer son post — art. 2.4 et 6.4
 
 **Rien n'est effacé, jamais.** Une scène retirée sort des listes et rend son

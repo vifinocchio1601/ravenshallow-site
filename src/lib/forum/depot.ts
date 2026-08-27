@@ -30,6 +30,7 @@ import {
   type Pouvoirs,
 } from "./pouvoirs";
 import {
+  peutModifierSonPost,
   peutRetirerLaScene,
   peutRetirerSonPost,
   type RaisonDeRefus,
@@ -1001,6 +1002,83 @@ export async function retirerSonPost(
   });
 
   return { ok: true, prevenus: 0 };
+}
+
+/**
+ * **Reprendre son propre post.**
+ *
+ * Sans limite de temps : ce qu'un joueur a écrit est à lui (art. 6.4), et une
+ * coquille se corrige six mois plus tard. Ce qui protège les autres n'est pas
+ * un délai mais **la marque « modifié le »**, que `modifieLe` porte et que
+ * l'écran affiche.
+ *
+ * Le texte repasse par `validerPost` — **la même porte que la publication** :
+ * même nettoyage du balisage, même minimum de lignes. Une correction ne peut
+ * donc ni faire passer un post sous le seuil, ni y glisser ce que la
+ * publication aurait refusé.
+ *
+ * ⚠️ **Modifier ne démasque pas.** Un post masqué le temps d'une correction
+ * (art. 19.3) le reste après correction : c'est le staff qui rouvre, après
+ * avoir relu. Sinon il suffirait de changer une virgule pour annuler la
+ * mesure.
+ */
+export async function modifierSonPost(
+  auteur: { eleveId: string },
+  postId: string,
+  saisie: { corps: unknown; avertissement: unknown },
+): Promise<ResultatEcriture> {
+  const post = await prisma.post.findUnique({
+    where: { id: postId },
+    select: {
+      id: true,
+      auteurId: true,
+      retireLe: true,
+      sujet: {
+        select: {
+          supprimeLe: true,
+          section: { select: { espace: { select: { lignesMinimum: true } } } },
+        },
+      },
+    },
+  });
+
+  if (!post || post.sujet.supprimeLe) {
+    return { ok: false, message: TEXTES_FORUM.erreurs.sujetIntrouvable };
+  }
+
+  if (
+    !peutModifierSonPost({
+      estLAuteur: post.auteurId !== null && post.auteurId === auteur.eleveId,
+      retire: post.retireLe !== null,
+    })
+  ) {
+    // Pas de `verdict` ici — le refus ne vient pas du lieu mais de la
+    // propriété du texte. La route reconnaît ce message et répond 403.
+    return { ok: false, message: TEXTES_FORUM.suppression.erreurs.postPasAMoi };
+  }
+
+  // Le minimum du LIEU, comme à la publication — jamais une valeur recopiée.
+  const corps = validerPost(
+    saisie.corps,
+    post.sujet.section.espace.lignesMinimum,
+  );
+  if (!corps.ok) return { ok: false, message: corps.message };
+
+  const avertissement = validerAvertissement(saisie.avertissement);
+  if (!avertissement.ok) {
+    return { ok: false, message: avertissement.message };
+  }
+
+  await prisma.post.update({
+    where: { id: post.id },
+    data: {
+      corps: corps.valeur,
+      avertissementContenu: avertissement.valeur,
+      modifieLe: new Date(),
+    },
+  });
+
+  return { ok: true, sujetId: "", postId: post.id };
 }
 
 /**
