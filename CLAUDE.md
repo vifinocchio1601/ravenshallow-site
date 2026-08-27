@@ -1496,6 +1496,30 @@ BUREAU », « LES / CORBEAUX » : il faut `text-center` sur le libellé pour que
 les deux mots s'alignent l'un sous l'autre. Le déroulé de téléphone, lui, est
 une liste verticale et reste au fer à gauche.
 
+**Un sous-menu qui s'ouvre au survol a un vide sous lui, et ce vide ferme
+tout.** Le déroulant était posé douze pixels sous son bouton par une marge —
+`mt-3`. Ces douze pixels n'appartenaient ni au bouton ni au menu : la souris
+qui les traversait pour atteindre le sous-menu sortait du groupe,
+`onMouseLeave` partait, et le menu se refermait avant qu'elle n'arrive. Le
+sous-menu s'ouvrait parfaitement et **était inatteignable**.
+
+Deux remèdes, et il faut les deux :
+
+- **le vide devient du remplissage** — un conteneur positionné qui part du
+  bouton et porte `pt-3`, avec le parchemin à l'intérieur. Le trajet ne quitte
+  plus jamais la zone survolée, et l'aspect ne change pas d'un pixel. Le
+  `hidden` va sur ce conteneur : replié, un rectangle invisible mais
+  survolable serait pire que le défaut d'origine ;
+- **la fermeture est différée de 200 ms** (`DELAI_FERMETURE_MS`), parce qu'une
+  souris qui vise le sous-menu passe toujours par des pixels à personne — le
+  coin d'un mouvement en diagonale, un tremblement. En dessous de 150 ms le
+  défaut revient ; au-delà de 300 ms le menu paraît collant.
+
+⚠️ **Ce défaut ne se teste pas en simulant `mouseleave` en JavaScript** :
+React n'écoute pas l'événement natif, il délègue `mouseout` à la racine. Un
+essai qui dispatche `new MouseEvent("mouseleave")` sur l'élément ne déclenche
+rien et fait croire à une régression. Il faut bouger le vrai pointeur.
+
 **`hidden` ne suffit pas quand une classe pose un `display`.** L'attribut
 `hidden` vaut `display: none` — mais une classe utilitaire comme `flex` le
 **remplace en silence**, et le sous-menu reste ouvert en permanence. Le défaut

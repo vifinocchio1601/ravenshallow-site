@@ -272,6 +272,16 @@ function cleDe(entree: EntreeMenu): string {
 
 // ─────────────────────────────────────────────────────────────
 //  Le groupe, sur écran large — un menu déroulant
+/**
+ * **Le répit avant que le sous-menu se referme.**
+ *
+ * Deux dixièmes de seconde : assez pour qu'une souris qui vise le sous-menu y
+ * arrive, trop peu pour qu'un menu qu'on quitte reste accroché. En dessous de
+ * cent cinquante millisecondes le défaut revient ; au-dessus de trois cents,
+ * le menu paraît collant.
+ */
+const DELAI_FERMETURE_MS = 200;
+
 // ─────────────────────────────────────────────────────────────
 
 /**
@@ -299,23 +309,54 @@ function GroupeDeroulant({
   const [deplie, setDeplie] = useState(false);
   const identifiant = useId();
   const bouton = useRef<HTMLButtonElement>(null);
+  const fermeture = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const annulerLaFermeture = () => {
+    if (fermeture.current) clearTimeout(fermeture.current);
+    fermeture.current = null;
+  };
+
+  const ouvrir = () => {
+    annulerLaFermeture();
+    setDeplie(true);
+  };
+
+  /**
+   * **Fermer plus tard, jamais tout de suite.** Une souris qui vise le
+   * sous-menu passe forcément par des pixels qui n'appartiennent ni au bouton
+   * ni au sous-menu — le coin d'un mouvement en diagonale, un tremblement. La
+   * fermer à l'instant même rendrait le menu inatteignable, ce qu'il était.
+   */
+  const fermerBientot = () => {
+    annulerLaFermeture();
+    fermeture.current = setTimeout(() => setDeplie(false), DELAI_FERMETURE_MS);
+  };
+
+  const fermerMaintenant = () => {
+    annulerLaFermeture();
+    setDeplie(false);
+  };
+
+  // Un compte à rebours qui survivrait au composant poserait un état sur
+  // quelque chose qui n'existe plus.
+  useEffect(() => annulerLaFermeture, []);
 
   return (
     <div
       className="relative"
-      onMouseEnter={() => setDeplie(true)}
-      onMouseLeave={() => setDeplie(false)}
+      onMouseEnter={ouvrir}
+      onMouseLeave={fermerBientot}
       // Le focus quitte le groupe : on referme. `relatedTarget` est la cible
       // qui reçoit le focus — nulle quand on quitte la fenêtre, auquel cas on
       // ferme aussi, ce qui est le comportement attendu.
       onBlur={(e) => {
         if (!e.currentTarget.contains(e.relatedTarget as Node | null)) {
-          setDeplie(false);
+          fermerMaintenant();
         }
       }}
       onKeyDown={(e) => {
         if (e.key === "Escape" && deplie) {
-          setDeplie(false);
+          fermerMaintenant();
           bouton.current?.focus();
         }
       }}
@@ -325,7 +366,10 @@ function GroupeDeroulant({
         type="button"
         aria-expanded={deplie}
         aria-controls={identifiant}
-        onClick={() => setDeplie((d) => !d)}
+        onClick={() => {
+          annulerLaFermeture();
+          setDeplie((d) => !d);
+        }}
         className={`group flex items-center gap-2 font-display text-[0.72rem] uppercase tracking-[0.16em] transition-colors duration-300 ${
           courante ? "font-bold text-ink" : "font-medium text-ink/60 hover:text-ink"
         }`}
@@ -351,20 +395,29 @@ function GroupeDeroulant({
         </span>
       </button>
 
-      {/* Rendu en permanence, masqué quand il est replié : `hidden` retire les
-          liens de l’ordre de tabulation sans avoir à gérer un `tabIndex`. */}
+      {/* **Le vide sous le bouton appartient au sous-menu, pas à personne.**
+          Il était fait d'une marge — `mt-3` — c'est-à-dire de douze pixels qui
+          n'étaient ni le bouton ni le menu : la souris qui les traversait
+          sortait du groupe, et le menu se refermait avant qu'elle n'arrive.
+          C'est maintenant du remplissage à l'intérieur d'un conteneur qui
+          part du bouton, et le trajet ne quitte plus jamais la zone.
+
+          Le conteneur porte le `hidden` : replié, il ne capte rien — un
+          rectangle invisible mais survolable au-dessus de la page serait pire
+          que le défaut d'origine. */}
+      <div
+        hidden={!deplie}
+        className={`absolute left-1/2 top-full z-20 -translate-x-1/2 pt-3 ${
+          deplie ? "block" : "hidden"
+        }`}
+      >
       <ul
         id={identifiant}
-        hidden={!deplie}
         aria-label={TEXTES_ECOLE.menu.sousMenuAria.replace(
           "{groupe}",
           groupe.libelle,
         )}
-        // Même précaution que l'accordéon : la classe dit ce que l'attribut
-        // dit, pour qu'aucun utilitaire de `display` ne puisse les désaccorder.
-        className={`parchemin absolute left-1/2 top-full z-20 mt-3 min-w-[12rem] -translate-x-1/2 rounded-[2px] border border-ink/20 px-2 py-2 shadow-lg ${
-          deplie ? "block" : "hidden"
-        }`}
+        className="parchemin min-w-[12rem] rounded-[2px] border border-ink/20 px-2 py-2 shadow-lg"
       >
         {groupe.liens.map((lien) => (
           <li key={lien.href}>
@@ -373,11 +426,12 @@ function GroupeDeroulant({
               courante={estLienCourant(lien)}
               compte={lien.porteUnCompteur ? (compteurs[lien.href] ?? 0) : 0}
               bloc
-              onClick={() => setDeplie(false)}
+              onClick={fermerMaintenant}
             />
           </li>
         ))}
       </ul>
+      </div>
     </div>
   );
 }
