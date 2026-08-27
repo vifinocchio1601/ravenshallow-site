@@ -6,10 +6,24 @@ import {
   validerPost,
   validerTitre,
 } from "./schema";
-import { LIGNES_MINIMUM_RP } from "./longueur";
+import { CARACTERES_PAR_LIGNE, LIGNES_MINIMUM_RP } from "./longueur";
 
+/**
+ * Un post de `n` lignes **au sens du compteur** — soit `n` fois la largeur
+ * d’une ligne, en caractères réels.
+ *
+ * Il valait autrefois `n` courtes phrases séparées par des retours à la
+ * ligne : c’était suffisant quand on comptait les sauts de ligne, et ça ne
+ * l’est plus. Le remplissage se fait avec des points et non des espaces —
+ * les blancs sont réduits avant comptage, et une ligne complétée d’espaces
+ * ne pèserait pas ce qu’elle prétend.
+ */
 const post = (n: number) =>
-  Array.from({ length: n }, (_, i) => `Ligne ${i + 1}.`).join("\n");
+  Array.from({ length: n }, (_, i) =>
+    `Ligne ${i + 1} — de la prose ordinaire, pour occuper toute la largeur`
+      .padEnd(CARACTERES_PAR_LIGNE, ".")
+      .slice(0, CARACTERES_PAR_LIGNE),
+  ).join("\n");
 
 describe("le titre d’une scène", () => {
   it("tient sur une seule ligne, quoi qu’on colle dedans", () => {
@@ -85,7 +99,7 @@ describe("le corps d’un post", () => {
   });
 
   it("ne réécrit ni les apostrophes, ni la ponctuation, ni la casse", () => {
-    const brut = `${post(9)}\nIl m'a dit : "N'y VA PAS".`;
+    const brut = `${post(10)}\nIl m'a dit : "N'y VA PAS".`;
     const lu = validerPost(brut, 10);
     expect(lu.ok).toBe(true);
     if (lu.ok) expect(lu.valeur).toContain(`Il m'a dit : "N'y VA PAS".`);

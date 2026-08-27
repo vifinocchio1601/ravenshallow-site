@@ -110,7 +110,7 @@ logique ailleurs, l'y ajouter.
 | `lib/forum/pouvoirs.ts` | **qui a le droit de quoi, et sur quelle maison.** Les cinq permissions, le staff qui passe partout, et le droit du préfet qui **dérive** de sa nomination |
 | `lib/forum/depot-pouvoirs.ts` | l'accès aux permissions et aux préfets. **Seul endroit qui écrit** dans `permissions_accordees` et `prefets` — et qui journalise chaque geste dans la même transaction |
 | `lib/forum/lieux.ts` | **qui lit un lieu, qui y ouvre un sujet, qui y répond.** Et la règle qu'une section ne peut que **resserrer** ce que l'espace ouvre |
-| `lib/forum/longueur.ts` | ce qui fait dix lignes — **partagé mot pour mot** entre le compteur du champ et la route. Le hors-RP est retiré avant comptage |
+| `lib/forum/longueur.ts` | ce qui fait dix lignes — **partagé mot pour mot** entre le compteur du champ et la route. On y compte des **caractères réels**, jamais des retours à la ligne ; le balisage et le hors-RP sont retirés avant comptage |
 | `lib/forum/scenes.ts` | le repère de scènes simultanées, **qui n'oppose rien** |
 | `lib/forum/depot.ts` | l'accès au forum. Filtre en **appelant** `peutLireLeLieu`, jamais en recopiant sa condition dans un `where` |
 | `lib/forum/schema.ts` | ce qu'un titre, un post et un avertissement ont le droit d'être — **partagé mot pour mot** entre le champ et la route |
@@ -704,6 +704,38 @@ comptages qui divergent, c'est un joueur qui voit « 10 » à l'écran et se fai
 refuser son post. Le hors-RP `[HRP]` est retiré **avant** comptage des deux
 côtés — et **conservé** dans le texte : on ne compte pas avec, on ne l'efface
 pas pour autant.
+
+**On y compte des caractères réels, et l'on affiche des lignes.** Le comptage
+par retours à la ligne se trompait **dans les deux sens**, et le second défaut
+était le pire :
+
+| Ce qu'un joueur écrivait | L'ancien compteur |
+| --- | --- |
+| « a » puis un retour, dix fois | **dix lignes, accepté** — l'unique post en base en était un : dix lignes, vingt-six signes |
+| un post de deux mille signes en **trois paragraphes** | **trois lignes, refusé** |
+
+La règle **punissait la prose** et récompensait le retour chariot. Depuis le
+27 août 2026 : `texteQuiCompte` retire le balisage, décode les entités, retire
+le hors-RP, réduit les blancs — et l'on compte ce qui reste.
+
+- **Une ligne vaut 80 caractères**, donc dix lignes valent 800. Ce nombre-là
+  vit dans `config/ecriture.json`, **pas dans le code** : il faudra l'ajuster
+  après avoir vu de vrais posts. Le **nombre de lignes**, lui, reste dans le
+  code — c'est l'article 12.2, une règle du joueur et non un réglage.
+- **Le joueur ne lit jamais un nombre de signes.** « 6 lignes sur 10 », comme
+  le règlement le dit. L'affichage arrondit **vers le bas** et le décompte de
+  ce qui manque **vers le haut** : jamais « 10 lignes » sur un post qui va
+  être refusé, jamais « 0 ligne à écrire » sur un post encore trop court.
+- **Le verdict ne passe pas par l'arrondi.** `respecteLeMinimum` compare des
+  caractères ; comparer les lignes affichées ferait refuser un post à 800
+  signes pile le jour où l'on changerait la largeur d'une ligne.
+- **Une barre a été ajoutée sous le compteur**, et ce n'est pas décoratif : la
+  phrase ne change plus que toutes les quatre-vingts frappes, et sans elle un
+  joueur qui écrit croirait le compteur bloqué. Elle est `aria-hidden` — la
+  phrase dit déjà tout à qui écoute.
+
+⚠️ **`texteQuiCompte` ne protège de rien.** Retirer des balises pour compter
+n'est pas nettoyer. Ne jamais s'en servir pour rendre un texte sûr.
 
 **Un post masqué n'est pas supprimé** (art. 19.3). Trois vues, et les trois
 comptent : son auteur voit le texte, le motif et la date limite — c'est lui

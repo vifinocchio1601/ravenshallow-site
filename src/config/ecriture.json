@@ -1,0 +1,4 @@
+{
+  "note": "Ce qu’une « ligne » vaut en caractères réels, pour le minimum de l’article 12.2. Le nombre de lignes, lui, est une règle du règlement et vit dans le code — ici on ne règle que la mesure. À ajuster après avoir vu de vrais posts : la logique n’a pas à changer pour autant. Voir src/lib/forum/longueur.ts.",
+  "caracteresParLigne": 80
+}

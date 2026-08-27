@@ -1,119 +1,168 @@
 import { describe, expect, it } from "vitest";
 import {
+  CARACTERES_PAR_LIGNE,
   LIGNES_MINIMUM_RP,
+  caracteresUtiles,
+  lignesAffichees,
   lignesManquantes,
-  lignesUtiles,
+  proportion,
   respecteLeMinimum,
   sansHorsRP,
+  seuilEnCaracteres,
+  texteQuiCompte,
 } from "./longueur";
-import { auDelaDuRepere, reperDeScenes } from "./scenes";
 
-/** Un post de `n` lignes qui portent du texte. */
-function post(n: number): string {
-  return Array.from({ length: n }, (_, i) => `Ligne ${i + 1}.`).join("\n");
+const SEUIL = seuilEnCaracteres(LIGNES_MINIMUM_RP);
+
+/** Un texte d’exactement `n` caractères utiles, sans blanc à réduire. */
+const exactement = (n: number) => "m".repeat(n);
+
+/**
+ * Un paragraphe d’un seul tenant, d’au moins `n` caractères utiles — **sans
+ * aucun retour à la ligne**. C’est tout l’objet de l’essai qui s’en sert :
+ * l’ancien compteur découpait sur les sauts de ligne, et un paragraphe, si
+ * long soit-il, ne valait qu’une ligne à ses yeux.
+ */
+function paragraphe(n: number): string {
+  const phrase =
+    "La brume monte du lac et se prend dans les arches, et l’on n’entend plus que le vent.";
+  let texte = phrase;
+  while (caracteresUtiles(texte) < n) texte += " " + phrase;
+  return texte;
 }
 
-describe("dix lignes au minimum dans le domaine — art. 12.2", () => {
-  it("le minimum est bien dix", () => {
+describe("le seuil", () => {
+  it("vaut dix lignes de quatre-vingts signes, soit huit cents", () => {
     expect(LIGNES_MINIMUM_RP).toBe(10);
-  });
-
-  /** Le cas de la liste de recette du joueur. */
-  it("un post de huit lignes est refusé en RP, accepté chez les non-mages", () => {
-    const huit = post(8);
-    expect(respecteLeMinimum(huit, LIGNES_MINIMUM_RP)).toBe(false);
-    // Chez les non-mages, aucun minimum : `null`.
-    expect(respecteLeMinimum(huit, null)).toBe(true);
-  });
-
-  it("dix lignes passent, neuf non", () => {
-    expect(respecteLeMinimum(post(10), 10)).toBe(true);
-    expect(respecteLeMinimum(post(9), 10)).toBe(false);
-  });
-
-  it("dit combien il en manque, et jamais un nombre négatif", () => {
-    expect(lignesManquantes(post(8), 10)).toBe(2);
-    expect(lignesManquantes(post(15), 10)).toBe(0);
-    expect(lignesManquantes(post(3), null)).toBe(0);
+    expect(CARACTERES_PAR_LIGNE).toBe(80);
+    expect(SEUIL).toBe(800);
   });
 });
 
-describe("les lignes vides ne comptent pas", () => {
-  it("dix retours à la ligne ne font pas un post", () => {
-    expect(lignesUtiles("\n".repeat(10))).toBe(0);
-    expect(respecteLeMinimum("\n".repeat(20), 10)).toBe(false);
+describe("ce qui compte", () => {
+  it("réduit les blancs répétés à un seul espace", () => {
+    expect(texteQuiCompte("un   \n\n\t  mot")).toBe("un mot");
   });
 
-  it("ni dix lignes d’espaces et de tabulations", () => {
-    // Le piège de `btrim`, déjà rencontré sur les corbeaux, vu de l'autre côté.
-    expect(lignesUtiles("   \n\t\n  \t  \n".repeat(4))).toBe(0);
+  it("ne compte pas le balisage de mise en forme", () => {
+    const orne = "<p><strong>Sigrid</strong> se tait.</p>";
+    expect(texteQuiCompte(orne)).toBe("Sigrid se tait.");
   });
 
-  it("les lignes vides entre deux paragraphes ne pénalisent pas non plus", () => {
-    const aere = post(10).split("\n").join("\n\n");
-    expect(lignesUtiles(aere)).toBe(10);
+  it("ne laisse pas deux paragraphes se coller l’un à l’autre", () => {
+    // Sans traitement, « <p>mot</p><p>autre</p> » se lirait « motautre » et
+    // le compte perdrait un signe par paragraphe.
+    expect(texteQuiCompte("<p>mot</p><p>autre</p>")).toBe("mot autre");
   });
 
-  it("sans minimum, seul le vide est refusé", () => {
-    expect(respecteLeMinimum("   \n\t\n ", null)).toBe(false);
+  it("ne se laisse pas gonfler par les entités", () => {
+    // Cinq esperluettes écrites à la main, que le nettoyage encode : cinq
+    // signes comptés, jamais vingt-cinq.
+    expect(caracteresUtiles("&amp;&amp;&amp;&amp;&amp;")).toBe(5);
+    expect(texteQuiCompte("&lt;script&gt;")).toBe("<script>");
+  });
+
+  it("traite l’espace insécable comme un blanc", () => {
+    expect(texteQuiCompte("un&nbsp;&nbsp;&nbsp;mot")).toBe("un mot");
+  });
+});
+
+describe("le hors-RP ne compte pas", () => {
+  it("retire les blocs fermés", () => {
+    expect(sansHorsRP("avant [HRP]note[/HRP] après")).toBe("avant  après");
+  });
+
+  it("coupe un bloc jamais refermé jusqu’à la fin", () => {
+    expect(texteQuiCompte("du jeu [HRP] et un commentaire sans fin")).toBe(
+      "du jeu",
+    );
+  });
+
+  it("le retrouve même quand du balisage le coupe en deux", () => {
+    const coupe = "<p>[HRP]</p><p>un aparté</p><p>[/HRP]</p><p>Le jeu.</p>";
+    expect(texteQuiCompte(coupe)).toBe("Le jeu.");
+  });
+
+  it("un hors-RP volumineux ne fait pas passer un post trop court", () => {
+    const corps = `Il entre. [HRP]${exactement(5000)}[/HRP]`;
+    expect(caracteresUtiles(corps)).toBe("Il entre.".length);
+    expect(respecteLeMinimum(corps, LIGNES_MINIMUM_RP)).toBe(false);
+  });
+});
+
+describe("le minimum", () => {
+  it("refuse dix lignes d’une seule lettre — le contournement d’origine", () => {
+    const triche = "a\n".repeat(10);
+    expect(respecteLeMinimum(triche, LIGNES_MINIMUM_RP)).toBe(false);
+  });
+
+  it("refuse le post réellement écrit sur le site : dix lignes, vingt-six signes", () => {
+    // Relevé en base le 27 août 2026, et c’est ce qui a motivé le changement.
+    const reel = "a\nb\nc\nd\ne\nf\ng\nh\ni\nj\nk\nl\nm\n";
+    expect(caracteresUtiles(reel)).toBeLessThan(SEUIL);
+    expect(respecteLeMinimum(reel, LIGNES_MINIMUM_RP)).toBe(false);
+  });
+
+  it("accepte huit cents caractères réels", () => {
+    expect(caracteresUtiles(exactement(SEUIL))).toBe(SEUIL);
+    expect(respecteLeMinimum(exactement(SEUIL), LIGNES_MINIMUM_RP)).toBe(true);
+  });
+
+  it("refuse un signe de moins, accepte le compte juste", () => {
+    expect(respecteLeMinimum(exactement(SEUIL - 1), LIGNES_MINIMUM_RP)).toBe(
+      false,
+    );
+    expect(respecteLeMinimum(exactement(SEUIL), LIGNES_MINIMUM_RP)).toBe(true);
+  });
+
+  /**
+   * La régression que l’ancien compteur provoquait, et qui était le plus
+   * grave des deux défauts : il découpait sur les retours à la ligne, donc un
+   * long post en trois paragraphes valait trois lignes et se faisait refuser.
+   */
+  it("accepte de la prose en trois paragraphes, que l’ancien compteur refusait", () => {
+    const trois = [paragraphe(300), paragraphe(300), paragraphe(300)].join(
+      "\n\n",
+    );
+    expect(trois.split("\n").filter((l) => /\S/.test(l)).length).toBeLessThan(
+      LIGNES_MINIMUM_RP,
+    );
+    expect(respecteLeMinimum(trois, LIGNES_MINIMUM_RP)).toBe(true);
+  });
+
+  it("sans minimum, tout passe sauf le vide", () => {
     expect(respecteLeMinimum("Un mot.", null)).toBe(true);
+    expect(respecteLeMinimum("   \n\t\n ", null)).toBe(false);
+    expect(respecteLeMinimum("<p></p>", null)).toBe(false);
+    expect(respecteLeMinimum("[HRP]tout en hors-RP[/HRP]", null)).toBe(false);
   });
 });
 
-describe("le hors-RP ne compte pas — art. 12.3", () => {
-  /**
-   * « Le hors-RP ne doit pas prendre le pas sur le RP lui-même. » S’il comptait
-   * dans le minimum, on atteindrait les dix lignes sans écrire une ligne de
-   * jeu, et la règle ne dirait plus rien.
-   */
-  it("un commentaire de douze lignes ne fait pas un post de douze lignes", () => {
-    const corps = `[HRP]\n${post(12)}\n[/HRP]\nUne seule ligne de jeu.`;
-    expect(lignesUtiles(corps)).toBe(1);
-    expect(respecteLeMinimum(corps, 10)).toBe(false);
+describe("ce que le joueur lit", () => {
+  it("s’exprime en lignes, arrondies vers le bas", () => {
+    expect(lignesAffichees(exactement(0))).toBe(0);
+    expect(lignesAffichees(exactement(CARACTERES_PAR_LIGNE - 1))).toBe(0);
+    expect(lignesAffichees(exactement(CARACTERES_PAR_LIGNE))).toBe(1);
+    expect(lignesAffichees(exactement(SEUIL))).toBe(LIGNES_MINIMUM_RP);
   });
 
-  it("le RP autour du bloc compte, lui", () => {
-    const corps = `${post(10)}\n[HRP]\nDésolé du retard !\n[/HRP]`;
-    expect(lignesUtiles(corps)).toBe(10);
-    expect(respecteLeMinimum(corps, 10)).toBe(true);
+  it("n’annonce jamais dix lignes à un post qui va être refusé", () => {
+    const presque = exactement(SEUIL - 1);
+    expect(respecteLeMinimum(presque, LIGNES_MINIMUM_RP)).toBe(false);
+    expect(lignesAffichees(presque)).toBeLessThan(LIGNES_MINIMUM_RP);
   });
 
-  it("la balise s’écrit comme on veut", () => {
-    expect(sansHorsRP("a\n[hrp]bruit[/hrp]\nb").trim()).toBe("a\n\nb");
-    expect(sansHorsRP("a\n[HrP]bruit[/HrP]\nb").trim()).toBe("a\n\nb");
+  it("compte les lignes qui restent, et jamais zéro tant que c’est refusé", () => {
+    expect(lignesManquantes(exactement(0), LIGNES_MINIMUM_RP)).toBe(10);
+    expect(lignesManquantes(exactement(SEUIL - 1), LIGNES_MINIMUM_RP)).toBe(1);
+    expect(lignesManquantes(exactement(SEUIL), LIGNES_MINIMUM_RP)).toBe(0);
+    expect(lignesManquantes(exactement(5), null)).toBe(0);
   });
 
-  it("un bloc jamais refermé est retiré jusqu’à la fin", () => {
-    // Quelqu'un ouvre `[HRP]` en fin de post et oublie la fermeture : son
-    // commentaire ne doit pas se mettre à compter.
-    const corps = `${post(4)}\n[HRP]\n${post(20)}`;
-    expect(lignesUtiles(corps)).toBe(4);
-  });
-
-  it("plusieurs blocs sont retirés, pas seulement le premier", () => {
-    const corps = "[HRP]a[/HRP]\nRP.\n[HRP]b[/HRP]\nRP encore.";
-    expect(lignesUtiles(corps)).toBe(2);
-  });
-});
-
-describe("les scènes simultanées — art. 17.3, et rien qu’un repère", () => {
-  it("trois avant la troisième année, cinq à partir de là", () => {
-    expect(reperDeScenes("PREMIERE_ANNEE")).toBe(3);
-    expect(reperDeScenes("DEUXIEME_ANNEE")).toBe(3);
-    expect(reperDeScenes("TROISIEME_ANNEE")).toBe(5);
-    expect(reperDeScenes("SEPTIEME_ANNEE")).toBe(5);
-  });
-
-  /**
-   * **Le compte n’oppose rien.** Le joueur a tranché : la limite est un
-   * principe de confiance. Ce test fige que la fonction ne sait que constater —
-   * si un jour quelqu’un s’en sert pour refuser une ouverture, c’est ici qu’il
-   * faudra relire la décision.
-   */
-  it("dire qu’on est au-delà n’est pas refuser", () => {
-    expect(auDelaDuRepere("PREMIERE_ANNEE", 3)).toBe(false);
-    expect(auDelaDuRepere("PREMIERE_ANNEE", 4)).toBe(true);
-    expect(auDelaDuRepere("TROISIEME_ANNEE", 4)).toBe(false);
-    expect(auDelaDuRepere("TROISIEME_ANNEE", 6)).toBe(true);
+  it("avance à chaque frappe, et se borne à un", () => {
+    expect(proportion("", LIGNES_MINIMUM_RP)).toBe(0);
+    expect(proportion(exactement(SEUIL / 2), LIGNES_MINIMUM_RP)).toBe(0.5);
+    expect(proportion(exactement(SEUIL * 3), LIGNES_MINIMUM_RP)).toBe(1);
+    expect(proportion("n’importe quoi", null)).toBe(1);
   });
 });

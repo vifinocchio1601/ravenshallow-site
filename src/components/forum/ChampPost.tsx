@@ -2,7 +2,11 @@
 
 import { useId, useMemo } from "react";
 import { TEXTES_FORUM } from "@/lib/forum/constantes";
-import { lignesUtiles } from "@/lib/forum/longueur";
+import {
+  lignesAffichees,
+  proportion,
+  respecteLeMinimum,
+} from "@/lib/forum/longueur";
 
 /**
  * Le champ d’un post, et son compteur de lignes.
@@ -14,9 +18,15 @@ import { lignesUtiles } from "@/lib/forum/longueur";
  *
  * **Le compteur est annoncé, pas seulement affiché** : il vit dans une région
  * `aria-live` polie, et le champ le désigne par `aria-describedby`. La phrase
- * ne change que lorsque le nombre de lignes change — c’est-à-dire à chaque
- * retour à la ligne, pas à chaque frappe : un lecteur d’écran qui réciterait
- * un compte à chaque lettre serait inutilisable.
+ * ne change que lorsque le nombre de lignes change — soit toutes les
+ * quatre-vingts frappes environ, jamais à chaque lettre : un lecteur d’écran
+ * qui réciterait un compte à chaque signe serait inutilisable.
+ *
+ * **La barre existe pour cette raison-là.** Depuis que l’on compte les
+ * caractères, la phrase reste identique pendant toute une ligne : sans elle,
+ * un joueur qui écrit ne verrait rien bouger et croirait le compteur bloqué.
+ * Elle est purement visuelle — `aria-hidden` —, la phrase disant déjà tout à
+ * qui écoute.
  *
  * Rien n’est bloqué ici. Le bouton se grise, la route refuse — et c’est elle
  * qui a le dernier mot : le champ se contourne en fermant JavaScript.
@@ -47,18 +57,29 @@ export default function ChampPost({
   const idAvertissement = useId();
   const idAideAvertissement = useId();
 
-  const lignes = useMemo(() => lignesUtiles(valeur), [valeur]);
+  const lignes = useMemo(() => lignesAffichees(valeur), [valeur]);
+
+  // Le verdict vient de `respecteLeMinimum`, jamais d'une comparaison sur les
+  // lignes affichées : celles-ci sont arrondies, et l'arrondi ne doit pas
+  // décider de ce que la route acceptera.
+  const atteint = useMemo(
+    () => respecteLeMinimum(valeur, lignesMinimum),
+    [valeur, lignesMinimum],
+  );
+
+  const avancement = useMemo(
+    () => proportion(valeur, lignesMinimum),
+    [valeur, lignesMinimum],
+  );
 
   const phrase =
     lignesMinimum === null
       ? t.compteur.sansMinimum.replace("{n}", String(lignes))
-      : lignes >= lignesMinimum
+      : atteint
         ? t.compteur.atteint.replace("{n}", String(lignes))
         : t.compteur.surLeMinimum
             .replace("{n}", String(lignes))
             .replace("{min}", String(lignesMinimum));
-
-  const atteint = lignesMinimum === null || lignes >= lignesMinimum;
 
   return (
     <div className="grid gap-5">
@@ -93,6 +114,20 @@ export default function ChampPost({
           <span className="sr-only">{t.compteur.aria} : </span>
           {phrase}
         </p>
+
+        {lignesMinimum === null ? null : (
+          <div
+            aria-hidden="true"
+            className="mt-2 h-[2px] w-full overflow-hidden rounded-full bg-silver/15"
+          >
+            <div
+              className={`h-full transition-[width] duration-300 ${
+                atteint ? "bg-aurora-teal/80" : "bg-silver/50"
+              }`}
+              style={{ width: `${Math.round(avancement * 100)}%` }}
+            />
+          </div>
+        )}
 
         <p id={idAide} className="mt-1 font-body text-xs italic text-silver">
           {t.corps.aideHrp}
