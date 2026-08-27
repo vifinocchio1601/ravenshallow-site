@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { ecrireAuMembre } from "@/lib/corbeaux/courrier";
 import { nettoyerTexteLibre } from "@/lib/texte";
 import { libellePlace, type Fonction, type Maison } from "@/lib/dossier/etats";
+import { adressePortrait } from "@/lib/ecole/portrait";
 import { TEXTES_FORUM } from "./constantes";
 import {
   validerAvertissement,
@@ -390,6 +391,11 @@ export type PostAffiche = {
   auteurId: string | null;
   auteur: string | null;
   maisonAuteur: Maison | null;
+  /**
+   * L'adresse du portrait de l'auteur, ou nul s'il n'en a pas — un compte
+   * effacé, une fiche sans portrait. L'écran montre alors le blason seul.
+   */
+  avatar: string | null;
   place: string;
   corps: string;
   avertissementContenu: string | null;
@@ -486,6 +492,9 @@ export async function lireSujet(
           etatMaison: true,
           fonction: true,
           roleAffiche: true,
+          // Pour l'adresse du portrait : une fiche modifiée change d'adresse,
+          // et le cache du navigateur ne peut pas resservir l'ancienne.
+          majLe: true,
         },
       },
     },
@@ -517,6 +526,7 @@ export async function lireSujet(
         p.auteur && p.auteur.etatMaison === "FAIT"
           ? (p.auteur.maison as Maison | null)
           : null,
+      avatar: p.auteur ? adressePortrait(p.auteurId, p.auteur.majLe) : null,
       place: p.auteur
         ? libellePlace(p.auteur.fonction as Fonction, p.auteur.roleAffiche)
         : "",

@@ -59,14 +59,42 @@ export default function Post({
     <article className="rounded-sm border border-silver/12 bg-mist/40">
       {/* — Qui écrit — */}
       <header className="flex flex-wrap items-center gap-3 border-b border-silver/10 px-5 py-3">
-        <Image
-          src={blason.src}
-          alt={blason.alt}
-          width={blason.largeur}
-          height={blason.hauteur}
-          sizes="24px"
-          className="h-7 w-auto shrink-0"
-        />
+        {/* **L'avatar et le blason, ensemble.** Le portrait dit qui parle, la
+            couleur de maison rend une scène à quatre lisible d'un coup d'œil :
+            l'un sans l'autre perd la moitié de l'information.
+
+            Un `<img>` ordinaire, et non `next/image` : l'optimiseur d'images
+            va chercher la source **depuis le serveur, sans les cookies du
+            lecteur**, et se ferait refuser par une route qui exige une
+            session. Le portrait est déjà recadré et servi avec un cache d'un
+            an — il n'a rien à gagner à repasser par l'optimiseur. */}
+        <span className="relative shrink-0">
+          {post.avatar ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={post.avatar}
+              alt=""
+              width={36}
+              height={36}
+              loading="lazy"
+              decoding="async"
+              className="h-9 w-9 rounded-sm border border-silver/25 object-cover object-top"
+            />
+          ) : null}
+
+          <Image
+            src={blason.src}
+            alt={blason.alt}
+            width={blason.largeur}
+            height={blason.hauteur}
+            sizes={post.avatar ? "18px" : "28px"}
+            className={
+              post.avatar
+                ? "absolute -bottom-1 -right-1 h-[1.15rem] w-auto drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]"
+                : "h-7 w-auto shrink-0"
+            }
+          />
+        </span>
         <div className="min-w-0">
           <p className="truncate font-display text-[0.7rem] uppercase tracking-[0.12em] text-parchment">
             {/* Nul = le compte a été supprimé. Le post reste lisible : effacer

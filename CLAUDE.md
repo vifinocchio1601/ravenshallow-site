@@ -113,6 +113,7 @@ logique ailleurs, l'y ajouter.
 | `lib/forum/lieux.ts` | **qui lit un lieu, qui y ouvre un sujet, qui y répond.** Et la règle qu'une section ne peut que **resserrer** ce que l'espace ouvre |
 | `lib/forum/longueur.ts` | ce qui fait dix lignes — **partagé mot pour mot** entre le compteur du champ et la route. On y compte des **caractères réels**, jamais des retours à la ligne ; le balisage et le hors-RP sont retirés avant comptage |
 | `lib/forum/scenes.ts` | le repère de scènes simultanées, **qui n'oppose rien** |
+| `lib/ecole/portrait.ts` | **l'adresse d'un portrait**, avec l'empreinte qui la rend cachable. Le seul endroit qui la compose |
 | `lib/forum/suppression.ts` | **qui peut retirer quoi** — une scène, son post — et ce qu'il en reste. Pur, sans base : l'écran et la route posent la même question |
 | `lib/forum/depot.ts` | l'accès au forum. Filtre en **appelant** `peutLireLeLieu`, jamais en recopiant sa condition dans un `where` |
 | `lib/forum/schema.ts` | ce qu'un titre, un post et un avertissement ont le droit d'être — **partagé mot pour mot** entre le champ et la route |
@@ -778,6 +779,35 @@ masquage : il est rapporté, comme pour les courriels.
 
 **Masquer relève du staff, et d'aucune permission attribuable.** Ce n'est pas
 un pouvoir qu'on accorde à la carte — ne pas l'ajouter à `Permission`.
+
+### L'avatar dans les scènes
+
+Chaque post porte **le portrait de son auteur et le blason de sa maison** — le
+premier dit qui parle, le second rend une scène à quatre lisible d'un coup
+d'œil. Décision du joueur, 27 août 2026 : les deux, jamais l'un sans l'autre.
+
+⚠️ **Les portraits sont stockés en base, en texte encodé** — celui de la
+directrice pèse 207 Ko. Le schéma prétend le contraire (« stockée sur Vercel
+Blob ») : **c'est faux**, et ça ne l'a jamais été. Tant qu'un portrait ne
+s'affichait que sur sa propre fiche, cela ne se voyait pas.
+
+Dans une scène, cela devenait un demi-méga recopié **dans chaque page, à
+chaque chargement**, sans que le navigateur puisse rien garder. D'où
+`/api/portraits/[id]` : le portrait redevient une adresse, téléchargée une
+fois par personne et gardée un an.
+
+- **L'adresse porte une empreinte** — `?v=<majLe>` — composée par
+  `adressePortrait`, seul endroit qui la connaisse. Une fiche modifiée change
+  d'adresse : le cache d'hier ne peut pas resservir un portrait d'avant, et
+  c'est ce qui permet de le déclarer `immutable` sans jamais mentir.
+- **Un `<img>` ordinaire, pas `next/image`.** L'optimiseur va chercher la
+  source **depuis le serveur, sans les cookies du lecteur**, et se ferait
+  refuser par une route qui exige une session. Ne pas le « corriger ».
+- **La route est le premier pas vers un stockage externe.** Le jour où les
+  portraits partiront sur Vercel Blob, ce fichier et `portrait.ts` changeront
+  — et rien d'autre.
+
+---
 
 ### Reprendre son post — art. 6.4
 
