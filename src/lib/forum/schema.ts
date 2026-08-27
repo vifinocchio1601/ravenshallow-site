@@ -1,15 +1,23 @@
+import "server-only";
 import { nettoyerTexteLibre, nettoyerUneLigne } from "@/lib/texte";
 import { TEXTES_FORUM } from "./constantes";
-import { lignesManquantes, respecteLeMinimum } from "./longueur";
+import { AVERTISSEMENT_MAX, POST_MAX, TITRE_MAX } from "./limites";
+import { lignesManquantes, respecteLeMinimum, texteQuiCompte } from "./longueur";
+import { nettoyerHtml } from "./nettoyer-html";
 
 /**
  * Ce qu’un titre, un post et un avertissement ont le droit d’être.
  *
- * **Seule source de vérité de la validation**, partagée mot pour mot entre le
- * champ de saisie et la route d’API. Pas de `server-only` : le champ en a
- * besoin pour compter les lignes pendant la frappe, et une règle recopiée des
- * deux côtés finit toujours par diverger — un joueur verrait « 10 lignes » à
- * l’écran et se ferait refuser son post.
+ * **Seule source de vérité de la validation**, et **seule porte par laquelle
+ * un post entre en base** : `validerPost` nettoie le balisage lui-même, si
+ * bien qu’aucune route ne peut l’oublier. C’est le parti pris
+ * d’`envoyerCorbeau`, appliqué au forum.
+ *
+ * **`server-only` depuis que le nettoyage y vit.** Ce que le champ de saisie
+ * partage encore avec la route — le comptage — a été laissé dans
+ * `longueur.ts`, et les plafonds dans `limites.ts` : ces deux-là restent
+ * lisibles des deux côtés, et c’est ce qui empêche l’écran et le serveur de
+ * se contredire.
  *
  * La base porte les mêmes limites, **en plus grossier** : au moins un signe
  * qui ne soit pas un blanc, et pas plus de tant. Elle n’arrête que ce qui
@@ -17,11 +25,7 @@ import { lignesManquantes, respecteLeMinimum } from "./longueur";
  * script, une commande tapée à la main. Le travail fin est ici.
  */
 
-/** Alignés sur les contraintes `CHECK` de `20260826120000_forum`. */
-export const TITRE_MAX = 140;
-export const POST_MAX = 60000;
-/** Une mention, pas une explication : « violence », « deuil ». */
-export const AVERTISSEMENT_MAX = 120;
+export { AVERTISSEMENT_MAX, POST_MAX, TITRE_MAX };
 
 export type Resultat<T> =
   | { ok: true; valeur: T }
@@ -64,9 +68,18 @@ export function validerPost(
   lignesMinimum: number | null,
 ): Resultat<string> {
   if (typeof brut !== "string") return { ok: false, message: E.corpsVide };
-  const net = nettoyerTexteLibre(brut);
 
-  if (net.length === 0) return { ok: false, message: E.corpsVide };
+  // Deux ménages, et l'ordre compte. Le premier retire les caractères de
+  // contrôle, que le nettoyeur de balisage laisserait passer. Le second
+  // réduit le balisage à la liste blanche — et c'est lui qui protège.
+  const net = nettoyerHtml(nettoyerTexteLibre(brut));
+
+  // Le vide se juge sur le TEXTE, pas sur la chaîne : « <p></p> » pèse sept
+  // signes et ne dit rien. Sans cela, un post vide passerait chez les
+  // non-mages, où aucun minimum ne le rattraperait.
+  if (texteQuiCompte(net).length === 0) {
+    return { ok: false, message: E.corpsVide };
+  }
   if (net.length > POST_MAX) {
     return {
       ok: false,

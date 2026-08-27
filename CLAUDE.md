@@ -115,6 +115,8 @@ logique ailleurs, l'y ajouter.
 | `lib/forum/depot.ts` | l'accès au forum. Filtre en **appelant** `peutLireLeLieu`, jamais en recopiant sa condition dans un `where` |
 | `lib/forum/schema.ts` | ce qu'un titre, un post et un avertissement ont le droit d'être — **partagé mot pour mot** entre le champ et la route |
 | `lib/texte.ts` | le ménage sur un texte libre écrit par un joueur, **partagé** par les corbeaux et par les posts |
+| `lib/forum/mise-en-forme.ts` | **ce qu'un joueur a le droit de faire à son texte** — les outils, la palette, et les classes qu'ils produisent. Les listes de classes sont **déduites** des outils |
+| `lib/forum/nettoyer-html.ts` | la **liste blanche** du balisage — `server-only`, appelée à l'enregistrement et à l'affichage. Rien d'autre ne protège du HTML d'un joueur |
 
 **L'accès se joue à deux étages**, tous deux dans `acces.ts` :
 
@@ -892,6 +894,78 @@ Inc., 440 N Barranca Ave #4133, Covina, CA 91723, relevée sur leurs conditions
 le 27 août 2026. Neon (Francfort) et Gmail sont cités dans la politique de
 confidentialité comme sous-traitants, pas dans les mentions légales : l'hébergeur
 du *site* est Vercel.
+
+---
+
+## La mise en forme des posts
+
+Posée le 27 août 2026, sur le forum et chez les non-mages. **La Tour aux
+Corbeaux reste en texte brut** — décision du joueur : c'est le seul endroit
+que le staff ne relit pas, et y laisser passer du balisage ouvrirait une
+surface là où personne ne regarde.
+
+**Le corps d'un post est désormais du HTML.** C'était du texte échappé par
+React et mis en paragraphes par `whitespace-pre-wrap` ; la migration
+`20260827150000_posts_en_balisage` a converti l'existant. Le seul
+`dangerouslySetInnerHTML` du projet est dans `Post.tsx`, et il ne reçoit
+jamais que la sortie de `nettoyerHtml`.
+
+**Trois principes, et aucun n'est négociable :**
+
+- **Liste blanche, jamais liste noire.** Dix balises, quatre attributs, trois
+  schémas d'adresse. Tout le reste tombe, y compris ce qui n'existe pas
+  encore. Même parti pris que `robots.ts`.
+- **Le serveur ne fait jamais confiance au navigateur.** La barre ne produit
+  que du permis, mais elle se contourne en appelant la route à la main.
+- **On nettoie à l'enregistrement ET à l'affichage.** Le premier passage
+  protège la base, le second protège l'écran de tout ce qui aurait pu entrer
+  autrement. Un essai vérifie que **nettoyer deux fois ne change rien**, sans
+  quoi un post se réécrirait à chaque lecture.
+
+**`validerPost` est la seule porte**, et c'est pour cela que `forum/schema.ts`
+est devenu `server-only` : le nettoyage s'y fait, donc aucune route ne peut
+l'oublier. Ce que le champ partage encore avec le serveur — le comptage — vit
+dans `longueur.ts`, et les plafonds dans `limites.ts` : ces deux-là restent
+lisibles des deux côtés.
+
+**Ni styles, ni nuancier — et l'éditeur ne sait pas en produire.** Les
+extensions officielles de Tiptap posent `style="color:…"` ; les nôtres posent
+une classe prise dans la palette, et rien d'autre. Idem pour l'alignement,
+réécrit pour la même raison. **Ne pas les remplacer par les extensions
+officielles** : ce serait rouvrir l'attribut `style`.
+
+**Sept couleurs, toutes mesurées.** Les quatre couleurs de maison de la
+palette **ne sont pas** celles des blasons : Kaldrafn tombait à 4,35:1 et
+Nattorm à 4,17:1 comme texte, sous le seuil de 4,5. Les variantes retenues
+tiennent **5,05:1 au minimum sur les quatre fonds du site**.
+`mise-en-forme.test.ts` **relit `globals.css`** et refait le calcul — éprouvé
+en y remettant la couleur du blason, il tombe. Il vérifie aussi que chaque
+classe permise est bien stylée : une classe acceptée mais sans effet serait un
+piège silencieux.
+
+**Ce que l'éditeur ne propose pas, la liste blanche ne l'accepte pas.** Ni
+titres, ni listes, ni code : ils ne figurent pas dans les outils demandés, et
+les laisser accessibles au clavier — `#`, `- ` — ferait disparaître le travail
+du joueur à la publication.
+
+⚠️ **`onMouseDown` refuse son effet par défaut sur chaque bouton de la barre**,
+et ce n'est pas un détail de style : sans lui, le clic donne le focus au
+bouton, la sélection est perdue, la commande s'applique à côté et la frappe
+suivante part dans le bouton. Constaté à l'écran — une phrase entière
+disparaissait. Le clic naît du relâchement, il se déclenche quand même.
+
+La barre est un vrai `role="toolbar"` à **tabindex glissant** : une seule
+étape à la tabulation, les flèches circulent dedans. Vingt-trois arrêts entre
+le champ et le bouton « Publier » rendraient l'écriture au clavier
+insupportable. Chaque bouton porte un nom d'action en toutes lettres —
+« Mettre en gras », jamais « B » — et les bascules annoncent `aria-pressed`.
+
+**Les pastilles de couleur de la barre prennent leur teinte dans la variable
+CSS**, pas dans la classe : celle-ci est bornée à `.post-rendu`, ce qui
+l'empêche de peindre le reste de la page — et la barre n'en fait pas partie.
+Elles étaient toutes grises avant qu'on s'en aperçoive.
+
+**Coût** : Tiptap fait passer les deux pages du forum de 100 à 235 Ko.
 
 ---
 

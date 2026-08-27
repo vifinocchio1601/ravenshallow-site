@@ -1,6 +1,7 @@
 "use client";
 
 import { useId, useMemo } from "react";
+import EditeurPost from "./EditeurPost";
 import { TEXTES_FORUM } from "@/lib/forum/constantes";
 import {
   lignesAffichees,
@@ -84,21 +85,23 @@ export default function ChampPost({
   return (
     <div className="grid gap-5">
       <div>
-        <label
-          htmlFor={idCorps}
-          className="font-display text-[0.66rem] uppercase tracking-[0.14em] text-parchment-dim"
+        {/* Un `<label for>` ne désigne pas la zone d'écriture, qui n'est plus
+            un `textarea` : c'est `aria-labelledby` qui fait le lien, et cet
+            élément n'a donc pas à être un `<label>`. */}
+        <span
+          id={idCorps}
+          className="block font-display text-[0.66rem] uppercase tracking-[0.14em] text-parchment-dim"
         >
           {reponse ? t.corps.libelleReponse : t.corps.libelle}
-        </label>
+        </span>
 
-        <textarea
-          id={idCorps}
-          value={valeur}
-          onChange={(e) => onChange(e.target.value)}
-          disabled={desactive}
-          rows={reponse ? 10 : 14}
-          aria-describedby={`${idCompteur} ${idAide}`}
-          className="mt-2 w-full rounded-sm border border-silver/25 bg-mist/60 px-4 py-3 font-body text-base leading-[1.8] text-parchment transition-colors duration-300 hover:border-silver/40 focus:border-aurora-teal/70 disabled:opacity-60"
+        <EditeurPost
+          valeur={valeur}
+          onChange={onChange}
+          idEtiquette={idCorps}
+          idDescription={`${idCompteur} ${idAide}`}
+          desactive={desactive}
+          hauteur={reponse ? "min-h-[12rem]" : "min-h-[18rem]"}
         />
 
         {/* Le compteur. `role="status"` le rend poli : il ne coupe jamais la

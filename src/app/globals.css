@@ -1459,3 +1459,95 @@
   font-style: italic;
   margin: 0 0 2.4rem;
 }
+
+/* ─────────────────────────────────────────────────────────────
+   La mise en forme des posts
+
+   Sept couleurs, et pas une de plus. Un nuancier libre laisserait un joueur
+   choisir un rouge sombre illisible sur ce fond-là, et personne ne pourrait
+   le lire — pas même lui, une fois publié.
+
+   ⚠️ Les quatre premières NE SONT PAS les couleurs de maison de
+   `tailwind.config.ts`. Ce sont leurs variantes lisibles : les valeurs
+   d'origine passaient sous le seuil de contraste dès qu'on s'en servait comme
+   texte (Kaldrafn 4,35:1, Nattorm 4,17:1, pour 4,5 exigés). Elles ont été
+   éclaircies jusqu'à **5,05:1 au minimum sur les quatre fonds du site** —
+   `void`, le fond d'un post, `mist` et `mist-2`. Ne pas les « corriger » vers
+   les valeurs des blasons : ce serait rendre illisibles deux maisons sur
+   quatre. `mise-en-forme.test.ts` relit ce fichier et refait le calcul.
+
+   Les classes sont préfixées `rs-` et **n'agissent qu'à l'intérieur d'un
+   post rendu** : une classe échappée ailleurs sur la page ne peint rien.
+   ───────────────────────────────────────────────────────────── */
+
+:root {
+  --rs-c-kaldrafn: #7ba2bf;
+  --rs-c-nattorm: #ad8fe2;
+  --rs-c-bryggeld: #d18f5a;
+  --rs-c-tideal: #3eaea1;
+  --rs-c-parchemin: #e9e1cd;
+  --rs-c-parchemin-2: #d5c9ac;
+  --rs-c-argent: #8ea0b3;
+}
+
+.post-rendu > :first-child {
+  margin-top: 0;
+}
+
+.post-rendu > :last-child {
+  margin-bottom: 0;
+}
+
+.post-rendu p {
+  margin: 0 0 0.9em;
+}
+
+.post-rendu .rs-c-kaldrafn { color: var(--rs-c-kaldrafn); }
+.post-rendu .rs-c-nattorm { color: var(--rs-c-nattorm); }
+.post-rendu .rs-c-bryggeld { color: var(--rs-c-bryggeld); }
+.post-rendu .rs-c-tideal { color: var(--rs-c-tideal); }
+.post-rendu .rs-c-parchemin { color: var(--rs-c-parchemin); }
+.post-rendu .rs-c-parchemin-2 { color: var(--rs-c-parchemin-2); }
+.post-rendu .rs-c-argent { color: var(--rs-c-argent); }
+
+/* Trois tailles, en `em` : elles suivent le corps du post au lieu de le
+   contredire, et restent lisibles quand le lecteur agrandit sa page. */
+.post-rendu .rs-t-grand { font-size: 1.15em; }
+.post-rendu .rs-t-petit { font-size: 0.86em; }
+
+.post-rendu .rs-a-gauche { text-align: left; }
+.post-rendu .rs-a-centre { text-align: center; }
+.post-rendu .rs-a-droite { text-align: right; }
+.post-rendu .rs-a-justifie { text-align: justify; }
+
+.post-rendu blockquote {
+  margin: 1.1em 0;
+  padding: 0.1em 0 0.1em 1.1em;
+  border-left: 2px solid rgb(142 160 179 / 0.35);
+  color: var(--silver);
+  font-style: italic;
+}
+
+.post-rendu hr {
+  margin: 1.6em 0;
+  border: 0;
+  border-top: 1px solid rgb(142 160 179 / 0.22);
+}
+
+.post-rendu a {
+  color: var(--aurora-teal);
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+  text-decoration-color: rgb(63 217 199 / 0.45);
+}
+
+.post-rendu a:hover {
+  text-decoration-color: var(--aurora-teal);
+}
+
+/* Les retours à la ligne d'un post viennent de son balisage, jamais d'un
+   `white-space` : un post rendu en HTML n'a plus besoin de `pre-wrap`, et le
+   garder ferait ressortir l'indentation du balisage lui-même. */
+.post-rendu {
+  white-space: normal;
+}

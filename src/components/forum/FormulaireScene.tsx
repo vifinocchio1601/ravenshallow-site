@@ -5,7 +5,7 @@ import { useId, useState } from "react";
 import ChampPost from "@/components/forum/ChampPost";
 import { TEXTES_FORUM } from "@/lib/forum/constantes";
 import { respecteLeMinimum } from "@/lib/forum/longueur";
-import { TITRE_MAX } from "@/lib/forum/schema";
+import { TITRE_MAX } from "@/lib/forum/limites";
 
 /**
  * Ouvrir une scène, ou répondre dans celle-ci — le même formulaire.

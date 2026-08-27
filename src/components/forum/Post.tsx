@@ -1,6 +1,8 @@
 import Image from "next/image";
 import { ActionsPost } from "@/components/forum/ActionsStaff";
 import { blasonDe } from "@/lib/ecole/blasons";
+import { CLASSE_CONTENEUR } from "@/lib/forum/mise-en-forme";
+import { nettoyerHtml } from "@/lib/forum/nettoyer-html";
 import { TEXTES_FORUM } from "@/lib/forum/constantes";
 import type { PostAffiche } from "@/lib/forum/depot";
 
@@ -100,10 +102,22 @@ export default function Post({
           </p>
         ) : null}
 
+        {/* ── Le second nettoyage, et il n'est pas superflu ──
+
+            Le premier a eu lieu à l'enregistrement, dans `validerPost`. Celui-ci
+            protège l'écran de tout ce qui aurait pu entrer autrement : une
+            reprise de données, une requête forgée contre une version plus
+            ancienne, une règle assouplie un jour de fatigue. C'est le seul
+            `dangerouslySetInnerHTML` du projet, et il ne reçoit jamais que la
+            sortie de `nettoyerHtml`.
+
+            La classe `post-rendu` porte les styles de la mise en forme, et
+            **les borne** : hors d'elle, une classe de post ne peint rien. */}
         {peutLireLeTexte ? (
-          <div className="whitespace-pre-wrap font-body leading-[1.85] text-parchment-dim">
-            {post.corps}
-          </div>
+          <div
+            className={`${CLASSE_CONTENEUR} font-body leading-[1.85] text-parchment-dim`}
+            dangerouslySetInnerHTML={{ __html: nettoyerHtml(post.corps) }}
+          />
         ) : null}
       </div>
 
