@@ -630,10 +630,25 @@ Trois choses arbitrées avant de les écrire, et inscrites dans la migration :
 
 Deux descriptions demandent de la prudence :
 
-- **Les souterrains** rappellent l'article 13.1 en toutes lettres et ne disent
-  **rien** de ce que le sceau retient — la bible marque ce contenu
-  « confidentiel staff », et une description de lieu est un document que les
-  joueurs lisent.
+- **Les souterrains ne nomment plus rien du tout.** Ils rappelaient l'article
+  13.1 en toutes lettres ; le joueur l'a retiré le 27 août 2026, et sa
+  décision vaut pour les vingt-cinq textes : **une description de lieu ne
+  nomme ni la grotte ni le sceau, pas même pour en interdire l'approche.**
+
+  Deux raisons, et la seconde est la vraie. Le texte n'était plus une pièce
+  mais un panneau d'interdiction, quand les seize autres décrivent un lieu. Et
+  surtout il **désignait l'endroit** : rappeler la règle dans cette pièce-là,
+  c'est dire où elle s'applique, donc où regarder. **Un interdit posé sur une
+  porte est une flèche.**
+
+  La règle n'en est pas affaiblie : l'article 13.1 vit dans le règlement,
+  approuvé à l'inscription, et oblige sans avoir besoin d'être répété. Le
+  remède retenu n'est pas le mystère mais **l'ennui** — des casiers vides, de
+  la poussière, rien à y chercher. Une pièce intrigante appelle ; une pièce
+  terne est le meilleur des verrous.
+
+  Vérifié le 27 août 2026 : **zéro des vingt-cinq textes** ne nomme l'un ou
+  l'autre. Le vérifier de nouveau après toute écriture de lieu.
 - **La Tour aux Corbeaux** est ce lieu-ci **et** le nom de la messagerie.
   C'est voulu. Sa description reste dans le monde : elle dit que tout le monde
   y monte, elle ne parle pas du site.
