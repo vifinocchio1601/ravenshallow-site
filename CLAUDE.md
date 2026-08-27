@@ -575,8 +575,27 @@ Trois choses arbitrées avant de les écrire, et inscrites dans la migration :
   salle c'est Harry Potter ». La bible range la ressemblance avec les univers
   de magie existants parmi les **interdits** (§13), et le vocabulaire suit la
   même règle que les visuels. La pièce s'appelle **La Salle de Banquet**, et
-  ce nom ne se confond avec rien. Sa description a changé aussi : elle ouvrait
-  sur « Quatre longues tables », qui était la même image empruntée.
+  ce nom ne se confond avec rien. **Le nom, lui, ne bouge plus.**
+
+  Sa description, en revanche, est revenue en arrière le 27 août 2026
+  (`20260827100000_salle_de_banquet_accordee`). Elle avait perdu « Quatre
+  longues tables » comme étant l'image qu'on fuit — mais le motif visait à
+  côté : **le texte de la Cérémonie du Miroir contient déjà les quatre tables
+  et le ciel au plafond**, et il est en ligne depuis des semaines. Seule la
+  description de la pièce les évitait, si bien que la salle décrite n'était
+  pas celle qu'on traverse le soir du Miroir. Décision du joueur : aligner la
+  pièce sur la Cérémonie, qui ne bouge pas d'une virgule. **Deux textes qui se
+  contredisent coûtent plus cher qu'une image reconnaissable.**
+
+  Le ciel y reste **exceptionnel** — une nuit par an —, et ce n'est pas un
+  adoucissement : la Cérémonie le dit elle-même, « ce n'est pas le ciel du
+  dehors, c'est celui que le château a décidé de vous montrer ce soir ». Une
+  description permanente qui l'annoncerait tous les jours la contredirait.
+
+  Au passage, « la veillée des braises » a disparu : je l'avais inventée, elle
+  n'est nulle part dans la bible. **Une invention glissée dans une description
+  de lieu devient du lore par la porte de service** — c'est le risque de ces
+  vingt textes, et la raison pour laquelle le joueur les relit un par un.
 - **Les ailes est et ouest ont été inversées** par rapport à la première
   liste : la carte fait autorité (bible §2, art. 12.4), et sa rose des vents
   met la mer à l'**est**, la forêt à l'**ouest**. Les appariements maison/vue
