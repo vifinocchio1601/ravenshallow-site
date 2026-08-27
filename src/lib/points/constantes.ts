@@ -24,6 +24,7 @@ export const TEXTES_POINTS = {
       saisonFermee:
         "Aucune saison n’est ouverte : il n’y a pas de compteur à corriger.",
       introuvable: "Cet ajustement n’existe pas, ou a déjà été annulé.",
+      eleveIntrouvable: "Ce membre n’existe pas, ou son dossier n’est pas accepté.",
     },
   },
 
@@ -180,7 +181,7 @@ export const TEXTES_POINTS = {
     },
 
     formulaire: {
-      titre: "Ajouter ou retirer des points",
+      titre: "Ajouter ou retirer des points à une maison",
       aide: "Un nombre positif ajoute, un nombre négatif retire. Le motif s’affichera dans l’historique, visible de tous.",
       maison: "Maison",
       points: "Points",
@@ -196,6 +197,43 @@ export const TEXTES_POINTS = {
         "Entorse au règlement en jeu",
         "Correction d’une erreur de comptage",
       ],
+    },
+
+    /** Donner des points à quelqu’un — art. 18.1. */
+    don: {
+      titre: "Donner des points à un joueur",
+      aide: "Pour une belle scène, la présence à un événement, la qualité d’écriture (art. 18.1) — tout ce qu’aucun compteur ne sait mesurer et qui se voit à la lecture.",
+      /** La différence avec l’ajustement de maison, dite une fois pour toutes. */
+      difference:
+        "Ces points-là vont dans les deux compteurs : la progression du joueur et le compteur de sa maison (art. 18.2). L’ajustement ci-dessus, lui, ne touche que la maison. Un joueur sans maison garde ses points sans que personne n’en profite au tournoi.",
+      joueur: "Joueur",
+      points: "Points",
+      pointsAide: "Positif pour donner, négatif pour reprendre.",
+      motif: "Motif",
+      motifPlaceholder: "Ce que le joueur lira dans l’historique…",
+      envoyer: "Accorder les points",
+      /** « Sigrid Vale — Bryggeld · 34 pts » dans la liste déroulante. */
+      option: "{nom} — {maison} · {points} pts",
+      sansMaison: "sans maison",
+      aucunEleve: "Aucun dossier accepté pour l’instant.",
+      suggestions: [
+        "Belle scène",
+        "Qualité d’écriture",
+        "Présence à un événement",
+        "Accueil d’un nouvel arrivant",
+        "Correction d’une erreur de comptage",
+      ],
+    },
+
+    historiqueDesDons: {
+      titre: "Les points accordés à la main",
+      aide: "Ce qui a été donné, à qui, et pourquoi. Reprendre n’efface rien : la ligne reste, barrée.",
+      vide: "Aucun point accordé à la main pour l’instant.",
+      reprendre: "Reprendre",
+      reprendreAria: "Reprendre les {points} points accordés à {nom}",
+      repris: "Repris",
+      /** Quand la fiche a été supprimée depuis. */
+      membreParti: "Un membre qui n’est plus là",
     },
 
     historique: {

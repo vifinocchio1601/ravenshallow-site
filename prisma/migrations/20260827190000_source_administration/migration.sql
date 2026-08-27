@@ -1,0 +1,32 @@
+-- Une quatrième provenance pour un point : la main de l'administration.
+--
+-- Jusqu'ici, un point ne pouvait naître que d'un post. Le joueur a demandé de
+-- pouvoir en accorder à quelqu'un — pour une belle scène, un événement, une
+-- qualité d'écriture (art. 18.1), toutes choses qu'aucun compteur ne sait
+-- mesurer et qui se voient à la lecture.
+--
+-- **Ce n'est PAS un ajustement de maison.** Les deux gestes se ressemblent et
+-- ne font pas la même chose :
+--
+--   `ajustements_maison`      — la maison seule, personne en particulier
+--   `points_gagnes` + ici     — un élève, et sa maison avec lui
+--
+-- Le second est un point au sens de l'article 18.2 : « ces points alimentent
+-- la progression individuelle ET le compteur de la maison ». Il entre donc
+-- dans le carnet, comme les autres, et se recalcule avec eux.
+--
+-- ⚠️ **Seule dans sa migration**, et il le faut : Postgres n'accepte une
+-- nouvelle valeur d'enum qu'après validation de la transaction qui l'ajoute.
+-- La contrainte qui s'y réfère vit donc dans la migration suivante. Même
+-- précaution qu'au lot des pouvoirs, où quatre événements de journal ont dû
+-- attendre un fichier de plus.
+
+-- ⚠️ **`IF NOT EXISTS`**, et ce n'est pas de la coquetterie : la valeur a été
+-- posée sur la base pendant qu'on éprouvait cette migration à blanc, et
+-- Postgres ne sait pas retirer une valeur d'un enum — il faut recréer le type
+-- entier. Sans cette clause, `migrate deploy` échouerait sur un « already
+-- exists » et s'arrêterait là, laissant les migrations suivantes en attente.
+--
+-- La clause est de toute façon le bon réflexe pour un enum : c'est la seule
+-- forme d'`ALTER TYPE` qui se rejoue sans dommage.
+ALTER TYPE "SourcePoint" ADD VALUE IF NOT EXISTS 'ADMINISTRATION';

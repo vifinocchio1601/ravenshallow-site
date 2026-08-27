@@ -4,8 +4,10 @@ import { revalidatePath } from "next/cache";
 import { MAISONS, type Maison } from "@/lib/dossier/etats";
 import { TEXTES_POINTS } from "@/lib/points/constantes";
 import {
+  accorderDesPointsAUnEleve,
   ajusterLaMaison,
   annulerLAjustement,
+  reprendreLesPointsAccordes,
   saisonEnCours,
 } from "@/lib/points/depot";
 
@@ -83,5 +85,47 @@ export async function annulerAjustementAction(donnees: FormData) {
   if (!id) return;
 
   await annulerLAjustement(id, AUTEUR);
+  rafraichir();
+}
+
+export type EtatDon = { erreur: string | null; fait: boolean };
+
+/**
+ * **Donner des points à un joueur** — art. 18.1.
+ *
+ * À ne pas confondre avec `ajusterAction`, juste au-dessus : celle-ci vise un
+ * élève et alimente **les deux compteurs** (art. 18.2), celle-là vise une
+ * maison et n’alimente que le sien. Deux gestes voisins, deux effets
+ * différents, et c’est pour cela qu’ils portent deux formulaires distincts
+ * plutôt qu’un seul avec un interrupteur.
+ */
+export async function donnerAction(
+  _precedent: EtatDon,
+  donnees: FormData,
+): Promise<EtatDon> {
+  const eleveId = String(donnees.get("eleveId") ?? "");
+  const brut = String(donnees.get("points") ?? "").trim();
+  const motif = String(donnees.get("motif") ?? "");
+
+  const E = TEXTES_POINTS.ajustement.erreurs;
+  if (!eleveId) return { erreur: E.eleveIntrouvable, fait: false };
+
+  // `Number()` rend `0` pour une chaîne vide : sans ce garde, un champ laissé
+  // vide se lirait comme un don de zéro point.
+  const points = brut === "" ? Number.NaN : Number(brut);
+
+  const resultat = await accorderDesPointsAUnEleve(eleveId, points, motif, AUTEUR);
+  if (!resultat.ok) return { erreur: resultat.message, fait: false };
+
+  rafraichir();
+  return { erreur: null, fait: true };
+}
+
+/** Reprendre ce qui a été donné. La ligne reste, barrée. */
+export async function reprendreDonAction(donnees: FormData) {
+  const id = String(donnees.get("id") ?? "");
+  if (!id) return;
+
+  await reprendreLesPointsAccordes(id);
   rafraichir();
 }

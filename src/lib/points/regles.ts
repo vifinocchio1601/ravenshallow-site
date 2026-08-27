@@ -61,32 +61,46 @@ export type EtatDuPlafond =
 /**
  * Où en est ce joueur de son plafond ?
  *
- * `gainsRecents` porte les instants des points **déjà inscrits au carnet**,
- * reprises comprises. Un point retiré parce que son post a été masqué ne
- * rend pas sa place dans la journée : le post a bien été écrit, et le plafond
- * mesure ce qu’on écrit, pas ce qui a été validé.
+ * `gainsRecents` porte les points **déjà inscrits au carnet**, reprises
+ * comprises. Un point retiré parce que son post a été masqué ne rend pas sa
+ * place dans la journée : le post a bien été écrit, et le plafond mesure ce
+ * qu’on écrit, pas ce qui a été validé.
+ *
+ * ⚠️ **Ce sont des POINTS qu’on additionne, pas des lignes.** Tant qu’un post
+ * vaut un point, les deux reviennent au même — mais le réglage s’appelle
+ * « points par jour », et il doit dire vrai le jour où un QCM en vaudra deux.
+ * Compter les lignes laisserait passer vingt points sous un plafond de dix.
+ *
+ * ⚠️ **Les points accordés à la main n’entrent PAS dans cette liste**, et
+ * c’est l’appelant qui les écarte. Le plafond existe pour qu’un seul membre
+ * très actif ne fasse pas gagner sa maison à lui seul ; un geste délibéré de
+ * l’administration n’est pas cela, il n’a donc ni à le remplir ni à s’y heurter.
  */
 export function etatDuPlafond(
-  gainsRecents: readonly (Date | string)[],
+  gainsRecents: readonly { gagneLe: Date | string; points: number }[],
   maintenant: Date,
 ): EtatDuPlafond {
   if (PLAFOND_PAR_JOUR === null) return { atteint: false, restants: null };
 
-  const instants = gainsRecents
-    .map((d) => new Date(d).getTime())
-    .filter((t) => !Number.isNaN(t) && maintenant.getTime() - t < UN_JOUR)
-    // De la plus récente à la plus ancienne : la N-ième en partant de
-    // maintenant est celle dont l'expiration libère une place.
-    .sort((a, b) => b - a);
+  const gains = gainsRecents
+    .map((g) => ({ instant: new Date(g.gagneLe).getTime(), points: g.points }))
+    .filter(
+      (g) => !Number.isNaN(g.instant) && maintenant.getTime() - g.instant < UN_JOUR,
+    )
+    // De la plus récente à la plus ancienne : on accumule en remontant le
+    // temps, et le gain qui fait franchir le plafond est celui dont
+    // l’expiration libère la place.
+    .sort((a, b) => b.instant - a.instant);
 
-  if (instants.length < PLAFOND_PAR_JOUR) {
-    return { atteint: false, restants: PLAFOND_PAR_JOUR - instants.length };
+  let cumul = 0;
+  for (const gain of gains) {
+    cumul += gain.points;
+    if (cumul >= PLAFOND_PAR_JOUR) {
+      return { atteint: true, reprendLe: new Date(gain.instant + UN_JOUR) };
+    }
   }
 
-  return {
-    atteint: true,
-    reprendLe: new Date(instants[PLAFOND_PAR_JOUR - 1]! + UN_JOUR),
-  };
+  return { atteint: false, restants: PLAFOND_PAR_JOUR - cumul };
 }
 
 // ─────────────────────────────────────────────────────────────

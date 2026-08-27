@@ -119,21 +119,23 @@ export async function accorderLePointDUnPost(
   const saison = await saisonEnCours(tx);
   if (!saison) return { gagne: false, raison: "LIEU_SANS_POINTS" };
 
+  // **Ce qui vient du jeu, et rien d'autre.** Un point accordé à la main par
+  // l'administration n'a pas à remplir le plafond de quelqu'un : celui-ci
+  // existe pour qu'un seul membre très actif ne fasse pas gagner sa maison à
+  // lui seul, et un geste délibéré n'est pas cela.
   const recents = await tx.pointGagne.findMany({
     where: {
       eleveId: auteur.eleveId,
+      source: { not: "ADMINISTRATION" },
       gagneLe: { gte: new Date(maintenant.getTime() - 24 * 60 * 60 * 1000) },
     },
-    select: { gagneLe: true },
+    select: { gagneLe: true, points: true },
   });
 
   const verdict = pointDUnPost({
     comptePourLesPoints,
     respecteLeMinimum,
-    plafond: etatDuPlafond(
-      recents.map((r) => r.gagneLe),
-      maintenant,
-    ),
+    plafond: etatDuPlafond(recents, maintenant),
   });
   if (!verdict.gagne) return verdict;
 
@@ -264,6 +266,169 @@ async function crediterLaMaison(
     update: { points: { increment: ecart } },
     create: { saisonId, maison, points: ecart },
   });
+}
+
+// ─────────────────────────────────────────────────────────────
+//  Accorder des points à un élève, à la main — art. 18.1
+// ─────────────────────────────────────────────────────────────
+
+export type ResultatDon =
+  | { ok: true; id: string; maison: Maison | null }
+  | { ok: false; message: string };
+
+/**
+ * **Donner des points à quelqu’un.**
+ *
+ * L’article 18.1 fait gagner des points par « la participation aux cours, la
+ * présence aux événements et la qualité d’écriture ». Les deux premières
+ * viendront avec les cours ; la troisième ne se mesure pas, elle se lit — d’où
+ * ce geste, demandé par le joueur.
+ *
+ * ⚠️ **À ne pas confondre avec `ajusterLaMaison`**, qui lui ressemble et ne
+ * fait pas la même chose :
+ *
+ *     ajusterLaMaison            — une maison, et le compteur du tournoi seul
+ *     accorderDesPointsAUnEleve  — un élève, et **les deux compteurs**
+ *
+ * Le second est un point au sens de l’article 18.2 — « ces points alimentent
+ * la progression individuelle ET le compteur de la maison ». Il entre donc
+ * dans le carnet comme un point de post, se recalcule avec eux, et suit son
+ * élève : s’il ne marque pour personne, sa maison ne reçoit rien.
+ *
+ * **Le plafond quotidien ne s’applique pas.** Il ralentit un joueur très
+ * actif ; il n’a pas à brider une décision prise en connaissance de cause.
+ *
+ * Le motif est **obligatoire**, ici et en base : ces points s’affichent, et
+ * personne ne doit les trouver sans explication.
+ */
+export async function accorderDesPointsAUnEleve(
+  eleveId: string,
+  points: number,
+  motif: string,
+  parNom: string = TEXTES_POINTS.ajustement.parDefautAuteur,
+): Promise<ResultatDon> {
+  const E = TEXTES_POINTS.ajustement.erreurs;
+
+  if (!Number.isFinite(points) || points === 0) {
+    return { ok: false, message: E.valeurRequise };
+  }
+  if (!Number.isInteger(points)) {
+    return { ok: false, message: E.valeurEntiere };
+  }
+
+  const motifNet = nettoyerTexteLibre(motif);
+  if (motifNet.length === 0) return { ok: false, message: E.motifRequis };
+
+  const fiche = await prisma.eleve.findUnique({
+    where: { id: eleveId },
+    select: { maison: true, etatMaison: true },
+  });
+  if (!fiche) return { ok: false, message: E.eleveIntrouvable };
+
+  const saison = await saisonEnCours();
+  if (!saison) return { ok: false, message: E.saisonFermee };
+
+  // La maison est figée ici, comme pour un point de post — et par la même
+  // question. Une professeure garde ses points personnels sans que Tideål,
+  // écrite sur sa fiche, n'en profite au tournoi.
+  const maison = maisonQuiCompte(fiche);
+
+  const id = await transaction(async (tx) => {
+    const ligne = await tx.pointGagne.create({
+      data: {
+        saisonId: saison.id,
+        eleveId,
+        maison,
+        points,
+        source: "ADMINISTRATION",
+        motif: motifNet,
+        parNom,
+      },
+      select: { id: true },
+    });
+    await tx.eleve.update({
+      where: { id: eleveId },
+      data: { points: { increment: points } },
+    });
+    if (maison) await crediterLaMaison(tx, saison.id, maison, points);
+    return ligne.id;
+  });
+
+  return { ok: true, id, maison };
+}
+
+/**
+ * **Reprendre des points accordés à la main.**
+ *
+ * La ligne du carnet n’est pas effacée : elle porte une date de reprise et
+ * cesse de compter — exactement comme un point de post masqué. L’historique
+ * garde donc le geste **et** son retrait : des points retirés sans qu’on sache
+ * pourquoi ils avaient été donnés seraient pires qu’un don injuste.
+ */
+export async function reprendreLesPointsAccordes(id: string): Promise<boolean> {
+  return transaction(async (tx) => {
+    const ligne = await tx.pointGagne.findUnique({
+      where: { id },
+      select: {
+        points: true, maison: true, eleveId: true, saisonId: true,
+        repriseLe: true, source: true,
+      },
+    });
+    // Uniquement ce qui a été donné à la main : reprendre un point de post
+    // depuis cet écran contournerait le masquage, qui est l'autre geste et
+    // qui, lui, rend le point au démasquage.
+    if (!ligne || ligne.repriseLe || ligne.source !== "ADMINISTRATION") return false;
+
+    await tx.pointGagne.update({ where: { id }, data: { repriseLe: new Date() } });
+    await appliquer(tx, ligne, -ligne.points);
+    return true;
+  });
+}
+
+/** Les points accordés à la main cette saison — le plus récent d’abord. */
+export async function historiqueDesDons(saisonId: string) {
+  return prisma.pointGagne.findMany({
+    where: { saisonId, source: "ADMINISTRATION" },
+    orderBy: { gagneLe: "desc" },
+    select: {
+      id: true,
+      points: true,
+      maison: true,
+      motif: true,
+      parNom: true,
+      gagneLe: true,
+      // Les repris restent visibles, barrés : c'est le principe même de
+      // « tracé et réversible ».
+      repriseLe: true,
+      // Nul si la fiche a été supprimée depuis : la ligne, elle, reste.
+      eleve: { select: { prenomNom: true } },
+    },
+  });
+}
+
+/**
+ * Les élèves à qui l’on peut donner des points, par ordre alphabétique.
+ *
+ * Tous les dossiers acceptés, **professeurs compris** : l’article 18.1 ne
+ * réserve pas la qualité d’écriture aux élèves, et un `roleAffiche` ne se lit
+ * pas pour décider d’un affichage. La maison affichée à côté du nom est celle
+ * qui compte — nulle pour qui ne marque pour personne, et l’écran le dit.
+ */
+export async function listerLesElevesPourLesPoints(): Promise<
+  { eleveId: string; prenomNom: string; maison: Maison | null; points: number }[]
+> {
+  const fiches = await prisma.eleve.findMany({
+    where: { statut: "ACCEPTE" },
+    orderBy: { prenomNom: "asc" },
+    select: { id: true, prenomNom: true, maison: true, etatMaison: true, points: true },
+  });
+
+  return fiches.map((f) => ({
+    eleveId: f.id,
+    prenomNom: f.prenomNom,
+    maison: maisonQuiCompte(f),
+    points: f.points,
+  }));
 }
 
 // ─────────────────────────────────────────────────────────────

@@ -17,6 +17,9 @@ import {
 const MIDI = new Date("2026-09-15T12:00:00.000Z");
 const ilYA = (heures: number) => new Date(MIDI.getTime() - heures * 3600_000);
 
+/** Un point gagné il y a tant d’heures. Un seul point, sauf mention. */
+const gain = (heures: number, points = 1) => ({ gagneLe: ilYA(heures), points });
+
 /** Le plafond ouvert, pour les cas où ce n’est pas lui qu’on éprouve. */
 const OUVERT = { atteint: false as const, restants: null };
 
@@ -84,20 +87,41 @@ describe("le plafond quotidien", () => {
   });
 
   it("décompte ce qui reste", () => {
-    const trois = [ilYA(1), ilYA(2), ilYA(3)];
+    const trois = [gain(1), gain(2), gain(3)];
     expect(etatDuPlafond(trois, MIDI)).toEqual({
       atteint: false,
       restants: (PLAFOND_PAR_JOUR ?? 0) - 3,
     });
   });
 
+  /**
+   * **Ce sont des points qu’on additionne, pas des lignes.**
+   *
+   * Tant qu’un post vaut un point, les deux reviennent au même — mais le
+   * réglage s’appelle « points par jour », et il doit dire vrai le jour où un
+   * QCM en vaudra deux. Compter les lignes laisserait passer vingt points
+   * sous un plafond de dix.
+   */
+  it("additionne les valeurs, et non le nombre de lignes", () => {
+    const plafond = PLAFOND_PAR_JOUR!;
+    // Deux lignes, mais elles valent tout le plafond à elles seules.
+    const grosses = [gain(1, plafond - 1), gain(2, 1)];
+
+    expect(etatDuPlafond(grosses, MIDI).atteint).toBe(true);
+    // Et une de moins laisse exactement une place.
+    expect(etatDuPlafond([gain(1, plafond - 1)], MIDI)).toEqual({
+      atteint: false,
+      restants: 1,
+    });
+  });
+
   /** **Le plafond se déclenche.** */
   it("se ferme à la limite exacte, et pas avant", () => {
     const plafond = PLAFOND_PAR_JOUR!;
-    const juste = Array.from({ length: plafond - 1 }, (_, i) => ilYA(i + 1));
+    const juste = Array.from({ length: plafond - 1 }, (_, i) => gain(i + 1));
 
     expect(etatDuPlafond(juste, MIDI).atteint).toBe(false);
-    expect(etatDuPlafond([...juste, ilYA(0.5)], MIDI).atteint).toBe(true);
+    expect(etatDuPlafond([...juste, gain(0.5)], MIDI).atteint).toBe(true);
   });
 
   it("dit quand la place se libère, plutôt que de dire non", () => {
@@ -105,8 +129,8 @@ describe("le plafond quotidien", () => {
     // Le plus ancien des gains bloquants date de vingt heures : c’est lui qui
     // libère la place, dans quatre heures.
     const gains = [
-      ilYA(20),
-      ...Array.from({ length: plafond - 1 }, (_, i) => ilYA(i + 1)),
+      gain(20),
+      ...Array.from({ length: plafond - 1 }, (_, i) => gain(i + 1)),
     ];
 
     const etat = etatDuPlafond(gains, MIDI);
@@ -124,7 +148,7 @@ describe("le plafond quotidien", () => {
    */
   it("oublie ce qui a plus de vingt-quatre heures", () => {
     const plafond = PLAFOND_PAR_JOUR!;
-    const vieux = Array.from({ length: plafond * 2 }, (_, i) => ilYA(25 + i));
+    const vieux = Array.from({ length: plafond * 2 }, (_, i) => gain(25 + i));
 
     expect(etatDuPlafond(vieux, MIDI)).toEqual({
       atteint: false,
@@ -135,7 +159,9 @@ describe("le plafond quotidien", () => {
   it("ignore une date illisible plutôt que de tout refuser", () => {
     // Une valeur abîmée ne doit ni compter dans le plafond ni le faire
     // basculer : elle disparaît, et le reste continue de fonctionner.
-    expect(etatDuPlafond(["pas une date", ilYA(1)], MIDI)).toEqual({
+    expect(
+      etatDuPlafond([{ gagneLe: "pas une date", points: 1 }, gain(1)], MIDI),
+    ).toEqual({
       atteint: false,
       restants: (PLAFOND_PAR_JOUR ?? 0) - 1,
     });

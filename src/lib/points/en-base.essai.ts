@@ -41,8 +41,10 @@ const { CARACTERES_PAR_LIGNE } = await import("@/lib/forum/longueur");
 const { demasquerPost, masquerPost, ouvrirSujet, repondre, retirerSonPost } =
   await import("@/lib/forum/depot");
 const {
+  accorderDesPointsAUnEleve,
   ajusterLaMaison,
   annulerLAjustement,
+  reprendreLesPointsAccordes,
   compteursDeLaSaison,
   effectifs,
   recalculerLesCompteurs,
@@ -439,6 +441,121 @@ describe("l’ajustement de l’administration — art. 19.1", () => {
     // Et une seconde annulation ne rend pas les points deux fois.
     expect(await annulerLAjustement(ajustementId, "Essai des points")).toBe(false);
     expect((await compteursDeLaSaison(saisonId)).TIDEAL).toBe(avant + 5);
+  });
+});
+
+/**
+ * **Donner des points à un joueur — art. 18.1.**
+ *
+ * Le geste voisin de l'ajustement de maison, et celui qu'il ne faut pas
+ * confondre avec lui : celui-ci alimente **les deux compteurs**.
+ */
+describe("les points donnés à la main", () => {
+  let donId = "";
+
+  it("vont dans les deux compteurs à la fois", async () => {
+    const personnelsAvant = await pointsDe(eleve.eleveId);
+    const maisonAvant = (await compteursDeLaSaison(saisonId)).TIDEAL;
+
+    const fait = await accorderDesPointsAUnEleve(
+      eleve.eleveId,
+      7,
+      "Belle scène dans la bibliothèque.",
+      "Essai des points",
+    );
+    expect(fait.ok).toBe(true);
+    if (!fait.ok) return;
+    donId = fait.id;
+    expect(fait.maison).toBe("TIDEAL");
+
+    expect(await pointsDe(eleve.eleveId)).toBe(personnelsAvant + 7);
+    expect((await compteursDeLaSaison(saisonId)).TIDEAL).toBe(maisonAvant + 7);
+
+    // La ligne est au carnet, avec son motif et son auteur — la base les
+    // exige pour cette provenance, et les interdit pour les autres.
+    const ligne = await prisma.pointGagne.findUnique({
+      where: { id: donId },
+      select: { source: true, motif: true, parNom: true, postId: true, maison: true },
+    });
+    expect(ligne).toEqual({
+      source: "ADMINISTRATION",
+      motif: "Belle scène dans la bibliothèque.",
+      parNom: "Essai des points",
+      postId: null,
+      maison: "TIDEAL",
+    });
+  });
+
+  it("refuse un motif vide, et une valeur nulle", async () => {
+    expect(
+      (await accorderDesPointsAUnEleve(eleve.eleveId, 5, "   ", "Essai des points")).ok,
+    ).toBe(false);
+    expect(
+      (await accorderDesPointsAUnEleve(eleve.eleveId, 0, "Rien", "Essai des points")).ok,
+    ).toBe(false);
+  });
+
+  /** **Une professeure garde ses points, sa maison n'en profite pas.** */
+  it("ne créditent aucune maison pour un compte qui ne marque pour personne", async () => {
+    const personnelsAvant = await pointsDe(prof.eleveId);
+    const maisonAvant = (await compteursDeLaSaison(saisonId)).TIDEAL;
+
+    const fait = await accorderDesPointsAUnEleve(
+      prof.eleveId,
+      12,
+      "Un cours mémorable.",
+      "Essai des points",
+    );
+    expect(fait.ok).toBe(true);
+    if (!fait.ok) return;
+    expect(fait.maison).toBeNull();
+
+    expect(await pointsDe(prof.eleveId)).toBe(personnelsAvant + 12);
+    expect((await compteursDeLaSaison(saisonId)).TIDEAL).toBe(maisonAvant);
+  });
+
+  /** **Le plafond quotidien ne s'applique pas à un geste délibéré.** */
+  it("passent alors même que le plafond du joueur est atteint", async () => {
+    // L'essai du plafond, plus haut, a rempli la journée de cet élève : un
+    // post n'y rapporterait plus rien. Un don, si.
+    const personnelsAvant = await pointsDe(eleve.eleveId);
+    const fait = await accorderDesPointsAUnEleve(
+      eleve.eleveId,
+      3,
+      "Au-delà du plafond, et c’est voulu.",
+      "Essai des points",
+    );
+    expect(fait.ok).toBe(true);
+    expect(await pointsDe(eleve.eleveId)).toBe(personnelsAvant + 3);
+  });
+
+  it("se reprennent sans s’effacer", async () => {
+    const personnelsAvant = await pointsDe(eleve.eleveId);
+    const maisonAvant = (await compteursDeLaSaison(saisonId)).TIDEAL;
+
+    expect(await reprendreLesPointsAccordes(donId)).toBe(true);
+    expect(await pointsDe(eleve.eleveId)).toBe(personnelsAvant - 7);
+    expect((await compteursDeLaSaison(saisonId)).TIDEAL).toBe(maisonAvant - 7);
+
+    // La ligne reste, avec son motif : l’historique garde le geste ET son
+    // retrait. Et une seconde reprise ne retire pas deux fois.
+    const ligne = await prisma.pointGagne.findUnique({
+      where: { id: donId },
+      select: { repriseLe: true, points: true, motif: true },
+    });
+    expect(ligne?.repriseLe).not.toBeNull();
+    expect(ligne?.points).toBe(7);
+    expect(await reprendreLesPointsAccordes(donId)).toBe(false);
+  });
+
+  /** Le masquage d’un post et la reprise d’un don sont deux chemins distincts. */
+  it("ne reprennent jamais un point de post", async () => {
+    const dePost = await prisma.pointGagne.findFirst({
+      where: { eleveId: eleve.eleveId, source: "POST", repriseLe: null },
+      select: { id: true },
+    });
+    if (!dePost) return;
+    expect(await reprendreLesPointsAccordes(dePost.id)).toBe(false);
   });
 });
 

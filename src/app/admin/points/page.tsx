@@ -1,11 +1,20 @@
 import type { Metadata } from "next";
-import { annulerAjustementAction } from "@/app/admin/points/actions";
+import {
+  annulerAjustementAction,
+  reprendreDonAction,
+} from "@/app/admin/points/actions";
 import { recalculerAction } from "@/app/admin/cloture/actions";
 import EnTeteAdmin from "@/components/admin/EnTeteAdmin";
 import FormulaireAjustement from "@/components/admin/FormulaireAjustement";
+import FormulaireDon from "@/components/admin/FormulaireDon";
 import { NOMS_MAISON } from "@/lib/ecole/blasons";
 import { TEXTES_POINTS } from "@/lib/points/constantes";
-import { historiqueDesAjustements, lireLeTournoi } from "@/lib/points/depot";
+import {
+  historiqueDesAjustements,
+  historiqueDesDons,
+  lireLeTournoi,
+  listerLesElevesPourLesPoints,
+} from "@/lib/points/depot";
 import { PLANCHER_EFFECTIF } from "@/lib/points/regles";
 
 export const dynamic = "force-dynamic";
@@ -32,7 +41,13 @@ export const metadata: Metadata = {
 export default async function PointsPage() {
   const t = TEXTES_POINTS.admin;
   const tournoi = await lireLeTournoi();
-  const historique = tournoi ? await historiqueDesAjustements(tournoi.saison.id) : [];
+  const [historique, dons, eleves] = tournoi
+    ? await Promise.all([
+        historiqueDesAjustements(tournoi.saison.id),
+        historiqueDesDons(tournoi.saison.id),
+        listerLesElevesPourLesPoints(),
+      ])
+    : [[], [], []];
 
   return (
     <main className="relative min-h-[100svh] bg-void">
@@ -121,6 +136,104 @@ export default async function PointsPage() {
             {/* ── Ajouter, retirer ── */}
             <Bloc titre={t.formulaire.titre} aide={t.formulaire.aide}>
               <FormulaireAjustement />
+            </Bloc>
+
+            {/* ── Donner à un joueur ──
+                Un formulaire à part, et non un interrupteur dans le premier :
+                les deux gestes se ressemblent et ne font pas la même chose.
+                On se trompe d'interrupteur sans s'en apercevoir, et un point
+                personnel accordé par erreur fait passer une année. */}
+            <Bloc titre={t.don.titre} aide={t.don.aide}>
+              <p className="max-w-[68ch] font-body text-sm italic leading-relaxed text-silver">
+                {t.don.difference}
+              </p>
+              <FormulaireDon eleves={eleves} />
+            </Bloc>
+
+            {/* ── Ce qui a été donné ── */}
+            <Bloc titre={t.historiqueDesDons.titre} aide={t.historiqueDesDons.aide}>
+              {dons.length === 0 ? (
+                <p className="rounded-sm border border-dashed border-silver/20 bg-void/40 px-5 py-6 text-center font-body leading-[1.7] text-parchment-dim">
+                  {t.historiqueDesDons.vide}
+                </p>
+              ) : (
+                <ul className="grid grid-cols-1 gap-2">
+                  {dons.map((don) => {
+                    const repris = don.repriseLe !== null;
+                    const signe = nombreSigne(don.points);
+                    const nom =
+                      don.eleve?.prenomNom ?? t.historiqueDesDons.membreParti;
+                    return (
+                      <li
+                        key={don.id}
+                        className="min-w-0 rounded-sm border border-silver/12 bg-mist/40 px-4 py-3"
+                      >
+                        <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+                          <p className="min-w-0 font-body text-parchment">
+                            <span
+                              className={`font-display text-sm tracking-[0.06em] ${
+                                repris
+                                  ? "text-silver line-through"
+                                  : don.points > 0
+                                    ? "text-aurora-teal"
+                                    : "text-ember"
+                              }`}
+                            >
+                              {signe}
+                            </span>{" "}
+                            <span className={repris ? "text-silver line-through" : undefined}>
+                              {nom}
+                              {don.maison ? (
+                                <span className="text-silver">
+                                  {" "}
+                                  ({NOMS_MAISON[don.maison] ?? don.maison})
+                                </span>
+                              ) : null}{" "}
+                              — {don.motif}
+                            </span>
+                          </p>
+
+                          <span className="font-body text-xs italic text-silver">
+                            <time
+                              dateTime={don.gagneLe.toISOString()}
+                              suppressHydrationWarning
+                            >
+                              {jour(don.gagneLe)}
+                            </time>
+                            {" · "}
+                            {don.parNom}
+                          </span>
+                        </div>
+
+                        {repris ? (
+                          <p className="mt-1 font-body text-xs italic text-silver">
+                            {t.historiqueDesDons.repris} —{" "}
+                            <time
+                              dateTime={don.repriseLe!.toISOString()}
+                              suppressHydrationWarning
+                            >
+                              {jour(don.repriseLe!)}
+                            </time>
+                          </p>
+                        ) : (
+                          <form action={reprendreDonAction} className="mt-2">
+                            <input type="hidden" name="id" value={don.id} />
+                            <button
+                              type="submit"
+                              aria-label={t.historiqueDesDons.reprendreAria
+                                .replace("{points}", signe)
+                                .replace("{nom}", nom)}
+                              className="rounded-sm border border-silver/25 px-3 py-1.5 font-display text-[0.6rem] uppercase tracking-[0.12em] text-silver transition-colors duration-300 hover:border-silver/50 hover:text-parchment"
+                            >
+                              {t.historiqueDesDons.reprendre}
+                            </button>
+                          </form>
+                        )}
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
             </Bloc>
 
             {/* ── Le filet ──

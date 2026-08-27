@@ -23,6 +23,9 @@
 //   `20260827160000_retirer_scenes_et_posts` — la cohérence des trois colonnes
 //       d'une scène retirée, et le fait qu'une place gardée n'a de sens que
 //       sur un post retiré
+//   `20260827190100_points_a_la_main`     — l'accord entre la provenance d'un
+//       point et son explication : motif et auteur obligatoires pour la main de
+//       l'administration, interdits pour le reste
 //   `20260827180000_carnet_des_points`    — une seule saison ouverte à la
 //       fois, un seul point par post, l'accord entre la source d'un point et
 //       son post, une ligne du carnet et un ajustement qui ne se réécrivent
@@ -1281,6 +1284,15 @@ enum SourcePoint {
   POST
   QCM
   EXAMEN
+
+  /// **La main de l'administration** — art. 18.1 : « la qualité d'écriture »,
+  /// la présence à un événement, une belle scène. Des choses qu'aucun compteur
+  /// ne sait mesurer et qui se voient à la lecture.
+  ///
+  /// ⚠️ À ne pas confondre avec `AjustementMaison`, qui lui ressemble et ne
+  /// fait pas la même chose : celui-ci vise UN ÉLÈVE et alimente les deux
+  /// compteurs (art. 18.2), celui-là vise une maison et n'alimente que le sien.
+  ADMINISTRATION
 }
 
 /// **Le carnet.** Une ligne par point gagné, et la seule vérité du lot.
@@ -1312,10 +1324,19 @@ model PointGagne {
 
   source SourcePoint
 
-  /// Le post qui l'a produit, ou nul pour les sources à venir. L'accord entre
+  /// Le post qui l'a produit, ou nul pour les autres sources. L'accord entre
   /// les deux est tenu par la base, **dans les deux sens**.
   postId String? @unique
   post   Post?   @relation(fields: [postId], references: [id], onDelete: Restrict)
+
+  /// Pourquoi ce point a été accordé, et par qui.
+  ///
+  /// **Obligatoires pour `ADMINISTRATION`, interdits pour le reste** — la base
+  /// tient les deux sens. Un point visible de tous ne doit jamais apparaître
+  /// sans explication ; un point de post, lui, EST son explication, et son
+  /// texte est lisible par tout le monde.
+  motif  String? @db.Text
+  parNom String?
 
   /// **Le point masqué.** Un post masqué le temps d'une correction
   /// (art. 19.3) cesse de rapporter, et le retrouve au démasquage. La ligne
@@ -1326,6 +1347,9 @@ model PointGagne {
   /// décision du joueur, 27 août 2026 : « les points acquis restent acquis »
   /// (art. 17.2). Retirer est le geste de l'auteur sur son propre texte ;
   /// masquer est une mesure du staff, temporaire.
+  ///
+  /// Elle sert aussi à **annuler un point accordé à la main** : là encore la
+  /// ligne reste, et l'historique garde le geste et son retrait.
   repriseLe DateTime?
 
   gagneLe DateTime @default(now())

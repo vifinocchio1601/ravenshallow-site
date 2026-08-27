@@ -42,7 +42,7 @@ joueur, pas des choix d'implémentation. Ne pas les réécrire sans demander.
 
 ```bash
 npm run dev              # http://localhost:3000
-npm test                 # vitest, 727 tests — ne touche JAMAIS la base
+npm test                 # vitest, 728 tests — ne touche JAMAIS la base
 npm run lint
 npx tsc --noEmit
 npm run build            # à passer avant tout déploiement
@@ -1005,6 +1005,32 @@ ne pourrait tenir sur tous les chemins :
 
 ### Ce qui rapporte, et ce qui ne rapporte pas
 
+### Deux gestes voisins, qui ne font pas la même chose
+
+| | Ce que ça vise | Ce que ça alimente |
+| --- | --- | --- |
+| `ajusterLaMaison` | **une maison** | le compteur du tournoi, seul |
+| `accorderDesPointsAUnEleve` | **un élève** | **les deux compteurs** (art. 18.2) |
+
+Le second est un point au sens plein : « ces points alimentent la progression
+individuelle ET le compteur de la maison ». Il entre donc **dans le carnet**,
+avec la source `ADMINISTRATION`, se recalcule avec les autres, et suit son
+élève — un professeur garde ses points personnels sans que personne n'en
+profite au tournoi.
+
+**Deux formulaires distincts, et non un seul avec un interrupteur.** On se
+trompe d'interrupteur sans s'en apercevoir, et un point personnel accordé par
+erreur fait passer une année.
+
+Le motif et l'auteur sont **obligatoires en base** pour cette source, et
+**interdits** pour les autres — un post EST son motif, et son texte est
+lisible de tous. Reprendre pose `repriseLe` : la ligne reste, barrée.
+
+⚠️ **Le plafond quotidien ne s'applique pas à un don.** Il existe pour qu'un
+membre très actif ne fasse pas gagner sa maison à lui seul ; un geste
+délibéré n'est pas cela. C'est `accorderLePointDUnPost` qui écarte la source
+`ADMINISTRATION` de sa lecture du carnet.
+
 **Un point par post publié dans un espace qui compte** — `domaine` seul —, à
 condition qu'il atteigne le minimum du lieu. `Espace.comptePourLesPoints`
 décide, jamais le nom de l'espace ; `maisonQuiCompte` décide pour qui.
@@ -1016,8 +1042,10 @@ lui, gagne des points personnels que personne n'encaisse au tournoi.
 
 **Le plafond est de dix points par joueur et par jour** — `config/points.json`,
 `null` pour le désactiver. Il **ne refuse jamais un post** : au-delà, on écrit
-encore, ça ne rapporte simplement plus. Et il se compte sur **vingt-quatre
-heures glissantes**, pas sur la journée civile : le serveur vit en UTC, le
+encore, ça ne rapporte simplement plus. Il **additionne des points, pas des
+lignes** : tant qu'un post en vaut un, les deux reviennent au même, mais le
+réglage doit dire vrai le jour où un QCM en vaudra deux. Et il se compte sur
+**vingt-quatre heures glissantes**, pas sur la journée civile : le serveur vit en UTC, le
 joueur non, et un plafond calé sur minuit du serveur se remettrait à zéro en
 pleine soirée d'écriture. Même choix que le plafond de la Tour aux Corbeaux.
 
