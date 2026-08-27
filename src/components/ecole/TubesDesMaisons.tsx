@@ -72,23 +72,18 @@ export default function TubesDesMaisons({
           Quatre éprouvettes posées sur une étagère reposent sur la même
           planche ; c'est par le HAUT qu'elles s'alignent ici, le bloc du
           blason et du nom ayant partout la même hauteur. */}
-      {/* **Le groupe est resserré**, et non étalé sur toute la largeur : le
-          panneau peut faire six cents pixels, quatre tubes de quatre-vingts
-          n'en occupent que trois cent cinquante. Étalés, ils flottaient chacun
-          au milieu de sa colonne, séparés par deux cents pixels de vide.
+      {/* **Le groupe remplit sa colonne**, et c'est le plafond de largeur d'un
+          tube — et lui seul — qui décide de sa taille.
 
-          Poussé à droite **seulement en deux colonnes** — il est alors posé au
-          bord du bureau, contre le journal. En une seule colonne le panneau
-          prend toute la page, et le coller à droite y creuserait un trou de
-          quatre cents pixels : il se centre. */}
+          Il a d'abord été borné à quatre fois quatre-vingts pixels, pour le
+          resserrer dans un panneau qui prenait alors toute la page. Depuis
+          qu'il vit dans une colonne de 58 %, ce plafond-là le laissait à trois
+          cent cinquante dans cinq cent soixante utiles : deux cents pixels de
+          vide à sa gauche, et des tubes qui paraissaient perdus. La grille
+          répartit maintenant la place, et chaque tube s'arrête à son plafond. */}
       <ul
-        className="mx-auto grid grid-cols-4 items-start lg:mr-0"
-        style={
-          {
-            gap: `${reglages.tubeEcart}px`,
-            maxWidth: `${reglages.tubeLargeurMax * 4 + reglages.tubeEcart * 3}px`,
-          } as CSSProperties
-        }
+        className="grid grid-cols-4 items-start"
+        style={{ gap: `${reglages.tubeEcart}px` } as CSSProperties}
       >
         {lignes.map((ligne, rang) => {
           const blason = blasonDe(ligne.maison);

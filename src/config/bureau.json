@@ -1,8 +1,8 @@
 {
   "note": "Les mesures du bureau — pas ses règles. Elles s’ajustent à l’œil, sur un vrai écran, sans qu’aucune logique ait à changer. Voir components/ecole/JournalDuNord.tsx et components/ecole/TubesDesMaisons.tsx.",
 
-  "noteJournal": "La hauteur du journal est PLAFONNÉE, et sa largeur suit le rapport de l’image — jamais l’inverse : le papier ne doit pas être déformé. Deux valeurs, parce qu’en pleine largeur sur un téléphone de 375 px l’image ferait 560 px de haut et mangerait tout l’écran.",
-  "journalHauteurMax": 540,
+  "noteJournal": "La hauteur du journal est PLAFONNÉE, et sa largeur suit le rapport de l’image — jamais l’inverse : le papier ne doit pas être déformé. Deux valeurs, parce qu’en pleine largeur sur un téléphone de 375 px l’image ferait 560 px de haut et mangerait tout l’écran. Le plafond du grand écran est réglé sur la hauteur du panneau du tournoi, sa voisine de rangée : à 540 il finissait cent vingt pixels plus haut qu’elle, et la rangée penchait.",
+  "journalHauteurMax": 660,
   "journalHauteurMaxTelephone": 400,
 
   "noteCadre": "Les bornes du cadre vide, en pourcentage des dimensions de l’image, relevées dessus. Ne pas les réajuster à l’œil : le texte sortirait du filet.",
@@ -13,7 +13,7 @@
   "noteMarge": "Pour que le texte ne touche pas le filet du cadre, en pourcentage de la largeur du journal.",
   "cadreMarge": 1.5,
 
-  "noteTubes": "La largeur maximale d’un tube, et l’écart entre deux. Ils flottaient, chacun perdu au milieu d’une colonne de deux cent soixante-dix pixels.",
-  "tubeLargeurMax": 80,
-  "tubeEcart": 10
+  "noteTubes": "La largeur maximale d’un tube, et l’écart entre deux. Le groupe REMPLIT sa colonne : plafonné à quatre-vingts, il laissait deux cents pixels de vide à sa gauche sur un grand écran, et le plafond seul décide donc de la taille. À ne pas monter beaucoup plus haut : au-delà, la photographie du verre est agrandie au-delà de sa définition.",
+  "tubeLargeurMax": 100,
+  "tubeEcart": 12
 }

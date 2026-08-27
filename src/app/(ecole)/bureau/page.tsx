@@ -103,7 +103,7 @@ export default async function BureauPage() {
             c'est le bon ordre : sur un petit écran le classement compte plus
             que les annonces. Sur grand écran, `lg:order-first` ramène le
             journal à gauche, sans toucher au document. */}
-        <div className="mt-10 grid items-start gap-5 lg:grid-cols-[42fr_58fr]">
+        <div className="mt-10 grid items-start gap-5 lg:grid-cols-[minmax(0,42fr)_minmax(0,58fr)]">
           {/* Le panneau disparaît entre deux saisons plutôt que d'afficher
               quatre tubes vides, qui laisseraient croire à un tournoi commencé
               que personne n'aurait joué. */}
@@ -128,13 +128,30 @@ export default async function BureauPage() {
           </div>
         </div>
 
-        <div className="mt-5 grid gap-5 lg:grid-cols-2">
+        {/* ── Le reste du bureau, sur les MÊMES deux colonnes ──
+
+            La grille est celle de la rangée haute, 42 / 58 : « Mes scènes en
+            cours » se retrouve donc exactement sous le tournoi, de la même
+            largeur — d'où le `minmax(0, …)` des deux, sans quoi le journal,
+            qui a une largeur intrinsèque, élargirait sa colonne et les deux
+            grilles se décaleraient l'une de l'autre. Sur toute la page il faisait mille quatre-vingt-huit
+            pixels pour une ligne de texte.
+
+            Les deux colonnes se lisent alors chacune pour elle-même : à
+            gauche ce qui m'arrive — le journal du château, mon courrier, ma
+            progression —, à droite ce que je joue — le tournoi, mes scènes.
+
+            **L'ordre du document reste celui du téléphone** : les scènes
+            d'abord, ce qui attend une réponse passant avant le reste. Ce sont
+            `col-start` et `row-start` qui les replacent sur grand écran, sans
+            toucher au document. */}
+        <div className="mt-5 grid gap-5 lg:grid-cols-[minmax(0,42fr)_minmax(0,58fr)]">
           {/* 1 — Ce qui attend une réponse passe en premier. */}
           <Panneau
             titre={t.scenes.titre}
             aide={t.scenes.aide}
             vide={t.scenes.vide}
-            className="lg:col-span-2"
+            className="lg:col-start-2 lg:row-start-1"
           >
             {scenes.length > 0 ? (
               <ul className="divide-y divide-silver/10">
@@ -155,7 +172,11 @@ export default async function BureauPage() {
               vraiment la Tour aux Corbeaux. Le raccourci vers la Tour reste
               là dans les deux cas — c’est aussi par ici qu’on va écrire,
               pas seulement lire. */}
-          <Panneau titre={t.courrier.titre} aide={t.courrier.aide}>
+          <Panneau
+            titre={t.courrier.titre}
+            aide={t.courrier.aide}
+            className="lg:col-start-1 lg:row-start-1"
+          >
             {courrier.length > 0 ? (
               <ul className="divide-y divide-silver/10">
                 {courrier.map((corbeau) => (
@@ -199,7 +220,10 @@ export default async function BureauPage() {
           </Panneau>
 
           {/* 3 — La progression. */}
-          <Panneau titre={t.progression.titre}>
+          <Panneau
+            titre={t.progression.titre}
+            className="lg:col-start-1 lg:row-start-2"
+          >
             <dl className="space-y-3 font-body">
               <Mesure
                 terme={t.progression.pointsPersonnels}

@@ -1137,11 +1137,16 @@ retoucher.
   commune les tubes ne partaient plus du même trait.
 - Tout ce qu'un tube raconte est **écrit en toutes lettres au-dessous**. L'eau,
   les bulles et les reflets sont `aria-hidden`.
-- **Le groupe est resserré**, et poussé à droite **seulement en deux
-  colonnes** — il est alors posé au bord du bureau, contre le journal. En une
-  seule colonne le panneau prend toute la page, et l'y coller creuserait un
-  trou de quatre cents pixels : il se centre. Largeur et écart dans
-  `config/bureau.json`.
+- **Le groupe remplit sa colonne**, et c'est le plafond de largeur d'un tube —
+  et lui seul — qui décide de sa taille. Il a d'abord été borné à quatre fois
+  quatre-vingts pixels, quand le panneau prenait toute la page ; depuis qu'il
+  vit dans une colonne de 58 %, ce plafond le laissait à 350 dans 563 utiles —
+  deux cents pixels de vide à sa gauche, et des tubes qui paraissaient perdus.
+- ⚠️ **Élargir un tube l'allonge**, le rapport de la photographie étant fixe,
+  et allonge donc le panneau : à 130 px il passait à 814 de haut contre 660
+  pour le journal, et la rangée penchait dans l'autre sens. Cent pixels sont
+  le point d'équilibre — panneau à 713, journal à 660. Le régler dans
+  `config/bureau.json`, et regarder les deux hauteurs ensemble.
 
 ### Le Guetteur du Nord
 
@@ -1153,12 +1158,20 @@ le panneau « Annonces du Grand Hall »** le 27 août 2026.
 
 - **Il n'est PAS dans un `Panneau`.** Le papier est son propre cadre, et une
   bordure autour d'une une de gazette ferait un cadre dans un cadre.
-- ⚠️ **C'est la HAUTEUR qui est plafonnée, jamais la largeur.** L'inverse
-  déformerait le papier, et une une de journal étirée se voit au premier coup
-  d'œil : d'où `height` sur le conteneur et `width: auto`, et non l'habituel
-  `max-width: 100%`. Deux plafonds — 540 px sur grand écran, 400 sur
-  téléphone : en pleine largeur sur un écran de 375, l'image ferait 560 px de
-  haut et mangerait tout.
+- ⚠️ **Le rapport est tenu par la BOÎTE, jamais par l'image**, et c'est
+  indispensable : les quatre bornes du cadre de texte sont des pourcentages de
+  cette boîte. Si elle cesse de suivre le rapport du papier, `object-fit`
+  centre gentiment l'image dedans — mais le cadre, lui, se décale, et le texte
+  sort du filet.
+
+  D'où `width: 100%` + `max-width: calc(hauteur × 900 / 1350)` +
+  `aspect-ratio`, et **surtout pas** `height` + `width: auto` : sur un bloc,
+  `auto` veut dire « toute la largeur disponible », les deux dimensions
+  deviennent définies et `aspect-ratio` est ignoré. Le journal se retrouvait
+  alors à 395 × 660 dans une colonne étroite — rapport 0,598 pour 0,667.
+- Le plafond de hauteur est donc **un plafond de largeur** : 660 px sur grand
+  écran, 400 sur téléphone. En pleine largeur sur un écran de 375, l'image
+  ferait sinon 560 px de haut et mangerait tout.
 - **Les quatre bornes du cadre vide sont relevées sur l'image** — gauche 26 %,
   droite 73,6 %, haut 20,5 %, bas 95,1 %, plus 1,5 % de marge. Les réajuster à
   l'œil ferait sortir le texte du filet. Elles vivent dans `config/bureau.json`.
@@ -1193,6 +1206,24 @@ journal ensuite. C'est ce qu'un lecteur d'écran parcourt, et c'est le bon
 ordre — sur un petit écran, le classement compte plus que les annonces. Sur
 grand écran, `lg:order-first` ramène le journal à gauche **sans toucher au
 document**.
+
+**Le bas du bureau reprend la même grille**, et les deux colonnes se lisent
+alors chacune pour elle-même :
+
+| | |
+| --- | --- |
+| à gauche, 42 % | ce qui m'arrive — le journal, mon courrier, ma progression |
+| à droite, 58 % | ce que je joue — le tournoi, mes scènes en cours |
+
+« Mes scènes » y est placée par `lg:col-start-2`, et le courrier comme la
+progression par `lg:col-start-1` : **le document garde l'ordre du téléphone**,
+où ce qui attend une réponse passe en premier.
+
+⚠️ **Les deux grilles portent `minmax(0, …)` sur leurs colonnes.** Sans lui, le
+journal — qui a une largeur intrinsèque — élargit la sienne au-delà de ses
+42 %, les deux grilles se décalent l'une de l'autre, et « Mes scènes » cesse
+d'être alignée sous le tournoi. Constaté à 1024 px : 440 / 500 en haut contre
+395 / 545 en bas.
 
 ### La clôture d'une année — art. 18.3
 

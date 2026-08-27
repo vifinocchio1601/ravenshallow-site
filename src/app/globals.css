@@ -1800,11 +1800,24 @@
 
 .journal {
   position: relative;
-  /* La hauteur commande, la largeur suit le rapport 900 × 1350 de l'image. */
-  height: var(--journal-h-telephone);
+  --journal-h: var(--journal-h-telephone);
+
+  /* **Le rapport est tenu par la boîte elle-même**, et jamais par l'image.
+     C'est indispensable : les quatre bornes du cadre de texte sont des
+     pourcentages DE CETTE BOÎTE. Si elle cesse de suivre le rapport du papier,
+     l'image se contente d'être centrée dedans par `object-fit`, mais le cadre,
+     lui, se décale — et le texte sort du filet.
+
+     D'où cette forme, et non `height` + `width: auto` : sur un bloc, `auto`
+     veut dire « toute la largeur disponible », les deux dimensions deviennent
+     définies, et `aspect-ratio` est ignoré. Le journal se retrouvait alors à
+     395 × 660 dans une colonne étroite, soit un rapport de 0,598 pour 0,667
+     attendu. Ici la largeur commande, le rapport donne la hauteur, et le
+     plafond de hauteur devient un plafond de largeur. */
+  width: 100%;
+  max-width: calc(var(--journal-h) * 900 / 1350);
   aspect-ratio: 900 / 1350;
-  width: auto;
-  max-width: 100%;
+
   /* Centré en une seule colonne, où le panneau prend toute la page ; calé à
      gauche en deux colonnes, comme un journal posé au coin du bureau. */
   margin: 0 auto;
@@ -1812,13 +1825,8 @@
 
 @media (min-width: 1024px) {
   .journal {
+    --journal-h: var(--journal-h-grand);
     margin: 0;
-  }
-}
-
-@media (min-width: 1024px) {
-  .journal {
-    height: var(--journal-h-grand);
   }
 }
 
