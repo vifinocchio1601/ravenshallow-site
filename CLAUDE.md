@@ -579,15 +579,35 @@ l'accord que sa propre bible réclame**, et elle comble l'un de ses manques.
 Ce qui en sort fait autorité pour le RP.
 
 D'où la méthode : une aile à la fois, chaque texte confronté à la bible avant
-d'être montré, et **une migration par correction**. Trois pièges y sont
-apparus, tous du même genre — un texte qui affirme quelque chose que la bible
-contredit, ou qui invente sans le dire :
+d'être montré, et **une migration par correction**. **La relecture des cinq
+ailes est terminée le 27 août 2026** — cinq corrections, toutes du même
+genre : un texte qui affirme quelque chose que la source contredit, ou qui
+invente sans le dire.
 
 | | Ce qui n'allait pas |
 | --- | --- |
 | La Salle de Banquet | contredisait la Cérémonie du Miroir, déjà en ligne |
 | La galerie des vents | posait l'interdit sans sa raison — les Draugr |
 | La Réserve | affirmait que rien d'interdit n'y dort, alors que la bible y place **l'un des trois seuls signes de la magie noire** (art. 13.3) |
+| Les souterrains | récitaient l'article 13.1, **et désignaient ainsi l'endroit** |
+| L'aile nord | regardait le massif « par-dessus la forêt » — la carte dit **le lac** |
+
+**Celle de l'aile nord est la plus instructive : elle ne se voyait pas en
+lisant.** Il fallait ouvrir la carte. L'article 12.4 dit que « toute
+description de lieu en RP doit s'y conformer », et la seule façon de le
+vérifier est de **la regarder** — `public/crests/carte.jpg` —, jamais de se
+fier au nom des lieux. Sa rose des vents met le nord en haut, le château à
+l'est sur la falaise, la Forêt Sombre à l'ouest, le Lac entre le château et
+les Hauts Plateaux de Givre, et Kaldvik au sud-ouest au pied du chemin
+escarpé.
+
+**Trois contrôles à refaire après toute écriture de lieu**, et ils sont
+mécaniques : aucun texte ne nomme la grotte ni le sceau ; les couleurs des
+quatre dortoirs sont celles de la bible, mot pour mot ; aucun texte ne
+s'adresse au joueur plutôt qu'au monde. Au 27 août 2026 : 0, conformes, et un
+seul écart — **la salle de duel**, dont la dernière phrase est un conseil au
+joueur. Signalé, **gardé tel quel par le joueur**. Ne pas le « corriger » de
+sa propre initiative.
 
 **Ne jamais nommer la chose dans une description de lieu.** Les Draugr, ce que
 le sceau retient, l'ouvrage qui ne devrait pas être là : une description est
