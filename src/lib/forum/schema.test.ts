@@ -93,6 +93,33 @@ describe("le corps d’un post", () => {
     if (lu.ok) expect(lu.valeur).toContain("[HRP]");
   });
 
+  /**
+   * **Le nettoyage se fait dans `validerPost`, et nulle part ailleurs.**
+   *
+   * C'est ce qui garantit qu'aucune route ne peut l'oublier : la seule porte
+   * par laquelle un post entre en base nettoie elle-même. L'essai passe donc
+   * par elle, et non par `nettoyerHtml` — celui-là est éprouvé à part.
+   */
+  it("retire une balise script insérée à la main, à l’enregistrement", () => {
+    const attaque = `<p>${post(10)}</p><script>alert("pris")</script>`;
+    const lu = validerPost(attaque, LIGNES_MINIMUM_RP);
+
+    expect(lu.ok).toBe(true);
+    if (!lu.ok) return;
+    expect(lu.valeur).not.toContain("script");
+    expect(lu.valeur).not.toContain("alert");
+    // Le texte du joueur, lui, est intact.
+    expect(lu.valeur).toContain("Ligne 1");
+  });
+
+  it("refuse un post qui ne serait QUE du balisage", () => {
+    // « <p></p> » pèse sept signes et ne dit rien. Sans le comptage sur le
+    // texte, il passerait chez les non-mages, où aucun minimum ne le
+    // rattraperait.
+    expect(validerPost("<p></p>", null).ok).toBe(false);
+    expect(validerPost('<span class="rs-c-tideal"> </span>', null).ok).toBe(false);
+  });
+
   it("sans minimum, seul le vide est refusé", () => {
     expect(validerPost("   \n\t\n ", null).ok).toBe(false);
     expect(validerPost("Un mot.", null).ok).toBe(true);
