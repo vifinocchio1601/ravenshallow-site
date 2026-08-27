@@ -50,6 +50,7 @@ npm run courriel:verifier # teste l'authentification SMTP sans rien envoyer
 npm run base:importer     # reprend .donnees/dossiers.json dans la base
 npm run base:migrer       # applique les migrations en attente
 npm run corbeaux:essai    # exerce la Tour aux Corbeaux SUR LA VRAIE BASE
+npm run base:sauvegarder  # recopie toute la base dans un fichier, hors du dépôt
 ```
 
 `base:migrer` existe parce que la CLI Prisma ne lit pas `.env.local` : le
@@ -663,6 +664,71 @@ jeu, et la règle ne dirait plus rien.
 
 ---
 
+## La sauvegarde
+
+**Le filet de Neon fait six heures.** Formule gratuite, curseur « History
+window » déjà au maximum — constaté dans la console le 27 août 2026. Passé ce
+délai, une donnée perdue l'est pour de bon ; Neon ne va au-delà (30 jours) que
+sur une formule payante.
+
+`npm run base:sauvegarder` est la réponse gratuite : il recopie **toute** la
+base dans un fichier daté, rangé dans `Perso/Ravenshallow/Sauvegardes/` — hors
+du dépôt, et que Dropbox versionne à son tour. 0,35 Mo au 27 août 2026.
+
+Trois décisions y sont inscrites, et aucune ne se devine :
+
+- **La liste des tables n'est pas écrite à la main**, elle est déduite du
+  schéma Prisma. Une table ajoutée demain serait sinon oubliée en silence — et
+  une sauvegarde incomplète est pire qu'aucune, parce qu'on lui fait confiance.
+- **Le fichier sort du dépôt**, qui est *public* : cette copie porte des
+  adresses, des portraits et des conversations privées. Ne jamais la déplacer
+  dedans, ni la joindre à un message.
+- **L'écriture est atomique** — fichier temporaire puis renommage —, seule
+  forme qui tienne dans un dossier Dropbox.
+
+L'état des migrations voyage avec les données : sans lui, on ne saurait pas
+sur quel schéma les réinjecter.
+
+⚠️ **Elle ne se lance pas toute seule.** La lancer avant toute opération
+risquée en base, et reposer la question de payer Neon le jour où des joueurs
+auront écrit des choses irremplaçables.
+
+**Scale to zero : 5 minutes, non modifiable en formule gratuite.** C'est ce
+qui rend le `connect_timeout` obligatoire plutôt que confortable : on ne peut
+pas empêcher la base de s'endormir.
+
+---
+
+## Les deux pages qu'on ne cherche jamais à voir
+
+`app/not-found.tsx` et `app/error.tsx`, leurs textes dans `lib/content.ts`.
+Sans elles, Next sert les siennes : fond blanc, anglais, « This page could not
+be found ». Un joueur n'en conclut pas qu'il s'est trompé d'adresse, il en
+conclut que le château est cassé.
+
+Elles restent **hors du bandeau et hors de la navigation** : elles répondent
+aussi bien pour une adresse de la vitrine que pour une salle de l'école qui
+n'existe pas, et un menu emprunté à l'un serait faux dans l'autre.
+
+`error.tsx` est **cliente** par obligation — Next lui passe un `reset` qui
+rejoue le rendu sans recharger la page. C'est tout l'intérêt du bouton : la
+cause la plus fréquente est une base endormie, et la seconde tentative tombe
+sur une base réveillée. `error.digest` n'est pas affiché : c'est une empreinte
+pour les journaux de Vercel, illisible pour un joueur.
+
+**`robots.ts` ferme tout et rouvre trois pages.** L'inverse de l'habituel, et
+pour la même raison que les drapeaux du menu : l'oubli doit aller dans le sens
+de la fermeture. Une liste d'interdits demanderait d'y penser à chaque route
+nouvelle, et l'oubli livrerait une page privée au cache de Google, qui survit
+à la correction. Les adresses privées n'y sont pas *citées* : les nommer dans
+un fichier public dirait où se trouve l'administration.
+
+L'icône d'onglet est le sceau de l'école — `app/icon.png` (192 px) et
+`app/apple-icon.png` (180 px), tirés de `public/crests/ravenshallow.webp`
+rendu carré sur le fond `void`.
+
+---
+
 ## Authentification
 
 Trois mécanismes distincts, à ne pas confondre :
@@ -1148,9 +1214,11 @@ les mettre sous le parchemin, ce serait en avoir deux versions dont une fausse.
 
 **Les pouvoirs sont posés** : cinq permissions attribuables à n'importe quel
 membre, les préfets, la traçabilité au journal et la page d'ensemble
-`/admin/pouvoirs`. Aucun préfet n'est nommé et aucune permission accordée —
-c'est voulu : le staff écrit les annonces en attendant, et le jour où le joueur
-en nomme un, il n'y a rien à développer.
+`/admin/pouvoirs`. Aucun préfet n'est nommé ; les onze permissions sont posées sur
+les **deux comptes d'administration**, qui passent de toute façon partout —
+elles n'ouvrent donc rien de plus, et se retirent sans conséquence. Aucun
+compte de joueur n'en porte : le staff écrit les annonces en attendant, et le
+jour où le joueur nomme un préfet, il n'y a rien à développer.
 
 **Le moteur du forum est posé, et L'école est meublée** : quatre tables, les
 trois espaces avec leur paramétrage, **cinq sections et vingt pièces** en base,

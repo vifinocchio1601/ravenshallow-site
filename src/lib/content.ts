@@ -158,3 +158,40 @@ export const DISCORD = {
   corps:
     "Le château s'ouvre d'abord sur Discord : viens t'y présenter, poser tes questions et suivre l'ouverture des inscriptions.",
 } as const;
+
+/**
+ * Les deux pages qu’on ne cherche jamais à voir.
+ *
+ * Sans elles, Next sert les siennes : un fond blanc, « This page could not be
+ * found », en anglais. Un joueur qui tombe dessus ne conclut pas qu’il s’est
+ * trompé d’adresse — il conclut que le château est cassé.
+ *
+ * Elles restent volontairement **hors du bandeau et hors de la navigation** :
+ * elles répondent aussi bien pour une adresse du site vitrine que pour une
+ * salle de l’école qui n’existe pas, et un menu emprunté à l’un serait faux
+ * dans l’autre.
+ */
+export const PAGE_INTROUVABLE = {
+  rune: "ᛒ",
+  eyebrow: "Adresse introuvable",
+  titre: "Ce couloir ne mène nulle part",
+  corps:
+    "Le château garde quelques passages murés, et tu viens d’en pousser un. L’adresse que tu as suivie ne correspond à aucune salle — un lien vieilli, une lettre de travers, ou une porte qui n’a jamais été percée.",
+  accueil: "Revenir devant les grilles",
+  chateau: "Accès au château",
+} as const;
+
+/**
+ * L’incident. Le texte ne promet rien qu’on ne puisse tenir : il invite à
+ * réessayer, parce que la cause la plus fréquente — une base endormie qui se
+ * réveille — se résout d’elle-même à la seconde tentative.
+ */
+export const PAGE_ERREUR = {
+  rune: "ᚺ",
+  eyebrow: "Incident",
+  titre: "La brume s’est levée d’un coup",
+  corps:
+    "Le château n’a pas pu répondre. C’est le plus souvent passager : reprends la même porte dans un instant, elle s’ouvrira. Si elle résiste encore, préviens l’administration — ce n’est pas de ton fait.",
+  reessayer: "Réessayer",
+  accueil: "Revenir devant les grilles",
+} as const;
