@@ -566,7 +566,33 @@ permission » sans pouvoir dire laquelle.
 ### L'école : cinq sections, vingt pièces
 
 Posées par `20260826130000_ecole`. **Les lieux vivent en base**, jamais dans
-le code : une description se corrige sans toucher au moteur.
+le code : une description se corrige sans toucher au moteur — par une
+migration tout de même, sinon la correction est vraie aujourd'hui et perdue
+le jour où la base serait reconstruite.
+
+**Ces vingt textes ne sont pas du décor : ils sont le plan intérieur du
+château.** La bible le dit deux fois, et il a fallu les rapprocher —
+« inventer une aile du château […] exige l'accord d'un administrateur »
+(art. 12.4), et, parmi ses points à approfondir, « plan intérieur du château,
+aile par aile ». La relecture que le joueur en fait, aile par aile, **est
+l'accord que sa propre bible réclame**, et elle comble l'un de ses manques.
+Ce qui en sort fait autorité pour le RP.
+
+D'où la méthode : une aile à la fois, chaque texte confronté à la bible avant
+d'être montré, et **une migration par correction**. Trois pièges y sont
+apparus, tous du même genre — un texte qui affirme quelque chose que la bible
+contredit, ou qui invente sans le dire :
+
+| | Ce qui n'allait pas |
+| --- | --- |
+| La Salle de Banquet | contredisait la Cérémonie du Miroir, déjà en ligne |
+| La galerie des vents | posait l'interdit sans sa raison — les Draugr |
+| La Réserve | affirmait que rien d'interdit n'y dort, alors que la bible y place **l'un des trois seuls signes de la magie noire** (art. 13.3) |
+
+**Ne jamais nommer la chose dans une description de lieu.** Les Draugr, ce que
+le sceau retient, l'ouvrage qui ne devrait pas être là : une description est
+un document que les élèves lisent. Elle donne ce qu'un élève voit — des
+lumières basses, un mot posé seul en fin de phrase —, jamais le nom.
 
 Trois choses arbitrées avant de les écrire, et inscrites dans la migration :
 
