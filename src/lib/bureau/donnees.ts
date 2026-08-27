@@ -2,11 +2,11 @@ import "server-only";
 import { TEXTES_CORBEAUX } from "@/lib/corbeaux/constantes";
 import { listerConversations } from "@/lib/corbeaux/depot";
 import { compterScenesOuvertes, listerScenesDe } from "@/lib/forum/depot";
+import { lireLeTournoi, pointsPersonnelsDe } from "@/lib/points/depot";
 import { auDelaDuRepere, reperDeScenes } from "@/lib/forum/scenes";
 import { libelleBaguette } from "@/lib/ecole/baguette";
 import { TEXTES_ECOLE } from "@/lib/ecole/constantes";
 import { ROUTES } from "@/lib/ecole/menu";
-import { compteAuTournoi } from "@/lib/ecole/tournoi";
 import {
   aFiniLesPremiersPas,
   aUneBaguette,
@@ -15,23 +15,23 @@ import {
   estConcerneParLaBoutique,
   estConcerneParLeMiroir,
 } from "@/lib/session/acces";
-import type { EtatEtape } from "@/lib/dossier/etats";
+import { maisonQuiCompte, type LigneDeClassement } from "@/lib/ecole/tournoi";
+import type { EtatEtape, Maison } from "@/lib/dossier/etats";
 import type { CompteConnecte } from "@/lib/session/garde";
 
 /**
  * Ce que Mon bureau affiche.
  *
- * Les scènes, les points et les annonces n’existent pas encore. Plutôt que de
- * laisser chaque panneau deviner quoi faire d’une source absente, tout passe
- * par ici : les fonctions rendent des listes vides, et chaque lot à venir en
- * remplace **une seule**, sans toucher aux panneaux.
+ * Une fonction par panneau, et chaque lot en remplace **une seule** — sans
+ * toucher aux panneaux eux-mêmes. C’était le plan depuis le lot du bureau, et
+ * il a tenu quatre fois : le courrier avec la Tour aux Corbeaux, les scènes
+ * avec le forum, la progression et le tournoi avec les points.
  *
- * La Tour aux Corbeaux vient d’en remplacer une : `courrierNonLu` lit
- * vraiment la base. C’était le plan depuis le lot du bureau, et le panneau
- * n’a pas eu à bouger.
+ * Il ne reste qu’`annonces`, qui attend le Grand Hall, et
+ * `prochainesEpreuves`, qui attend le calendrier scolaire.
  *
- * Aucune ne lève d’exception. Un bureau qui s’effondre parce que la
- * messagerie n’est pas construite serait le pire des accueils.
+ * Aucune ne lève d’exception. Un bureau qui s’effondre parce qu’une brique
+ * n’est pas construite serait le pire des accueils.
  */
 
 export type SceneEnCours = {
@@ -60,9 +60,12 @@ export type CorbeauNonLu = {
 };
 
 export type Progression = {
+  /**
+   * Les points de l’élève — art. 18.1. **Distincts du compteur de sa
+   * maison**, qui vit dans les tubes : un ajustement de l’administration
+   * (art. 19.1) touche le second et jamais le premier.
+   */
   pointsPersonnels: number;
-  /** Nul tant que l’élève n’a pas de maison — le compteur reste masqué. */
-  pointsMaison: number | null;
   /**
    * Où en est la répartition, transporté tel quel : le panneau doit
    * distinguer « le compteur s’ouvrira au Miroir » d’un compte que la
@@ -163,19 +166,21 @@ export async function courrierNonLu(
 }
 
 /**
- * Lot « points et épreuves » — colonnes à créer.
+ * **Le troisième panneau à cesser d’être vide.**
  *
- * Seules l’année et le rôle sont déjà connus : ils vivent sur la fiche. Le
- * reste est annoncé comme vide, jamais inventé.
+ * Les points personnels sont désormais lus en base — ils portent la
+ * progression de l’élève et traversent les années (art. 18.4). Le compteur de
+ * SA MAISON, lui, n’est plus ici : les tubes le disent bien mieux qu’une
+ * ligne de texte, et deux affichages du même nombre finiraient par se
+ * contredire.
+ *
+ * Reste `prochainesEpreuves`, qui attend le calendrier scolaire.
  */
 export async function progression(compte: CompteConnecte): Promise<Progression> {
   return {
-    pointsPersonnels: 0,
-    // Le compteur du bureau EST celui du tournoi : il passe donc par la même
-    // couture, `lib/ecole/tournoi.ts`, et jamais par la colonne `maison`.
-    // Zéro pour l'instant — le lot des points remplacera la valeur, pas la
-    // condition.
-    pointsMaison: compteAuTournoi(compte) ? 0 : null,
+    pointsPersonnels: compte.eleveId
+      ? await pointsPersonnelsDe(compte.eleveId)
+      : 0,
     etatMaison: compte.etatMaison,
     fonction: compte.fonction,
     roleAffiche: compte.roleAffiche,
@@ -184,6 +189,30 @@ export async function progression(compte: CompteConnecte): Promise<Progression> 
       : null,
     prochainesEpreuves: null,
   };
+}
+
+/**
+ * **Le tournoi des maisons** — les quatre tubes, en tête du bureau.
+ *
+ * Rend `null` quand aucune saison n’est ouverte : le panneau disparaît alors
+ * plutôt que d’afficher quatre tubes vides, qui laisseraient croire à un
+ * tournoi en cours que personne n’aurait commencé.
+ *
+ * `maMaison` passe par `maisonQuiCompte` — jamais par la colonne. Une
+ * directrice ne voit aucun liseré : elle n’est d’aucune maison au tournoi,
+ * même si Tideål reste écrite sur sa fiche.
+ */
+export type TournoiAffiche = {
+  lignes: LigneDeClassement[];
+  maMaison: Maison | null;
+};
+
+export async function tournoi(
+  compte: CompteConnecte,
+): Promise<TournoiAffiche | null> {
+  const lu = await lireLeTournoi();
+  if (!lu) return null;
+  return { lignes: lu.lignes, maMaison: maisonQuiCompte(compte) };
 }
 
 /** Lot « Grand Hall » — table à créer. */

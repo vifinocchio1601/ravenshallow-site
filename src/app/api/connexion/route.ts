@@ -8,6 +8,7 @@ import {
   effacerTentatives,
   noterEchec,
 } from "@/lib/connexion/tentatives";
+import { noterLaConnexion } from "@/lib/dossier/archivage";
 import { destinationApres } from "@/lib/session/acces";
 import { COOKIE_SESSION, creerSession, optionsCookie } from "@/lib/session/session";
 import type { EtatEtape, StatutAcces, StatutDossier } from "@/lib/dossier/etats";
@@ -98,6 +99,16 @@ export async function POST(request: Request) {
     }
 
     await effacerTentatives("connexion", email, ip);
+
+    // La visite est notée ici, et **jamais avant** : une tentative ratée n'est
+    // pas une visite. C'est cette date qui rend l'article 7.3 applicable —
+    // sans elle, l'inactivité ne se constate pas.
+    //
+    // Elle lève aussi l'archivage d'un revenant : « le retour reste possible »
+    // ne doit pas obliger à écrire à l'administration pour rentrer chez soi.
+    // La fonction n'échoue jamais bruyamment : le mot de passe est bon, on
+    // entre.
+    await noterLaConnexion(compte.id);
 
     const destination = destinationApres({
       statut: (compte.eleve?.statut ?? "BROUILLON") as StatutDossier,

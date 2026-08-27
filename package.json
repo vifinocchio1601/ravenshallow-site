@@ -11,6 +11,7 @@
     "test:watch": "vitest",
     "corbeaux:essai": "vitest run --config vitest.essai.mts src/lib/corbeaux/en-base.essai.ts",
     "forum:essai": "vitest run --config vitest.essai.mts src/lib/forum/en-base.essai.ts",
+    "points:essai": "vitest run --config vitest.essai.mts src/lib/points/en-base.essai.ts",
     "courriel:verifier": "node scripts/verifier-courriel.mjs",
     "postinstall": "prisma generate",
     "base:importer": "node scripts/importer-dossiers.mjs",

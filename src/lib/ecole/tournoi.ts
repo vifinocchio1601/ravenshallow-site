@@ -1,22 +1,26 @@
 import { MAISONS, type EtatEtape, type Maison } from "@/lib/dossier/etats";
+import { PLANCHER_EFFECTIF } from "@/lib/points/regles";
 import { aUneMaison } from "@/lib/session/acces";
 
 /**
  * Qui marque pour sa maison — et le tournoi inter-maisons (art. 18.2).
  *
- * **Les points n’existent pas encore.** Ce fichier ne compte donc rien
- * aujourd’hui : il pose la règle qui décidera *qui* compte, avant que le
- * moindre total soit écrit quelque part.
- *
- * L’ordre n’est pas anodin. Poser cette règle après coup obligerait à
- * retrouver un par un les endroits qui totalisent, et c’est très exactement
- * ainsi qu’un professeur finit par rapporter des points à son ancienne
- * maison : sa maison est toujours écrite en base — on ne l’efface pas —, et
- * n’importe quelle somme naïve la ramasserait au passage.
- *
  * **`maisonQuiCompte` est le seul endroit du site qui répond à la question.**
- * Le lot des points s’y branchera plutôt que de relire `maison` : lire la
- * colonne directement, c’est le bug.
+ * Lire `Eleve.maison` ailleurs, c’est le bug : la maison d’une directrice
+ * reste écrite en base — on ne l’efface pas —, et n’importe quelle somme
+ * naïve la ramasserait au passage.
+ *
+ * La règle a été posée avant les points, exprès. La poser après coup aurait
+ * obligé à retrouver un par un les endroits qui totalisent, et c’est très
+ * exactement ainsi qu’un professeur finit par rapporter des points à son
+ * ancienne maison. Le lot des points s’y est branché sans rien y changer.
+ *
+ * ── Ce que ce fichier ne fait pas ──
+ *
+ * Il ne totalise **aucun point**. Le compteur d’une maison vit en base et se
+ * reconstruit depuis le carnet — `lib/points/depot.ts`. Ici on répond à trois
+ * questions et trois seulement : qui marque, combien ils sont, et où ça les
+ * place.
  *
  * Rien ici n’est un contrôle d’accès : ce fichier dit ce qui se totalise,
  * jamais qui a le droit d’entrer où.
@@ -69,23 +73,139 @@ export function totauxVides(): Record<Maison, number> {
 }
 
 /**
- * Le compteur de chaque maison.
+ * L’effectif de chaque maison.
  *
  * Prend les membres **bruts** et fait le tri lui-même, à dessein : une
  * fonction qui recevrait une liste déjà filtrée reposerait sur l’appelant
  * pour ne pas se tromper, et c’est précisément ce qu’on veut lui retirer.
  *
  * Les quatre maisons figurent toujours au résultat, même à zéro : un tournoi
- * où une maison disparaît du tableau parce qu’elle n’a encore rien marqué
- * serait illisible.
+ * où une maison disparaît du tableau parce qu’elle n’a encore personne serait
+ * illisible.
+ *
+ * **Qui filtrer AVANT d’appeler** : les dossiers non acceptés et les comptes
+ * archivés (art. 7.3). Ce sont des questions de dossier, pas de tournoi, et
+ * elles se posent dans le dépôt. Un membre suspendu, lui, compte — décision
+ * du joueur, 27 août 2026 : il garde son blason, il reste de sa maison.
+ *
+ * ⚠️ **Ce fichier ne totalise plus les points.** `totauxParMaison` sommait
+ * `Eleve.points`, c’est-à-dire qu’il supposait « compteur de maison = somme
+ * des points personnels ». C’est faux depuis le lot des points : un
+ * ajustement de l’administration (art. 19.1) ne touche que la maison, jamais
+ * les points personnels. Le compteur de maison vit désormais en base, et se
+ * reconstruit depuis le carnet — voir `lib/points/depot.ts`.
  */
-export function totauxParMaison(
-  membres: readonly (PourLeTournoi & { points: number })[],
+export function effectifsParMaison(
+  membres: readonly PourLeTournoi[],
 ): Record<Maison, number> {
-  const totaux = totauxVides();
+  const effectifs = totauxVides();
   for (const membre of membres) {
     const maison = maisonQuiCompte(membre);
-    if (maison) totaux[maison] += membre.points;
+    if (maison) effectifs[maison] += 1;
   }
-  return totaux;
+  return effectifs;
+}
+
+// ─────────────────────────────────────────────────────────────
+//  Le classement — à la moyenne par élève
+// ─────────────────────────────────────────────────────────────
+
+/**
+ * Une maison au classement.
+ *
+ * `part` est ce que remplit son tube : la maison en tête vaut 1, les autres
+ * se mesurent à elle. **Pas d’objectif fixe** — un plafond arbitraire serait
+ * à recalibrer tous les mois, et un tube à moitié plein ne dirait rien.
+ */
+export type LigneDeClassement = {
+  maison: Maison;
+  /**
+   * Le compteur tel qu’il est en base — **et il peut être négatif**, si
+   * l’administration a retiré plus de points qu’une maison n’en avait
+   * (art. 19.1). C’est la vérité du carnet, et l’administration doit la voir :
+   * sans elle, un retrait de vingt points sur une maison qui en a dix
+   * n’aurait aucun effet visible, et on le referait.
+   */
+  points: number;
+  /**
+   * **Ce qui compte au tournoi : jamais moins que zéro.**
+   *
+   * Décision du joueur, 27 août 2026. Un tube ne descend pas sous le fond du
+   * verre — il n’y a pas de hauteur négative à peindre —, et une maison
+   * punie n’a pas à traîner un handicap invisible pendant des semaines : elle
+   * repart de zéro et remonte.
+   *
+   * Le plancher est posé **ici et nulle part ailleurs**. Surtout pas à
+   * l’écriture : le compteur se reconstruit depuis le carnet, et un plancher
+   * appliqué à chaque geste donnerait un autre total que la même somme faite
+   * d’un coup. Le recalcul cesserait d’être un filet.
+   */
+  pointsAuTournoi: number;
+  effectif: number;
+  /** Calculée sur `pointsAuTournoi` : jamais négative non plus. */
+  moyenne: number;
+  /** De 1 à 4. Les ex æquo partagent leur rang. */
+  rang: number;
+  /** De 0 à 1 — la hauteur du tube. */
+  part: number;
+};
+
+/**
+ * **Le classement se fait à la moyenne par élève, jamais au total.**
+ *
+ * Sinon la maison la plus peuplée gagne mécaniquement : quarante élèves
+ * médiocres battent huit élèves assidus, et le tournoi ne récompense plus que
+ * le recrutement.
+ *
+ *     moyenne = points de la maison / max(effectif, PLANCHER)
+ *
+ * Le **plancher** neutralise le cas inverse — une maison à un ou deux
+ * inscrits dont la moyenne exploserait au premier post. Il vit dans
+ * `config/points.json` : c’est une mesure, pas une règle.
+ *
+ * ── L’ordre du résultat ──
+ *
+ * Les quatre maisons sortent **toujours dans l’ordre de `MAISONS`**, et non
+ * triées par rang. Un tube qui change de place entre deux visites est
+ * désorientant : on cherche le sien, il a bougé. Le rang voyage sur chaque
+ * ligne, et l’écran l’affiche sans avoir à déplacer quoi que ce soit.
+ *
+ * Fonction pure : elle ne lit ni base ni horloge, et se teste sur des
+ * nombres.
+ */
+export function classement(
+  totaux: Record<Maison, number>,
+  effectifs: Record<Maison, number>,
+): LigneDeClassement[] {
+  // Le plancher à zéro, une fois pour toutes : tout ce qui suit — moyennes,
+  // rangs, hauteurs de tubes — en découle, et rien ne peut plus redevenir
+  // négatif en chemin.
+  const auTournoi = Object.fromEntries(
+    MAISONS.map((maison) => [maison, Math.max(0, totaux[maison])]),
+  ) as Record<Maison, number>;
+
+  const moyennes = Object.fromEntries(
+    MAISONS.map((maison) => [
+      maison,
+      auTournoi[maison] / Math.max(effectifs[maison], PLANCHER_EFFECTIF),
+    ]),
+  ) as Record<Maison, number>;
+
+  const sommet = Math.max(...MAISONS.map((m) => moyennes[m]));
+
+  return MAISONS.map((maison) => ({
+    maison,
+    points: totaux[maison],
+    pointsAuTournoi: auTournoi[maison],
+    effectif: effectifs[maison],
+    moyenne: moyennes[maison],
+    // Le rang se compte, il ne se trie pas : deux maisons à égalité partagent
+    // le leur, et la suivante ne prend pas la place laissée libre.
+    rang: 1 + MAISONS.filter((m) => moyennes[m] > moyennes[maison]).length,
+    // Toutes à zéro — le premier jour, et après chaque clôture : quatre tubes
+    // vides, et surtout pas quatre tubes pleins. Une division par zéro rendrait
+    // `NaN`, que le navigateur peindrait comme une hauteur de zéro pixel par
+    // accident plutôt que par décision.
+    part: sommet > 0 ? moyennes[maison] / sommet : 0,
+  }));
 }

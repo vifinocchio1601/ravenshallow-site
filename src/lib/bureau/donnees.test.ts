@@ -1,6 +1,18 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { ROUTES } from "@/lib/ecole/menu";
 import type { CompteConnecte } from "@/lib/session/garde";
+
+/**
+ * **`npm test` ne touche JAMAIS la base.**
+ *
+ * Depuis le lot des points, `progression` va y lire les points personnels de
+ * l’élève. On remplace donc le dépôt des points — et lui seul : ce qui
+ * s’éprouve ici, ce sont les règles du bureau, pas la lecture d’une colonne.
+ */
+vi.mock("@/lib/points/depot", () => ({
+  pointsPersonnelsDe: async () => 0,
+  lireLeTournoi: async () => null,
+}));
 
 /**
  * La note des premiers pas.
@@ -116,20 +128,25 @@ describe("l’ordre des premiers pas", () => {
   });
 });
 
-describe("les panneaux qui attendent leur lot", () => {
-  it("ouvre le compteur de maison à la répartition, et pas avant", async () => {
+describe("les deux compteurs ne se confondent pas", () => {
+  /**
+   * La progression ne porte plus QUE les points personnels.
+   *
+   * Le compteur de la maison a quitté ce panneau au lot des points : il vit
+   * dans les tubes, en tête du bureau, et son plancher comme sa moyenne se
+   * décident dans `ecole/tournoi.ts`. Deux affichages du même nombre
+   * finiraient par se contredire — et surtout, ce ne sont pas les mêmes
+   * nombres : un ajustement de l’administration (art. 19.1) touche la maison
+   * et jamais l’élève.
+   */
+  it("la progression ne porte plus le compteur de la maison", async () => {
     const { progression } = await import("./donnees");
+    const avancee = await progression(
+      compte({ maison: "KALDRAFN", etatMaison: "FAIT" }),
+    );
 
-    expect((await progression(compte())).pointsMaison).toBeNull();
-
-    // C’est l’état qui ouvre le compteur, jamais la seule présence d’une
-    // maison : ce test posait autrefois `maison` toute seule, et il aurait
-    // continué de passer avec un professeur qui garde la sienne au chaud.
-    const repartie = compte({ maison: "KALDRAFN", etatMaison: "FAIT" });
-    expect((await progression(repartie)).pointsMaison).toBe(0);
-
-    const directrice = compte({ maison: "KALDRAFN", etatMaison: "SANS_OBJET" });
-    expect((await progression(directrice)).pointsMaison).toBeNull();
+    expect(avancee).not.toHaveProperty("pointsMaison");
+    expect(avancee.pointsPersonnels).toBe(0);
   });
 });
 

@@ -3,16 +3,19 @@ import Image from "next/image";
 import Link from "next/link";
 import Panneau from "@/components/ecole/Panneau";
 import PremiersPas from "@/components/ecole/PremiersPas";
+import TubesDesMaisons from "@/components/ecole/TubesDesMaisons";
 import {
   annonces,
   courrierNonLu,
   premiersPas,
   progression,
   scenesEnCours,
+  tournoi,
 } from "@/lib/bureau/donnees";
+import { TEXTES_POINTS } from "@/lib/points/constantes";
 import { TEXTES_CORBEAUX } from "@/lib/corbeaux/constantes";
 import { libellePlace } from "@/lib/dossier/etats";
-import { estConcerneParLeMiroir } from "@/lib/session/acces";
+import { aUneMaison, estConcerneParLeMiroir } from "@/lib/session/acces";
 import { TEXTES_ECOLE } from "@/lib/ecole/constantes";
 import { ROUTES } from "@/lib/ecole/menu";
 import { exigerAcces } from "@/lib/session/garde";
@@ -35,16 +38,17 @@ export default async function BureauPage() {
   const compte = await exigerAcces(ROUTES.bureau);
   const t = TEXTES_ECOLE.bureau;
 
-  // Quatre sources. Le courrier lit maintenant la Tour aux Corbeaux ; les
-  // trois autres rendent encore des listes vides, et les panneaux savent quoi
-  // en faire.
-  const [scenes, courrier, avancee, hall, pas] = await Promise.all([
-    scenesEnCours(compte),
-    courrierNonLu(compte),
-    progression(compte),
-    annonces(),
-    premiersPas(compte),
-  ]);
+  // Cinq sources, toutes lues en parallèle. Seul le Grand Hall rend encore
+  // une liste vide — et le panneau sait quoi en faire.
+  const [scenes, courrier, avancee, hall, pas, tournoiDesMaisons] =
+    await Promise.all([
+      scenesEnCours(compte),
+      courrierNonLu(compte),
+      progression(compte),
+      annonces(),
+      premiersPas(compte),
+      tournoi(compte),
+    ]);
 
   return (
     <main className="relative">
@@ -89,6 +93,25 @@ export default async function BureauPage() {
         ) : null}
 
         <div className="mt-10 grid gap-5 lg:grid-cols-2">
+          {/* 0 — Le tournoi, en tête et sur toute la largeur.
+              Quatre tubes ne se partagent pas en deux colonnes, et c'est ce
+              qu'on veut voir en arrivant : où en est sa maison.
+              Le panneau disparaît entre deux saisons plutôt que d'afficher
+              quatre tubes vides, qui laisseraient croire à un tournoi commencé
+              que personne n'aurait joué. */}
+          {tournoiDesMaisons ? (
+            <Panneau
+              titre={TEXTES_POINTS.tournoi.titre}
+              aide={TEXTES_POINTS.tournoi.aide}
+              className="lg:col-span-2"
+            >
+              <TubesDesMaisons
+                lignes={tournoiDesMaisons.lignes}
+                maMaison={tournoiDesMaisons.maMaison}
+              />
+            </Panneau>
+          ) : null}
+
           {/* 1 — Ce qui attend une réponse passe en premier. */}
           <Panneau
             titre={t.scenes.titre}
@@ -165,22 +188,16 @@ export default async function BureauPage() {
                 terme={t.progression.pointsPersonnels}
                 valeur={String(avancee.pointsPersonnels)}
               />
-              {/* Trois cas, et non deux :
-                  — sans objet  : rien du tout. Ce compte n’a pas de maison à
-                    suivre, et lui promettre un compteur serait absurde.
-                  — pas réparti : la promesse du compteur, plutôt qu’un zéro —
-                    un zéro se lit comme un échec.
-                  — réparti     : le compteur. */}
-              {!estConcerneParLeMiroir(avancee) ? null : avancee.pointsMaison === null ? (
+              {/* Le compteur de SA MAISON n’est plus ici : les tubes, en tête
+                  de page, le disent bien mieux qu’une ligne de texte — et deux
+                  affichages du même nombre finiraient par se contredire.
+                  Reste la promesse du Miroir, pour qui l’attend : un zéro se
+                  lirait comme un échec. */}
+              {estConcerneParLeMiroir(avancee) && !aUneMaison(avancee) ? (
                 <p className="font-body text-sm italic leading-relaxed text-silver">
                   {t.progression.maisonInconnue}
                 </p>
-              ) : (
-                <Mesure
-                  terme={t.progression.pointsMaison}
-                  valeur={String(avancee.pointsMaison)}
-                />
-              )}
+              ) : null}
               {/* Même règle que sur la fiche : le rôle prend la place de
                   l’année, et le terme suit la valeur. */}
               <Mesure

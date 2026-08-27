@@ -52,6 +52,9 @@ const {
   retirerLaScene,
   retirerSonPost,
 } = await import("./depot");
+const { recalculerLesCompteurs, saisonEnCours } = await import(
+  "@/lib/points/depot"
+);
 const {
   accorderPermission,
   accorderSurToutesLesMaisons,
@@ -109,7 +112,24 @@ afterAll(async () => {
   // de cascader, parce qu'effacer un compte n'efface pas ce qu'il a écrit
   // chez les autres.
   if (sujetsCrees.length) {
+    // **Le carnet des points d'abord.** Une ligne du carnet RETIENT son post
+    // (`ON DELETE RESTRICT`), et l'effacement des scènes échouerait tant
+    // qu'elle est là. Ce n'est pas un défaut de la contrainte : elle est là
+    // pour qu'un effacement de post ne fasse jamais disparaître un point en
+    // silence, en laissant le compteur de la maison plus haut que le carnet.
+    //
+    // Les posts des DEUX comptes sont visés — l'essai fait répondre le second
+    // dans les scènes du premier, et ses points sont dans le même carnet.
+    await prisma.pointGagne.deleteMany({
+      where: { post: { sujetId: { in: sujetsCrees } } },
+    });
     await prisma.sujet.deleteMany({ where: { id: { in: sujetsCrees } } });
+
+    // Puis les compteurs remis d'aplomb depuis ce qui reste. C'est exactement
+    // ce à quoi sert le recalcul : les points de l'essai sont passés par le
+    // compteur de Bryggeld, et ils n'ont rien à y faire.
+    const saison = await saisonEnCours();
+    if (saison) await recalculerLesCompteurs(saison.id);
   }
 
   // Puis le compte, par l'adresse exacte et rien d'autre. Sa suppression

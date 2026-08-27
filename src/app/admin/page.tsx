@@ -7,6 +7,7 @@ import { TEXTES_CORBEAUX } from "@/lib/corbeaux/constantes";
 import { courrierEnAttente } from "@/lib/corbeaux/courrier";
 import { signalementsEnAttente } from "@/lib/corbeaux/moderation";
 import { TEXTES_POUVOIRS } from "@/lib/forum/constantes";
+import { TEXTES_POINTS } from "@/lib/points/constantes";
 
 export const metadata: Metadata = {
   title: "Administration — Ravenshallow",
@@ -175,6 +176,56 @@ export default async function AdminPage() {
             </p>
             <Link href="/admin/pouvoirs" className="btn btn-ghost mt-6">
               {TEXTES_POUVOIRS.lien}
+            </Link>
+          </AdminCard>
+
+          {/* Les points.
+              Séparés des pouvoirs, et pas par commodité : accorder une charge
+              et retirer des points à une maison n'ont ni le même rythme ni le
+              même public. Les seconds s'affichent devant tout le monde. */}
+          <AdminCard
+            rune="ᛏᚢᚱ"
+            eyebrow={TEXTES_POINTS.admin.eyebrow}
+            title={TEXTES_POINTS.admin.titre}
+          >
+            <p className="leading-[1.7] text-parchment-dim">
+              {TEXTES_POINTS.admin.accroche}
+            </p>
+            <Link href="/admin/points" className="btn btn-ghost mt-6">
+              Ouvrir les compteurs
+            </Link>
+          </AdminCard>
+
+          {/* La clôture d'année.
+              À part, et volontairement peu accessible : c'est le geste le plus
+              irréversible du site, et il se fait deux fois par an. */}
+          <AdminCard
+            rune="ᛊᛚᚢᛏ"
+            eyebrow={TEXTES_POINTS.cloture.eyebrow}
+            title={TEXTES_POINTS.cloture.titre}
+          >
+            <p className="leading-[1.7] text-parchment-dim">
+              {TEXTES_POINTS.cloture.accroche}
+            </p>
+            <Link href="/admin/cloture" className="btn btn-ghost mt-6">
+              Ouvrir la clôture
+            </Link>
+          </AdminCard>
+
+          {/* Les absences.
+              Séparées de la liste des membres : celle-ci répond à « que
+              devient Sigrid ? », celle-là à « qui n'est pas revenu ? ». La
+              première est triée par nom, et l'absent s'y perd. */}
+          <AdminCard
+            rune="ᚠᚱᚨ"
+            eyebrow={TEXTES_POINTS.absences.eyebrow}
+            title={TEXTES_POINTS.absences.titre}
+          >
+            <p className="leading-[1.7] text-parchment-dim">
+              {TEXTES_POINTS.absences.accroche}
+            </p>
+            <Link href="/admin/absences" className="btn btn-ghost mt-6">
+              Ouvrir les absences
             </Link>
           </AdminCard>
 

@@ -1,0 +1,12 @@
+{
+  "note": "Les mesures du lot des points — pas ses règles. Ce qu'un post rapporte, le plafond quotidien et le plancher d'effectif s'ajustent ici, après avoir vu de vrais posts, sans qu'aucune logique ait à changer. Ce qui vient du règlement, lui, vit dans le code : que les points se gagnent au RP (art. 18.1), que l'année dure six mois (art. 18.3), que le classement se fait à la moyenne. Voir src/lib/points/regles.ts.",
+
+  "noteParPost": "Un point par post publié dans un espace qui compte. Monter ce nombre multiplie tout, sans rien déséquilibrer entre les maisons.",
+  "parPost": 1,
+
+  "notePlafondParJour": "Le maximum de points qu'un joueur peut faire gagner à sa maison en vingt-quatre heures. Il ne refuse jamais un post : au-delà, on écrit encore, ça ne rapporte simplement plus. Mettre null le désactive entièrement.",
+  "plafondParJour": 10,
+
+  "notePlancherEffectif": "Le diviseur minimum de la moyenne par élève. Il neutralise le cas d'une maison à un ou deux inscrits, dont la moyenne exploserait au premier post.",
+  "plancherEffectif": 3
+}

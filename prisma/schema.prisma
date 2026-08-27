@@ -23,6 +23,10 @@
 //   `20260827160000_retirer_scenes_et_posts` — la cohérence des trois colonnes
 //       d'une scène retirée, et le fait qu'une place gardée n'a de sens que
 //       sur un post retiré
+//   `20260827180000_carnet_des_points`    — une seule saison ouverte à la
+//       fois, un seul point par post, l'accord entre la source d'un point et
+//       son post, une ligne du carnet et un ajustement qui ne se réécrivent
+//       jamais, et un classement archivé qui ne se réécrit pas du tout
 
 generator client {
   provider = "prisma-client-js"
@@ -85,6 +89,25 @@ model Utilisateur {
   /// affichées publiquement sur la fiche, jamais à justifier.
   limitesEcriture LimiteEcriture[] @default([])
   limitesAutres   String?
+
+  /// Le jour de la dernière connexion réussie. **C'est ce qui rend
+  /// l'article 7.3 applicable** : la base n'en gardait aucune trace, ni date
+  /// de connexion ni date d'activité, et l'inactivité ne pouvait donc pas se
+  /// constater. Nulle tant que le compte ne s'est jamais connecté.
+  derniereConnexionLe DateTime?
+
+  /// Art. 7.3 — le compte archivé après une longue absence.
+  ///
+  /// **Ce n'est pas une sanction, et cela ne touche pas à `statutAcces`** : un
+  /// compte archivé n'est pas mis à la porte, il sort seulement de l'effectif
+  /// de sa maison — sans quoi une maison à moitié absente serait pénalisée au
+  /// tournoi par des joueurs qui ne jouent plus.
+  ///
+  /// « Le retour reste possible » (art. 7.3) : une connexion lève l'archivage
+  /// d'elle-même. Les deux colonnes vont ensemble ou pas du tout, et c'est la
+  /// base qui le tient.
+  archiveLe  DateTime?
+  archivePar String?
 
   eleve Eleve?
 
@@ -310,6 +333,11 @@ model Eleve {
   /// reste écrite en base sous `SANS_OBJET`.
   points Int @default(0)
 
+  /// Les lignes du carnet gagnées par ce personnage. **C'est la trace**, et
+  /// `points` n'en est que le résumé : le jour où ce total serait faux, c'est
+  /// d'ici qu'on le refera.
+  pointsGagnes PointGagne[]
+
   creeLe DateTime @default(now())
   majLe  DateTime @updatedAt
 
@@ -505,6 +533,12 @@ enum EvenementMembre {
 
   /// Une scène retirée du forum par le staff, avec son motif.
   SCENE_SUPPRIMEE
+
+  /// Art. 7.3 — le compte mis de côté après une longue absence, et son retour.
+  /// Distincts d'`ACCES_MODIFIE` : archiver n'est pas sanctionner, et deux
+  /// gestes qui se ressemblent dans un même enum finissent par se confondre.
+  COMPTE_ARCHIVE
+  COMPTE_RESTAURE
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -1178,7 +1212,226 @@ model Post {
   /// coup, et le post reparaîtrait sans que personne l'ait demandé.
   placeConservee Boolean @default(false)
 
+  /// Le point que ce post a rapporté, s'il en a rapporté un. **Au plus un,
+  /// jamais deux** : la base le garantit par un index unique partiel, et non
+  /// par une condition écrite quelque part dans une route.
+  pointGagne PointGagne?
+
   @@index([sujetId, publieLe])
   @@index([auteurId])
   @@map("posts")
+}
+
+// ─────────────────────────────────────────────────────────────
+//  Partie V — Les points, les saisons et le tournoi des maisons
+//
+//  **Deux compteurs, et il ne faut jamais les confondre :**
+//
+//    les points PERSONNELS — `Eleve.points`, la progression de l'élève, qui
+//        traverse les années (art. 18.4)
+//    les points de MAISON  — `CompteurMaison`, le tournoi et les tubes, remis
+//        à zéro à chaque saison
+//
+//  Les deux se remplissent du même carnet — `PointGagne` — mais un ajustement
+//  de l'administration ne touche que le second : une sanction jouée en RP
+//  (art. 19.1) ne doit pas coûter son année à un élève.
+//
+//  **Le carnet est la seule vérité.** Les compteurs n'en sont qu'un résumé,
+//  tenu à jour pour que les tubes s'affichent d'un coup, et reconstructible
+//  entièrement depuis le carnet le jour où un total serait faux.
+// ─────────────────────────────────────────────────────────────
+
+/// Une année scolaire — six mois en temps réel (art. 18.3).
+///
+/// **Rien n'est jamais remis à zéro sur ce site**, et les compteurs ne font
+/// pas exception : à la clôture, on n'efface pas, on ouvre une page neuve.
+///
+/// C'est ce qui permet à deux exigences de coexister : que les compteurs de
+/// maison repartent de zéro chaque année, et qu'une commande sache les
+/// reconstruire depuis le carnet. Sans saison, ce recalcul ramasserait toute
+/// l'histoire et rendrait les points de l'an dernier.
+///
+/// **Une seule saison ouverte à la fois**, garanti par un index unique
+/// partiel que Prisma ne sait pas exprimer — il vit dans la migration.
+model SaisonScolaire {
+  id  String @id @default(cuid())
+  nom String
+
+  ouverteLe DateTime  @default(now())
+  /// Renseignée = la saison est close, son classement est archivé, et les
+  /// points vont désormais dans la suivante.
+  closeLe   DateTime?
+
+  points      PointGagne[]
+  ajustements AjustementMaison[]
+  compteurs   CompteurMaison[]
+  classement  ClassementArchive[]
+
+  creeLe DateTime @default(now())
+
+  @@map("saisons_scolaires")
+}
+
+/// D'où vient un point.
+///
+/// `QCM` et `EXAMEN` sont posés sans être employés : les cours n'existent pas
+/// encore. C'est le point d'accroche, et le poser après coup obligerait à
+/// retoucher un type que des milliers de lignes porteraient déjà.
+enum SourcePoint {
+  POST
+  QCM
+  EXAMEN
+}
+
+/// **Le carnet.** Une ligne par point gagné, et la seule vérité du lot.
+model PointGagne {
+  id String @id @default(cuid())
+
+  saisonId String
+  saison   SaisonScolaire @relation(fields: [saisonId], references: [id], onDelete: Restrict)
+
+  /// La FICHE, et non le compte : un post RP est écrit par un personnage.
+  /// Nulle si le compte a été supprimé — la ligne, elle, reste, et le
+  /// compteur de la maison ne bouge pas. Un total qui baisserait parce que
+  /// quelqu'un s'en va punirait sa maison de son départ.
+  eleveId String?
+  eleve   Eleve?  @relation(fields: [eleveId], references: [id], onDelete: SetNull)
+
+  /// **Figée au moment du gain**, comme l'année d'un sujet à son ouverture.
+  /// Elle n'est jamais relue sur la fiche, et c'est tout l'intérêt : une
+  /// joueuse de Bryggeld nommée professeure quitte l'effectif sans que sa
+  /// maison perde ce qu'elle a vraiment gagné pour elle.
+  ///
+  /// Nulle quand le compte ne marquait pour personne — `maisonQuiCompte`, et
+  /// jamais la colonne `maison` de la fiche.
+  maison Maison?
+
+  /// Un aujourd'hui. La colonne existe pour que « un post vaut un point »
+  /// reste un réglage, et non une vérité gravée dans la forme du carnet.
+  points Int @default(1)
+
+  source SourcePoint
+
+  /// Le post qui l'a produit, ou nul pour les sources à venir. L'accord entre
+  /// les deux est tenu par la base, **dans les deux sens**.
+  postId String? @unique
+  post   Post?   @relation(fields: [postId], references: [id], onDelete: Restrict)
+
+  /// **Le point masqué.** Un post masqué le temps d'une correction
+  /// (art. 19.3) cesse de rapporter, et le retrouve au démasquage. La ligne
+  /// n'est pas effacée : elle porte une date et cesse de compter tant qu'elle
+  /// la porte — c'est ce qui rend le geste réversible à l'identique.
+  ///
+  /// ⚠️ À ne pas confondre avec un post RETIRÉ, qui **garde** ses points —
+  /// décision du joueur, 27 août 2026 : « les points acquis restent acquis »
+  /// (art. 17.2). Retirer est le geste de l'auteur sur son propre texte ;
+  /// masquer est une mesure du staff, temporaire.
+  repriseLe DateTime?
+
+  gagneLe DateTime @default(now())
+
+  @@index([eleveId, gagneLe])
+  @@index([saisonId, maison])
+  @@map("points_gagnes")
+}
+
+/// Un ajustement de l'administration — art. 19.1.
+///
+/// **Table séparée du carnet, et la séparation est la règle elle-même** : un
+/// ajustement n'a pas d'élève, et ne touche QUE le compteur de la maison. Le
+/// ranger dans le carnet le ferait tôt ou tard entrer dans les points
+/// personnels par une somme distraite.
+///
+/// Ce sont des points visibles de tous : ils ne doivent jamais apparaître
+/// sans explication. Le motif est donc obligatoire **en base**, pas seulement
+/// à l'écran.
+model AjustementMaison {
+  id String @id @default(cuid())
+
+  saisonId String
+  saison   SaisonScolaire @relation(fields: [saisonId], references: [id], onDelete: Restrict)
+
+  maison Maison
+
+  /// Signé : un retrait est un nombre négatif. Deux colonnes « sens » et
+  /// « nombre » diraient la même chose en deux endroits.
+  points Int
+
+  /// Affiché dans l'historique public de la maison.
+  motif String @db.Text
+
+  /// « L'Administration ». La zone d'administration n'a pas de comptes
+  /// distincts : il n'y a personne d'autre à nommer. Même choix que
+  /// `Sujet.closPar` et que `Eleve.roleAffichePosePar`.
+  parNom String
+
+  /// **Réversible sans effacement.** Annuler pose une date ; l'historique
+  /// garde le geste ET son retrait. Un retrait de points qui disparaîtrait de
+  /// l'historique serait pire qu'un retrait injuste.
+  annuleLe  DateTime?
+  annulePar String?
+
+  creeLe DateTime @default(now())
+
+  @@index([saisonId, maison, creeLe])
+  @@map("ajustements_maison")
+}
+
+/// Le compteur d'une maison pour une saison — quatre lignes par saison.
+///
+/// Il n'apporte aucune vérité nouvelle : il évite seulement de refaire
+/// l'addition de toute une saison à chaque bureau ouvert, et le bureau est la
+/// page la plus visitée du site.
+///
+/// **Aucune contrainte `points >= 0`**, à dessein : le règlement fait perdre
+/// des points (art. 18.6) et en retirer à une maison (art. 19.1) sans dire si
+/// un total peut passer sous zéro. La poser trancherait à la place du joueur
+/// une règle qu'il n'a pas écrite.
+model CompteurMaison {
+  id String @id @default(cuid())
+
+  saisonId String
+  saison   SaisonScolaire @relation(fields: [saisonId], references: [id], onDelete: Restrict)
+
+  maison Maison
+  points Int    @default(0)
+
+  majLe DateTime @default(now()) @updatedAt
+
+  @@unique([saisonId, maison])
+  @@map("compteurs_maison")
+}
+
+/// Le classement d'une saison close — quatre lignes figées.
+///
+/// **Figées, jamais recalculées.** L'effectif de mars n'est pas celui
+/// d'octobre, et un classement qui changerait après coup ne serait pas une
+/// archive. Même principe que `Post.placeConservee` et que
+/// `Sujet.anneeRequiseALOuverture` ; ici, c'est un déclencheur qui refuse
+/// toute réécriture, sans exception.
+///
+/// La moyenne est recopiée telle quelle plutôt que redéduite des deux autres
+/// colonnes : le plancher de trois élèves est un réglage, et il pourra
+/// changer. Ce qui est archivé doit rester lisible avec les règles de son
+/// époque.
+model ClassementArchive {
+  id String @id @default(cuid())
+
+  saisonId String
+  saison   SaisonScolaire @relation(fields: [saisonId], references: [id], onDelete: Restrict)
+
+  maison   Maison
+  points   Int
+  effectif Int
+  moyenne  Float
+
+  /// De 1 à 4. **La maison gagnante est celle de rang 1** — pas de colonne
+  /// « gagnante » : deux façons de dire la même chose finiraient par se
+  /// contredire. Les ex æquo partagent leur rang, il n'est donc pas unique.
+  rang Int
+
+  figeLe DateTime @default(now())
+
+  @@unique([saisonId, maison])
+  @@map("classements_archives")
 }

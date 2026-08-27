@@ -42,7 +42,7 @@ joueur, pas des choix d'implémentation. Ne pas les réécrire sans demander.
 
 ```bash
 npm run dev              # http://localhost:3000
-npm test                 # vitest, 484 tests — ne touche JAMAIS la base
+npm test                 # vitest, 727 tests — ne touche JAMAIS la base
 npm run lint
 npx tsc --noEmit
 npm run build            # à passer avant tout déploiement
@@ -52,6 +52,7 @@ npm run base:migrer       # applique les migrations en attente
 npm run corbeaux:essai    # exerce la Tour aux Corbeaux SUR LA VRAIE BASE
 npm run base:sauvegarder  # recopie toute la base dans un fichier, hors du dépôt
 npm run forum:essai       # exerce les pouvoirs ET le forum SUR LA VRAIE BASE
+npm run points:essai      # exerce les points, la clôture et l'archivage SUR LA VRAIE BASE
 ```
 
 `base:migrer` existe parce que la CLI Prisma ne lit pas `.env.local` : le
@@ -89,7 +90,7 @@ Vercel, environnement Production — avec là-bas la chaîne Neon **pooled**.
 
 ## Les coutures uniques
 
-Vingt-deux endroits concentrent chacun une décision. Ne pas recopier leur
+Vingt-six endroits concentrent chacun une décision. Ne pas recopier leur
 logique ailleurs, l'y ajouter.
 
 | Fichier | Ce qu'il décide, seul |
@@ -103,7 +104,11 @@ logique ailleurs, l'y ajouter.
 | `lib/bjornstav/constantes.ts` | toute la scène de la boutique **et les vingt-cinq réactions** — `server-only` |
 | `lib/ecole/baguette.ts` | les dix codes, les dix noms, et la validation de ce qu'envoie le navigateur |
 | `lib/dossier/role-affiche.ts` | ce qu'on peut écrire dans le rôle particulier — **partagé mot pour mot** entre le champ de saisie et l'action serveur |
-| `lib/ecole/tournoi.ts` | **qui marque pour sa maison**, et le compteur des quatre. Ne compte rien aujourd'hui : la règle est posée avant le premier total |
+| `lib/ecole/tournoi.ts` | **qui marque pour sa maison**, l'effectif des quatre, et **le classement à la moyenne** — plancher compris. Ne totalise aucun point |
+| `lib/points/regles.ts` | **ce qu'un post rapporte**, et le plafond quotidien. Pur : ni horloge, ni base |
+| `lib/points/depot.ts` | l'accès aux points. **Seul endroit qui écrit** dans le carnet, les compteurs et les ajustements — et le seul qui touche à `Eleve.points` |
+| `lib/points/cloture.ts` | **la fin d'une année scolaire** : archiver, ouvrir la suivante, faire passer les cochés |
+| `lib/dossier/archivage.ts` | **l'archivage d'un compte** (art. 7.3), et la date de dernière connexion qui le rend applicable |
 | `lib/corbeaux/droits.ts` | **qui peut écrire à qui**, et ce qu'un corbeau devient — `PART`, `PART_DANS_LE_VIDE`, `REFUSE` |
 | `lib/corbeaux/depot.ts` | l'accès aux conversations. **Seul endroit qui compose une requête** sur les messages |
 | `lib/corbeaux/schema.ts` | ce qu'un corbeau a le droit de porter — **partagé mot pour mot** entre le champ et la route |
@@ -966,6 +971,179 @@ jeu, et la règle ne dirait plus rien.
 
 ---
 
+## Les points de maison
+
+Posés le 27 août 2026. **Deux compteurs, et il ne faut jamais les confondre :**
+
+| | Ce que c'est | Ce qui l'alimente |
+| --- | --- | --- |
+| `Eleve.points` | la progression de l'élève, qui **traverse les années** | le jeu, seul |
+| `CompteurMaison` | le tournoi et les tubes, **remis à zéro** chaque saison | le jeu **et** les ajustements |
+
+**Un ajustement de l'administration ne touche que le second** (art. 19.1) :
+une sanction jouée en RP ne doit pas coûter son année à un élève (art. 18.4).
+
+### Le carnet est la seule vérité
+
+`points_gagnes` — une ligne par point : qui, quelle maison, quel post, quand.
+Les compteurs n'en sont qu'un **résumé**, tenu à jour pour que les tubes
+s'affichent d'un coup, et **reconstructible en entier** par
+`recalculerLesCompteurs`. Sans la trace, un total faux n'aurait rien à quoi se
+comparer.
+
+Trois choses que la base garantit elle-même, et qu'aucune ligne de TypeScript
+ne pourrait tenir sur tous les chemins :
+
+- **un post ne donne jamais deux points** — index unique partiel sur `postId`.
+  ⚠️ **partiel** (`WHERE "postId" IS NOT NULL`), sinon les futures lignes de
+  QCM, sans post, se croiraient toutes identiques. Cousin exact du piège des
+  `NULL` du lot des pouvoirs ;
+- **une ligne du carnet ne se réécrit pas** — seule `repriseLe` bouge. La
+  fiche peut être *effacée*, jamais *remplacée* : refuser aussi l'effacement
+  rendrait un compte indestructible, comme pour un signalement ;
+- **un ajustement est figé**, et son annulation est le seul champ mobile.
+
+### Ce qui rapporte, et ce qui ne rapporte pas
+
+**Un point par post publié dans un espace qui compte** — `domaine` seul —, à
+condition qu'il atteigne le minimum du lieu. `Espace.comptePourLesPoints`
+décide, jamais le nom de l'espace ; `maisonQuiCompte` décide pour qui.
+
+**La maison est figée au moment du gain**, comme l'année d'un sujet à son
+ouverture. Une joueuse de Bryggeld nommée professeure quitte l'effectif sans
+que sa maison perde ce qu'elle avait vraiment gagné pour elle ; un professeur,
+lui, gagne des points personnels que personne n'encaisse au tournoi.
+
+**Le plafond est de dix points par joueur et par jour** — `config/points.json`,
+`null` pour le désactiver. Il **ne refuse jamais un post** : au-delà, on écrit
+encore, ça ne rapporte simplement plus. Et il se compte sur **vingt-quatre
+heures glissantes**, pas sur la journée civile : le serveur vit en UTC, le
+joueur non, et un plafond calé sur minuit du serveur se remettrait à zéro en
+pleine soirée d'écriture. Même choix que le plafond de la Tour aux Corbeaux.
+
+**Masquer retire le point, démasquer le rend** (art. 19.3) — la ligne porte une
+date et cesse de compter, elle n'est pas effacée.
+
+⚠️ **Un post RETIRÉ garde ses points**, et ce n'est pas un oubli. Décision du
+joueur, 27 août 2026 : « les points acquis restent acquis » (art. 17.2), et
+rien n'est jamais vraiment effacé sur ce site — le texte reste en base. Seul
+un geste de l'administration retire des points. **Ne pas ajouter d'appel à
+`reprendreLePointDUnPost` dans `retirerSonPost` « par symétrie »** : les deux
+gestes n'ont ni le même auteur ni le même sens.
+
+### Le classement, à la moyenne par élève
+
+```
+moyenne = max(0, points de la maison) / max(effectif, PLANCHER)
+```
+
+Jamais au total : sinon la maison la plus peuplée gagne mécaniquement, et le
+tournoi ne récompense plus que le recrutement. Le **plancher de trois**
+neutralise le cas inverse — une maison à un ou deux inscrits dont la moyenne
+exploserait au premier post.
+
+⚠️ **Un tube ne descend jamais sous zéro** — décision du joueur. Le plancher à
+zéro est posé **dans `classement()`, et nulle part ailleurs** ; `points` reste
+le compteur réel, `pointsAuTournoi` est ce qui compte. Surtout **pas à
+l'écriture** : le compteur se reconstruit depuis le carnet, et un plancher
+appliqué à chaque geste donnerait un autre total que la même somme faite d'un
+coup — le recalcul cesserait d'être un filet. Une maison à −15 puis +5 vaudrait
+5 en incrémental et 0 au recalcul, deux vérités.
+
+L'administration voit le **vrai** chiffre, et une ligne le lui dit : sinon un
+retrait de vingt points sur une maison qui en a dix n'aurait aucun effet
+visible, et on le referait.
+
+**Les quatre maisons sortent toujours dans l'ordre de `MAISONS`**, jamais
+triées par rang : un tube qui change de place entre deux visites est
+désorientant — on cherche le sien, il a bougé. Le rang voyage sur la ligne.
+
+### Les tubes
+
+`components/ecole/TubesDesMaisons.tsx`, d'après la maquette du joueur.
+L'image `public/bureau/tube.webp` est fournie **déjà traitée** : ne pas la
+retoucher.
+
+- **L'eau se peint PAR-DESSUS la photographie, en `mix-blend-mode: screen`.**
+  Derrière, elle serait purement et simplement invisible.
+- **L'intérieur du verre** : gauche `23.05 %`, droite `76.37 %`, haut
+  `14.34 %`, bas `78.44 %`. Relevé sur l'image, pas à l'œil.
+- **Aucune ligne de JavaScript.** Le remplissage est une `@keyframes` qui part
+  de zéro : le composant est un composant **serveur**, rien à hydrater, et la
+  page s'affiche remplie même sans script. Le client reçoit quatre nombres
+  déjà calculés, jamais la règle.
+- **Les couleurs de l'eau ne sont PAS celles de la palette** — `screen`
+  éclaircit très fortement, et les couleurs du site en ressortiraient
+  délavées. Ne pas les « harmoniser ».
+- `prefers-reduced-motion` : la règle globale ramène l'animation à
+  l'instantané, donc les tubes s'affichent pleins. **Les bulles et la houle
+  sont retirées à part** — sinon elles retomberaient immobiles au fond du
+  verre comme des poussières.
+- **Les quatre tubes s'alignent par le HAUT.** La colonne du lecteur porte une
+  ligne de plus — « Ma maison » —, et l'alignement par le bas faisait flotter
+  son tube au-dessus des autres. De même, le blason porte une **hauteur** fixe
+  et non une largeur : les quatre écus n'ont pas le même rapport, et à largeur
+  commune les tubes ne partaient plus du même trait.
+- Tout ce qu'un tube raconte est **écrit en toutes lettres au-dessous**. L'eau,
+  les bulles et les reflets sont `aria-hidden`.
+
+### La clôture d'une année — art. 18.3
+
+`lib/points/cloture.ts`, déclenchée depuis `/admin/cloture` et **jamais sur une
+date** : décision du joueur, il veut lancer la première lui-même.
+
+Trois gestes, un seul instant : le classement est **archivé et figé** (un
+déclencheur refuse toute réécriture), la saison se ferme, la suivante s'ouvre
+avec ses quatre compteurs à zéro, et les élèves cochés passent d'une année.
+
+**Rien ne se remet à zéro, en vérité** : on n'efface aucun compteur, on ouvre
+une **page neuve**. Les points de l'année passée restent lisibles dans leur
+saison, avec leur carnet entier — c'est ce qui permet de refaire un total six
+mois après.
+
+**Qui passe est coché à la main, élève par élève.** Le règlement dit
+« conditions de passage précises à définir » (art. 18.5) : il n'y a donc aucune
+règle à appliquer, et en inventer une trancherait à la place du joueur.
+
+⚠️ **Les points personnels ne sont pas remis à zéro** : ils portent la
+progression, et c'est justement ce qu'on vient de récompenser.
+
+⚠️ La liste des passages contient **tous les dossiers acceptés**, professeurs
+compris — un `roleAffiche` ne se lit pas pour décider d'un affichage, la règle
+est ferme. Ils apparaissent donc, non cochés, et le joueur les ignore. Le jour
+où cela gênera, il faudra une vraie colonne « n'est pas un élève », pas un
+libellé détourné.
+
+### L'archivage d'un compte — art. 7.3
+
+`lib/dossier/archivage.ts`, et l'écran `/admin/absences`.
+
+**Ce n'est pas une sanction, et cela ne touche pas à `statutAcces`** : un
+compte archivé n'est pas mis à la porte. Il sort seulement de l'effectif de sa
+maison — sans quoi une maison à moitié absente serait pénalisée au tournoi par
+des joueurs qui ne jouent plus.
+
+**Une connexion le lève d'elle-même.** « Le retour reste possible » ne doit pas
+obliger à écrire à l'administration pour rentrer chez soi.
+
+**`derniereConnexionLe` est ce qui rend l'article applicable** : la base n'en
+gardait aucune trace, et l'inactivité ne pouvait donc pas se constater. Elle
+est notée par la route de connexion, après vérification du mot de passe et
+jamais avant — une tentative ratée n'est pas une visite —, et son écriture
+**n'échoue jamais bruyamment** : le mot de passe est bon, on entre.
+
+⚠️ **Une date manquante ne vaut PAS une absence.** La colonne n'existe que
+depuis le 27 août 2026 : tous les comptes d'avant sont à `null` sans s'être
+absentés un seul jour. Les archiver sur cette base fermerait l'école à tout le
+monde d'un clic — d'où `archivable: false` dans ce cas, et la phrase qui
+l'explique à l'écran. La pastille du seuil dit **« Trois mois atteints »** et
+non « 90 jours » : le nombre du seuil, posé à côté d'une absence de cent, se
+lit comme la durée et contredit la ligne d'en dessous.
+
+**Rien ne s'archive tout seul** : l'écran donne le fait, le joueur décide. Même
+choix que pour la clôture.
+
+
 ## Les transactions
 
 **Toute transaction interactive passe par `transaction()`**, dans
@@ -1503,6 +1681,26 @@ Celui de l'année figée est ce qui fait tenir « le verrouillage n'est pas
 rétroactif » : sans lui, un script de reprise refermerait des scènes en cours
 sans que personne le voie. Même procédé que le type d'une conversation.
 
+Dans `20260827180000_carnet_des_points` : **une seule saison ouverte à la
+fois** — un index unique sur une expression constante, la seule forme qui
+exprime « au plus une ligne satisfaisant cette condition », et que Prisma ne
+sait pas écrire ; **un seul point par post**, par index unique **partiel**
+(sans le `WHERE`, les futures lignes de QCM se croiraient identiques) ;
+l'accord entre la source d'un point et son post, **dans les deux sens** ; une
+ligne du carnet et un ajustement qui **ne se réécrivent jamais** — seules la
+reprise et l'annulation bougent — ; et un classement archivé qui ne se réécrit
+**pas du tout**, sans exception.
+
+Les trente et une garanties de cette migration ont été **éprouvées sur la
+vraie base**, dans une transaction annulée : chacune refuse bien ce qu'elle
+doit refuser, et rien n'est resté écrit.
+
+⚠️ Le lien d'un point vers son post est en `ON DELETE RESTRICT`, et cela se
+voit tout de suite : `forum:essai` efface ses scènes en fin de course, et
+l'effacement échouait. **C'est ce que la contrainte doit faire** — un post ne
+disparaît pas en laissant son point derrière lui, avec un compteur plus haut
+que le carnet. C'est le ménage de l'essai qui a été réparé, pas la règle.
+
 **Les deux verrous anti-rejeu portent sur l'ÉTAT, pas sur la case vide.**
 `enregistrerRepartition` et `inscrireBaguette` conditionnent leur `updateMany`
 à `NON_FAIT`, et écrivent l'état dans la même requête — la base refuserait une
@@ -1795,40 +1993,41 @@ d'être vide, et il n'a pas eu à bouger.
 **Les deux pages légales sont posées** — mentions légales et politique de
 confidentialité —, liées au pied de page et au moment de la saisie du dossier.
 
-**Pas encore** : le lot des points, les cours, les annonces du Grand Hall, le
-Registre magique, et le contenu des espaces `non-mages` et `maison`. Le point
-d'accroche des points est un booléen sur l'espace — `comptePourLesPoints` — et
-le jour venu il se branchera sur `maisonQuiCompte`, jamais sur la colonne
-`maison`.
+**Les points sont attribués** : un par post publié dans « Le domaine », le
+carnet, les deux compteurs, l'écran d'administration, les tubes du bureau, la
+clôture d'année et l'archivage des comptes. Voir « Les points de maison ».
 
-⚠️ **La colonne `Eleve.points` existe et s'affiche, mais RIEN NE L'ÉCRIT.**
-Posée le 27 août 2026 par `20260827170000_points_de_maison`, sur décision du
-joueur : il voulait les points sur la carte de l'auteur tout de suite, sans
-attendre le lot qui les attribuera. Tout le monde est donc à zéro, et ce n'est
-pas un défaut d'affichage. Il n'existe **aucun** écran, aucune route, aucune
-commande d'administration qui accorde ou retire un point — ni cours, ni
-événement, ni qualité d'écriture (art. 18.1).
+**Pas encore** : les cours et leurs QCM, les examens, les annonces du Grand
+Hall, le Registre magique, et le contenu des espaces `non-mages` et `maison`.
+Le point d'accroche des cours est posé : `SourcePoint.QCM` et
+`SourcePoint.EXAMEN` existent dans l'enum et n'attendent que d'être écrits.
 
-Deux choses à savoir avant d'ouvrir ce lot :
+⚠️ **`totauxParMaison` a disparu**, et il ne faut pas le réécrire. Il sommait
+`Eleve.points` par maison — il supposait « compteur de maison = somme des
+points personnels », ce qui est faux depuis qu'un ajustement (art. 19.1) touche
+la maison sans toucher l'élève. Le compteur vit en base et se reconstruit
+depuis le carnet. `effectifsParMaison` l'a remplacé : il compte des têtes.
 
-- **Aucune contrainte `CHECK` n'est posée sur la colonne**, à dessein. Le
-  règlement fait perdre des points (art. 18.4) et en retirer à une maison
-  (art. 19.1) sans dire si un total individuel peut passer sous zéro. Poser
-  `points >= 0` aujourd'hui trancherait à la place du joueur une règle qu'il
-  n'a pas écrite. La contrainte viendra avec le geste qui écrira vraiment.
-- **Le total d'une maison ne se lit jamais en sommant la colonne.**
-  `totauxParMaison` prend la liste brute et appelle `maisonQuiCompte` : une
-  somme naïve ramasserait la maison d'une directrice, qui reste écrite sous
-  `SANS_OBJET`.
+⚠️ **Aucune contrainte `CHECK` sur `Eleve.points` ni sur `CompteurMaison`**, à
+dessein et toujours. Le règlement fait perdre des points (art. 18.6) et en
+retirer à une maison (art. 19.1) sans dire si un total peut passer sous zéro.
+Le plancher qui existe est **d'affichage** — `pointsAuTournoi` —, pas de base :
+la trace doit rester vraie même quand le tournoi arrondit à zéro.
+
+⚠️ **L'historique des ajustements n'est visible que de l'administration.** Le
+brief du joueur le veut « affiché dans l'historique public de la maison » — or
+il n'existe pas encore de page de maison, l'espace `maison` étant vide. À
+poser sous les tubes ou avec le lot de cet espace : **c'est une décision qui
+lui appartient**, et elle est en attente.
 
 Le **Registre magique** — l'annuaire des membres, trié par maison et par
 fonction — n'existe pas : c'est lui qui portera « bloquer depuis sa fiche »,
-et c'est pourquoi ce lot-ci ne pose le blocage que depuis la conversation. Le tournoi inter-maisons n'existe pas non plus — mais la règle qui
-dira **qui compte** est déjà posée et testée dans `lib/ecole/tournoi.ts` : le
-lot des points remplacera la valeur, pas la condition. Les quatre panneaux du bureau lisent `lib/bureau/donnees.ts`, dont
-les fonctions rendent des listes vides — chaque lot en remplacera **une
-seule**. `progression()` est la première à rendre autre chose : elle porte
-déjà l'année et la baguette.
+et c'est pourquoi ce lot-ci ne pose le blocage que depuis la conversation. Les panneaux du bureau lisent `lib/bureau/donnees.ts` — **une fonction par
+panneau, et chaque lot en remplace une seule**, sans toucher aux panneaux. Le
+plan a tenu quatre fois : le courrier avec la Tour aux Corbeaux, les scènes
+avec le forum, la progression et le tournoi avec les points. Il ne reste
+qu'`annonces`, qui attend le Grand Hall, et `prochainesEpreuves`, qui attend le
+calendrier scolaire.
 
 **Limites connues** — les blasons ne sont plus une limite : passés en WebP et
 munis de leur `sizes`, la ligne de conversation de la Tour en charge 7 Ko au

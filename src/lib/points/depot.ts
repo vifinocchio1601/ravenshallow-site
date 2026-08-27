@@ -1,0 +1,522 @@
+import "server-only";
+import type { Prisma } from "@prisma/client";
+import { transaction } from "@/lib/base/transaction";
+import { MAISONS, type Maison } from "@/lib/dossier/etats";
+import {
+  classement,
+  effectifsParMaison,
+  maisonQuiCompte,
+  totauxVides,
+  type LigneDeClassement,
+} from "@/lib/ecole/tournoi";
+import { prisma } from "@/lib/prisma";
+import { nettoyerTexteLibre } from "@/lib/texte";
+import { TEXTES_POINTS } from "./constantes";
+import { etatDuPlafond, pointDUnPost, type VerdictPoint } from "./regles";
+
+/**
+ * L’accès aux points.
+ *
+ * **Le seul endroit qui écrit dans `points_gagnes`, `compteurs_maison` et
+ * `ajustements_maison`** — et le seul qui touche à `Eleve.points`. Trois
+ * tables et une colonne qui doivent bouger ensemble ou pas du tout : les
+ * laisser s’écrire depuis plusieurs endroits, c’est garantir qu’un jour l’une
+ * bougera sans l’autre, et qu’un total sera faux sans que rien ne le dise.
+ *
+ * ── Deux compteurs, jamais confondus ──
+ *
+ *   `Eleve.points`    — la progression personnelle, qui traverse les années
+ *   `CompteurMaison`  — le tournoi, remis à zéro à chaque saison
+ *
+ * Les points gagnés alimentent **les deux**. Un ajustement de l’administration
+ * (art. 19.1) n’alimente **que le second** : une sanction jouée en RP ne doit
+ * pas coûter son année à un élève (art. 18.4).
+ *
+ * ── Tout passe par une transaction ──
+ *
+ * Écrire la ligne du carnet sans corriger les compteurs, ou l’inverse, laisse
+ * la base dans un état qu’aucune lecture ne peut plus expliquer. Les fonctions
+ * d’écriture reçoivent donc un `tx` : elles s’inscrivent **dans la transaction
+ * de l’appelant** — celle qui crée le post, celle qui le masque — plutôt que
+ * d’en ouvrir une à côté.
+ */
+
+/** Le client, ou la transaction en cours. Jamais autre chose. */
+type Base = Prisma.TransactionClient | typeof prisma;
+
+// ─────────────────────────────────────────────────────────────
+//  La saison
+// ─────────────────────────────────────────────────────────────
+
+export type Saison = { id: string; nom: string };
+
+/**
+ * La saison ouverte, ou `null`.
+ *
+ * `null` ne devrait jamais arriver — la base garantit qu’il y en a au plus
+ * une, la migration en a ouvert une, et la clôture en ouvrira la suivante
+ * dans la même transaction. Mais **un point qui n’a nulle part où se poser ne
+ * doit pas faire échouer la publication d’un post** : le joueur a écrit, son
+ * texte part, et c’est tout ce qui compte pour lui. On rend `null`, l’appelant
+ * n’accorde rien, et rien ne casse.
+ */
+export async function saisonEnCours(base: Base = prisma): Promise<Saison | null> {
+  return base.saisonScolaire.findFirst({
+    where: { closeLe: null },
+    select: { id: true, nom: true },
+  });
+}
+
+// ─────────────────────────────────────────────────────────────
+//  Accorder le point d’un post
+// ─────────────────────────────────────────────────────────────
+
+/** Le strict nécessaire pour décider — pas la fiche entière. */
+export type AuteurDUnPost = {
+  eleveId: string;
+  maison: string | null;
+  etatMaison: "NON_FAIT" | "FAIT" | "SANS_OBJET";
+};
+
+/**
+ * **Ce post rapporte-t-il, et à qui ?**
+ *
+ * Appelée dans la transaction qui vient de créer le post. Elle relit le
+ * plafond en base, demande le verdict à la règle pure, puis écrit d’un seul
+ * geste : la ligne du carnet, les points personnels, le compteur de la maison.
+ *
+ * Rend le verdict pour que l’appelant sache ce qui s’est passé — aucun d’eux
+ * n’en fait rien aujourd’hui, et c’est volontaire : **un post ne doit jamais
+ * échouer parce qu’il n’a pas rapporté de point.** Le joueur écrit une scène,
+ * il ne dépose pas une note de frais.
+ *
+ * ── La maison est figée ici, et nulle part ailleurs ──
+ *
+ * `maisonQuiCompte` est interrogée **au moment du gain**, et sa réponse est
+ * recopiée dans la ligne. Une joueuse de Bryggeld nommée professeure quitte
+ * l’effectif sans que sa maison perde ce qu’elle avait vraiment gagné pour
+ * elle ; un professeur, lui, gagne ses points personnels sans que personne
+ * n’en profite au tournoi. La base refuse ensuite de changer cette colonne.
+ */
+export async function accorderLePointDUnPost(
+  tx: Prisma.TransactionClient,
+  auteur: AuteurDUnPost,
+  postId: string,
+  comptePourLesPoints: boolean,
+  respecteLeMinimum: boolean,
+  maintenant = new Date(),
+): Promise<VerdictPoint> {
+  // Le plafond ne se lit que si le lieu compte : interroger la base pour un
+  // post chez les non-mages serait une requête par post, pour rien.
+  if (!comptePourLesPoints) {
+    return pointDUnPost({
+      comptePourLesPoints: false,
+      respecteLeMinimum,
+      plafond: { atteint: false, restants: null },
+    });
+  }
+
+  const saison = await saisonEnCours(tx);
+  if (!saison) return { gagne: false, raison: "LIEU_SANS_POINTS" };
+
+  const recents = await tx.pointGagne.findMany({
+    where: {
+      eleveId: auteur.eleveId,
+      gagneLe: { gte: new Date(maintenant.getTime() - 24 * 60 * 60 * 1000) },
+    },
+    select: { gagneLe: true },
+  });
+
+  const verdict = pointDUnPost({
+    comptePourLesPoints,
+    respecteLeMinimum,
+    plafond: etatDuPlafond(
+      recents.map((r) => r.gagneLe),
+      maintenant,
+    ),
+  });
+  if (!verdict.gagne) return verdict;
+
+  const maison = maisonQuiCompte(auteur);
+
+  await tx.pointGagne.create({
+    data: {
+      saisonId: saison.id,
+      eleveId: auteur.eleveId,
+      maison,
+      points: verdict.points,
+      source: "POST",
+      postId,
+      gagneLe: maintenant,
+    },
+  });
+
+  await tx.eleve.update({
+    where: { id: auteur.eleveId },
+    data: { points: { increment: verdict.points } },
+  });
+
+  if (maison) {
+    await crediterLaMaison(tx, saison.id, maison, verdict.points);
+  }
+
+  return verdict;
+}
+
+// ─────────────────────────────────────────────────────────────
+//  Reprendre et rendre — le post masqué (art. 19.3)
+// ─────────────────────────────────────────────────────────────
+
+/**
+ * **Le point d’un post masqué s’en va, et revient au démasquage.**
+ *
+ * La ligne du carnet n’est pas effacée : elle porte une date de reprise, et
+ * cesse de compter tant qu’elle la porte. C’est ce qui rend le geste
+ * réversible à l’identique — rendre un point effacé obligerait à le
+ * réinventer, et à deviner ce qu’il valait.
+ *
+ * ⚠️ **À ne pas confondre avec un post RETIRÉ, qui garde ses points.**
+ * Décision du joueur, 27 août 2026 : « les points acquis restent acquis »
+ * (art. 17.2). Retirer est le geste de l’auteur sur son propre texte ;
+ * masquer est une mesure du staff, temporaire, sur un post non conforme.
+ * `retirerSonPost` et `retirerLaScene` ne passent donc jamais par ici.
+ *
+ * Rend `true` si un point a bougé — faux quand le post n’en avait pas, ou
+ * qu’il était déjà repris. Un second masquage ne retire pas deux fois.
+ */
+export async function reprendreLePointDUnPost(
+  tx: Prisma.TransactionClient,
+  postId: string,
+  maintenant = new Date(),
+): Promise<boolean> {
+  const ligne = await tx.pointGagne.findUnique({
+    where: { postId },
+    select: { id: true, points: true, maison: true, eleveId: true, saisonId: true, repriseLe: true },
+  });
+  if (!ligne || ligne.repriseLe) return false;
+
+  await tx.pointGagne.update({
+    where: { id: ligne.id },
+    data: { repriseLe: maintenant },
+  });
+  await appliquer(tx, ligne, -ligne.points);
+  return true;
+}
+
+/** Le post rouvre : son point revient, identique. */
+export async function rendreLePointDUnPost(
+  tx: Prisma.TransactionClient,
+  postId: string,
+): Promise<boolean> {
+  const ligne = await tx.pointGagne.findUnique({
+    where: { postId },
+    select: { id: true, points: true, maison: true, eleveId: true, saisonId: true, repriseLe: true },
+  });
+  if (!ligne || !ligne.repriseLe) return false;
+
+  await tx.pointGagne.update({
+    where: { id: ligne.id },
+    data: { repriseLe: null },
+  });
+  await appliquer(tx, ligne, ligne.points);
+  return true;
+}
+
+/**
+ * Porter un écart sur les deux compteurs à la fois.
+ *
+ * Une fiche supprimée laisse `eleveId` nul : la ligne du carnet reste, le
+ * compteur de la maison reste juste, et il n’y a simplement plus de points
+ * personnels à corriger. Un total de maison qui baisserait parce que
+ * quelqu’un s’en va punirait sa maison de son départ.
+ */
+async function appliquer(
+  tx: Prisma.TransactionClient,
+  ligne: { eleveId: string | null; maison: Maison | null; saisonId: string },
+  ecart: number,
+): Promise<void> {
+  if (ligne.eleveId) {
+    await tx.eleve.update({
+      where: { id: ligne.eleveId },
+      data: { points: { increment: ecart } },
+    });
+  }
+  if (ligne.maison) {
+    await crediterLaMaison(tx, ligne.saisonId, ligne.maison, ecart);
+  }
+}
+
+/**
+ * Le compteur de la maison, corrigé.
+ *
+ * `upsert` et non `update` : les quatre lignes existent, mais une saison
+ * ouverte à la main ou par un script pourrait n’en avoir aucune. **Un point
+ * ne doit jamais se perdre en silence parce qu’une ligne de résumé manquait.**
+ */
+async function crediterLaMaison(
+  tx: Prisma.TransactionClient,
+  saisonId: string,
+  maison: Maison,
+  ecart: number,
+): Promise<void> {
+  await tx.compteurMaison.upsert({
+    where: { saisonId_maison: { saisonId, maison } },
+    update: { points: { increment: ecart } },
+    create: { saisonId, maison, points: ecart },
+  });
+}
+
+// ─────────────────────────────────────────────────────────────
+//  Les ajustements de l’administration — art. 19.1
+// ─────────────────────────────────────────────────────────────
+
+export type ResultatAjustement =
+  | { ok: true; id: string }
+  | { ok: false; message: string };
+
+/**
+ * **Ajouter ou retirer des points à une maison.**
+ *
+ * ⚠️ **Ne touche JAMAIS aux points personnels**, et c’est toute la mesure :
+ * une entorse jouée en RP (art. 19.1) coûte des points à la maison, pas son
+ * année à l’élève (art. 18.4). Confondre les deux ferait redoubler quelqu’un
+ * pour une retenue de fiction.
+ *
+ * Le motif est **obligatoire**, ici et en base : ces points s’affichent dans
+ * l’historique de la maison, et personne ne doit les y trouver sans
+ * explication. C’est l’inverse d’un signalement, où le motif est facultatif
+ * parce que celui qui subit n’a pas à rédiger un dossier.
+ *
+ * **Aucun bouton ailleurs sur le site.** Un professeur ou un modérateur qui
+ * veut faire retirer des points écrit à l’administration par la Tour aux
+ * Corbeaux — décision du joueur. Il n’existe donc pas de permission
+ * attribuable qui ouvre ce geste, et il ne faut pas en ajouter une.
+ */
+export async function ajusterLaMaison(
+  saisonId: string,
+  maison: Maison,
+  points: number,
+  motif: string,
+  parNom: string = TEXTES_POINTS.ajustement.parDefautAuteur,
+): Promise<ResultatAjustement> {
+  const E = TEXTES_POINTS.ajustement.erreurs;
+
+  if (!Number.isFinite(points) || points === 0) {
+    return { ok: false, message: E.valeurRequise };
+  }
+  if (!Number.isInteger(points)) {
+    return { ok: false, message: E.valeurEntiere };
+  }
+
+  const motifNet = nettoyerTexteLibre(motif);
+  if (motifNet.length === 0) return { ok: false, message: E.motifRequis };
+
+  const id = await transaction(async (tx) => {
+    const ecrit = await tx.ajustementMaison.create({
+      data: { saisonId, maison, points, motif: motifNet, parNom },
+      select: { id: true },
+    });
+    await crediterLaMaison(tx, saisonId, maison, points);
+    return ecrit.id;
+  });
+
+  return { ok: true, id };
+}
+
+/**
+ * **Annuler un ajustement, sans l’effacer.**
+ *
+ * L’historique garde le geste ET son retrait. Un retrait de points qui
+ * disparaîtrait de l’histoire serait pire qu’un retrait injuste : une maison
+ * verrait son compteur remonter sans que rien n’explique pourquoi il avait
+ * baissé.
+ */
+export async function annulerLAjustement(
+  id: string,
+  parNom: string = TEXTES_POINTS.ajustement.parDefautAuteur,
+): Promise<boolean> {
+  return transaction(async (tx) => {
+    const ligne = await tx.ajustementMaison.findUnique({
+      where: { id },
+      select: { saisonId: true, maison: true, points: true, annuleLe: true },
+    });
+    if (!ligne || ligne.annuleLe) return false;
+
+    await tx.ajustementMaison.update({
+      where: { id },
+      data: { annuleLe: new Date(), annulePar: parNom },
+    });
+    await crediterLaMaison(tx, ligne.saisonId, ligne.maison, -ligne.points);
+    return true;
+  });
+}
+
+/** L’historique d’une saison — le plus récent d’abord. Tout y figure. */
+export async function historiqueDesAjustements(saisonId: string, maison?: Maison) {
+  return prisma.ajustementMaison.findMany({
+    where: { saisonId, ...(maison ? { maison } : {}) },
+    orderBy: { creeLe: "desc" },
+    select: {
+      id: true,
+      maison: true,
+      points: true,
+      motif: true,
+      parNom: true,
+      creeLe: true,
+      // Les annulés restent visibles, barrés : c'est le principe même de
+      // « tracé et réversible ».
+      annuleLe: true,
+      annulePar: true,
+    },
+  });
+}
+
+// ─────────────────────────────────────────────────────────────
+//  Lire — ce que le bureau affiche
+// ─────────────────────────────────────────────────────────────
+
+/**
+ * Le compteur des quatre maisons pour la saison en cours.
+ *
+ * **Les quatre, toujours**, même à zéro : une maison qui disparaît du tableau
+ * parce qu’elle n’a rien marqué serait illisible, et le tube manquant se
+ * lirait comme un défaut d’affichage.
+ */
+export async function compteursDeLaSaison(
+  saisonId: string,
+): Promise<Record<Maison, number>> {
+  const lignes = await prisma.compteurMaison.findMany({
+    where: { saisonId },
+    select: { maison: true, points: true },
+  });
+
+  const totaux = totauxVides();
+  for (const ligne of lignes) {
+    if ((MAISONS as readonly string[]).includes(ligne.maison)) {
+      totaux[ligne.maison] = ligne.points;
+    }
+  }
+  return totaux;
+}
+
+/**
+ * **Refaire les quatre compteurs depuis le carnet.**
+ *
+ * C’est le filet du lot entier. Les compteurs ne sont qu’un résumé : le jour
+ * où l’un serait faux — un bug, une transaction à moitié passée, une commande
+ * tapée à la main —, cette fonction le refait à partir de ce qui s’est
+ * réellement produit. Sans la trace, il n’y aurait rien à quoi le comparer, et
+ * il faudrait deviner.
+ *
+ * Ce qui entre dans le total, et rien d’autre :
+ *   • les points du carnet **non repris** — un post masqué ne compte pas
+ *   • les ajustements de l’administration **non annulés**
+ *
+ * Elle ne touche **pas** aux points personnels : ce sont deux compteurs, et
+ * un ajustement de maison n’a jamais rien à voir avec eux.
+ *
+ * Rend les quatre totaux tels qu’ils viennent d’être écrits.
+ */
+export async function recalculerLesCompteurs(
+  saisonId: string,
+): Promise<Record<Maison, number>> {
+  const [gagnes, ajustements] = await Promise.all([
+    prisma.pointGagne.findMany({
+      where: { saisonId, repriseLe: null, NOT: { maison: null } },
+      select: { maison: true, points: true },
+    }),
+    prisma.ajustementMaison.findMany({
+      where: { saisonId, annuleLe: null },
+      select: { maison: true, points: true },
+    }),
+  ]);
+
+  const totaux = totauxVides();
+  for (const ligne of [...gagnes, ...ajustements]) {
+    if (ligne.maison) totaux[ligne.maison] += ligne.points;
+  }
+
+  // Les quatre ensemble, dans une transaction : un recalcul à moitié écrit
+  // laisserait des compteurs plus faux qu’avant de le lancer.
+  await transaction(async (tx) => {
+    for (const maison of MAISONS) {
+      await tx.compteurMaison.upsert({
+        where: { saisonId_maison: { saisonId, maison } },
+        update: { points: totaux[maison] },
+        create: { saisonId, maison, points: totaux[maison] },
+      });
+    }
+  });
+
+  return totaux;
+}
+
+/**
+ * Les points personnels d’un élève — art. 18.1.
+ *
+ * ⚠️ **À ne jamais sommer pour obtenir le total d’une maison.** Les deux
+ * compteurs ne portent pas la même chose : un ajustement de l’administration
+ * (art. 19.1) va au compteur de la maison et jamais ici. Le total d’une
+ * maison se lit dans `compteursDeLaSaison`, et nulle part ailleurs.
+ *
+ * Zéro pour une fiche qui n’existe pas — le bureau ne doit pas s’effondrer
+ * pour un compte sans fiche, un cas qui ne devrait de toute façon pas exister.
+ */
+export async function pointsPersonnelsDe(eleveId: string): Promise<number> {
+  const fiche = await prisma.eleve.findUnique({
+    where: { id: eleveId },
+    select: { points: true },
+  });
+  return fiche?.points ?? 0;
+}
+
+/**
+ * **Le tournoi, tel qu’il s’affiche** — la saison, et les quatre maisons
+ * classées.
+ *
+ * Une seule porte pour les deux écrans qui le montrent : les tubes du bureau
+ * et le tableau de l’administration. Deux lectures qui calculeraient chacune
+ * leur moyenne finiraient par se contredire, et c’est le genre de désaccord
+ * qu’on ne remarque qu’en le voyant à l’écran, trop tard.
+ *
+ * Rend `null` s’il n’y a pas de saison ouverte — l’écran le dit alors, plutôt
+ * que d’afficher quatre zéros qui laisseraient croire à un tournoi vide.
+ */
+export type Tournoi = {
+  saison: Saison & { ouverteLe: Date };
+  lignes: LigneDeClassement[];
+};
+
+export async function lireLeTournoi(): Promise<Tournoi | null> {
+  const saison = await prisma.saisonScolaire.findFirst({
+    where: { closeLe: null },
+    select: { id: true, nom: true, ouverteLe: true },
+  });
+  if (!saison) return null;
+
+  const [totaux, compte] = await Promise.all([
+    compteursDeLaSaison(saison.id),
+    effectifs(),
+  ]);
+
+  return { saison, lignes: classement(totaux, compte) };
+}
+
+/**
+ * L’effectif des quatre maisons.
+ *
+ * Le dépôt écarte ce qui relève du dossier — candidature non acceptée, compte
+ * archivé (art. 7.3) — puis passe la liste **brute** à `effectifsParMaison`,
+ * qui fait le tri des maisons lui-même. C’est le même parti pris que partout
+ * ailleurs : la règle « qui compte pour sa maison » ne se recopie pas dans un
+ * `where`, elle s’appelle.
+ *
+ * Un membre suspendu compte — il garde son blason, il reste de sa maison.
+ */
+export async function effectifs(): Promise<Record<Maison, number>> {
+  const membres = await prisma.eleve.findMany({
+    where: { statut: "ACCEPTE", utilisateur: { archiveLe: null } },
+    select: { maison: true, etatMaison: true },
+  });
+  return effectifsParMaison(membres);
+}

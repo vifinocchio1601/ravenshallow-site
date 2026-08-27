@@ -165,6 +165,23 @@ export function rangAnnee(fonction: Fonction): number {
   return rang === -1 ? 1 : rang + 1;
 }
 
+/**
+ * **L’année d’après, ou `null` en septième** — art. 18.4.
+ *
+ * Ici parce que c’est le seul fichier qui connaisse l’ordre des années :
+ * `rangAnnee` et `atteintLAnnee` s’y appuient déjà, et une seconde liste
+ * tenue ailleurs finirait par diverger de celle-ci.
+ *
+ * `null` en septième année n’est pas une erreur : c’est la fin des études.
+ * L’élève reste où il est, et ce qu’il devient est une décision de lore que
+ * le règlement ne tranche pas.
+ */
+export function anneeSuivante(fonction: Fonction): Fonction | null {
+  const rang = FONCTIONS.indexOf(fonction);
+  if (rang === -1 || rang >= FONCTIONS.length - 1) return null;
+  return FONCTIONS[rang + 1]!;
+}
+
 /** L’année exigée est-elle atteinte ? `null` = aucune exigence. */
 export function atteintLAnnee(
   fonction: Fonction,

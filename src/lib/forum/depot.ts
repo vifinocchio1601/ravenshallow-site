@@ -5,8 +5,14 @@ import { nettoyerTexteLibre } from "@/lib/texte";
 import { libellePlace, type Fonction, type Maison } from "@/lib/dossier/etats";
 import { adressePortrait } from "@/lib/ecole/portrait";
 import { maisonQuiCompte } from "@/lib/ecole/tournoi";
+import {
+  accorderLePointDUnPost,
+  rendreLePointDUnPost,
+  reprendreLePointDUnPost,
+} from "@/lib/points/depot";
 import { aUneMaison } from "@/lib/session/acces";
 import { TEXTES_FORUM } from "./constantes";
+import { respecteLeMinimum } from "./longueur";
 import {
   validerAvertissement,
   validerPost,
@@ -631,26 +637,42 @@ export async function ouvrirSujet(
   const avertissement = validerAvertissement(saisie.avertissement);
   if (!avertissement.ok) return { ok: false, message: avertissement.message };
 
-  const cree = await prisma.sujet.create({
-    data: {
-      sectionId: section.id,
-      auteurId: auteur.eleveId,
-      titre: titre.valeur,
-      anneeRequiseALOuverture: section.regles.anneeMinimale,
-      posts: {
-        create: {
-          auteurId: auteur.eleveId,
-          corps: corps.valeur,
-          avertissementContenu: avertissement.valeur,
+  // La scène, son premier post et son point dans la même transaction. Un post
+  // écrit sans son point laisserait un total faux que rien ne signalerait —
+  // et le carnet est ce qui permettra de le refaire, à condition d'être
+  // complet.
+  const cree = await transaction(async (tx) => {
+    const sujet = await tx.sujet.create({
+      data: {
+        sectionId: section.id,
+        auteurId: auteur.eleveId,
+        titre: titre.valeur,
+        anneeRequiseALOuverture: section.regles.anneeMinimale,
+        posts: {
+          create: {
+            auteurId: auteur.eleveId,
+            corps: corps.valeur,
+            avertissementContenu: avertissement.valeur,
+          },
         },
       },
-    },
-    select: { id: true, posts: { select: { id: true } } },
-  });
+      select: { id: true, posts: { select: { id: true } } },
+    });
 
-  // Sans usage aujourd'hui — mais l'espace le déclare, et le lot des points
-  // s'y branchera plutôt que de relire la colonne `maison`.
-  void espace.comptePourLesPoints;
+    // `comptePourLesPoints` vient de l'espace, jamais deviné d'après son nom.
+    // Le minimum est relu plutôt que supposé : `validerPost` vient de le
+    // vérifier, mais « seul un post valide rapporte » est une règle du joueur,
+    // et une règle ne se déduit pas d'un enchaînement d'appels.
+    await accorderLePointDUnPost(
+      tx,
+      auteur,
+      sujet.posts[0]!.id,
+      espace.comptePourLesPoints,
+      respecteLeMinimum(corps.valeur, section.regles.lignesMinimum),
+    );
+
+    return sujet;
+  });
 
   return { ok: true, sujetId: cree.id, postId: cree.posts[0]!.id };
 }
@@ -687,10 +709,11 @@ export async function repondre(
   const avertissement = validerAvertissement(saisie.avertissement);
   if (!avertissement.ok) return { ok: false, message: avertissement.message };
 
-  // Le post et la date d'activité dans la même transaction : un sujet qui
-  // gagne un post sans remonter dans la liste serait invisible à tous.
-  const [post] = await prisma.$transaction([
-    prisma.post.create({
+  // Le post, la date d'activité et le point dans la même transaction : un
+  // sujet qui gagne un post sans remonter dans la liste serait invisible à
+  // tous, et un post sans son point laisserait un compteur faux.
+  const post = await transaction(async (tx) => {
+    const ecrit = await tx.post.create({
       data: {
         sujetId,
         auteurId: auteur.eleveId,
@@ -698,12 +721,25 @@ export async function repondre(
         avertissementContenu: avertissement.valeur,
       },
       select: { id: true },
-    }),
-    prisma.sujet.update({
+    });
+
+    await tx.sujet.update({
       where: { id: sujetId },
       data: { dernierPostLe: new Date() },
-    }),
-  ]);
+    });
+
+    // L'espace du sujet, et non celui d'où l'on croit répondre : c'est la
+    // scène qui décide, comme pour l'année figée à son ouverture.
+    await accorderLePointDUnPost(
+      tx,
+      auteur,
+      ecrit.id,
+      charge.espace.comptePourLesPoints,
+      respecteLeMinimum(corps.valeur, charge.section.regles.lignesMinimum),
+    );
+
+    return ecrit;
+  });
 
   return { ok: true, sujetId, postId: post.id };
 }
@@ -829,14 +865,20 @@ export async function masquerPost(
     Date.now() + JOURS_POUR_CORRIGER * 24 * 60 * 60 * 1000,
   );
 
-  await prisma.post.update({
-    where: { id: postId },
-    data: {
-      masqueLe: new Date(),
-      masquePar: parNom,
-      motifMasquage: motifNet,
-      corrigerAvantLe: limite,
-    },
+  // Le masquage et la reprise du point dans la même transaction : un post
+  // masqué qui rapporterait encore viderait la mesure d'une partie de son
+  // sens, et le décalage ne se verrait nulle part.
+  await transaction(async (tx) => {
+    await tx.post.update({
+      where: { id: postId },
+      data: {
+        masqueLe: new Date(),
+        masquePar: parNom,
+        motifMasquage: motifNet,
+        corrigerAvantLe: limite,
+      },
+    });
+    await reprendreLePointDUnPost(tx, postId);
   });
 
   // Un compte supprimé n'a plus de boîte : le masquage tient quand même.
@@ -857,22 +899,32 @@ export async function masquerPost(
   return { ok: true, prevenu: envoi === "ENVOYEE" };
 }
 
-/** Le post redevient visible. Les quatre colonnes repartent ensemble. */
+/**
+ * Le post redevient visible. Les quatre colonnes repartent ensemble, **et son
+ * point revient**, identique — la ligne du carnet n’avait pas été effacée,
+ * seulement mise de côté.
+ */
 export async function demasquerPost(
   pouvoirs: Pouvoirs,
   postId: string,
 ): Promise<boolean> {
   if (!estStaff(pouvoirs)) return false;
-  const { count } = await prisma.post.updateMany({
-    where: { id: postId },
-    data: {
-      masqueLe: null,
-      masquePar: null,
-      motifMasquage: null,
-      corrigerAvantLe: null,
-    },
+
+  return transaction(async (tx) => {
+    const { count } = await tx.post.updateMany({
+      where: { id: postId },
+      data: {
+        masqueLe: null,
+        masquePar: null,
+        motifMasquage: null,
+        corrigerAvantLe: null,
+      },
+    });
+    if (count === 0) return false;
+
+    await rendreLePointDUnPost(tx, postId);
+    return true;
   });
-  return count > 0;
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -1018,6 +1070,15 @@ export async function retirerLaScene(
  *
  * **Le staff ne passe pas par ici.** Masquer est un autre geste, qui laisse le
  * texte lisible à son auteur pour qu’il le reprenne (art. 19.3).
+ *
+ * ⚠️ **Un post retiré GARDE ses points**, et ce n’est pas un oubli : décision
+ * du joueur, 27 août 2026. « Une scène sans réponse depuis un mois peut être
+ * clôturée ; **les points acquis restent acquis** » (art. 17.2), et rien n’est
+ * jamais vraiment effacé sur ce site — le texte reste en base. Seul un geste
+ * de l’administration retire des points (art. 18.6 et 19.1), et il le fait à
+ * la maison, avec un motif. Ne pas ajouter d’appel à `reprendreLePointDUnPost`
+ * ici « par symétrie » avec le masquage : les deux gestes n’ont ni le même
+ * auteur ni le même sens.
  */
 export async function retirerSonPost(
   auteur: { eleveId: string },
