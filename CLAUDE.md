@@ -42,7 +42,7 @@ joueur, pas des choix d'implémentation. Ne pas les réécrire sans demander.
 
 ```bash
 npm run dev              # http://localhost:3000
-npm test                 # vitest, 728 tests — ne touche JAMAIS la base
+npm test                 # vitest, 737 tests — ne touche JAMAIS la base
 npm run lint
 npx tsc --noEmit
 npm run build            # à passer avant tout déploiement
@@ -106,6 +106,7 @@ logique ailleurs, l'y ajouter.
 | `lib/dossier/role-affiche.ts` | ce qu'on peut écrire dans le rôle particulier — **partagé mot pour mot** entre le champ de saisie et l'action serveur |
 | `lib/ecole/tournoi.ts` | **qui marque pour sa maison**, l'effectif des quatre, et **le classement à la moyenne** — plancher compris. Ne totalise aucun point |
 | `lib/points/regles.ts` | **ce qu'un post rapporte**, et le plafond quotidien. Pur : ni horloge, ni base |
+| `lib/points/affichage.ts` | **comment un nombre de points s'écrit** — l'arrondi, le signe moins, les accords. Le seul endroit |
 | `lib/points/depot.ts` | l'accès aux points. **Seul endroit qui écrit** dans le carnet, les compteurs et les ajustements — et le seul qui touche à `Eleve.points` |
 | `lib/points/cloture.ts` | **la fin d'une année scolaire** : archiver, ouvrir la suivante, faire passer les cochés |
 | `lib/dossier/archivage.ts` | **l'archivage d'un compte** (art. 7.3), et la date de dernière connexion qui le rend applicable |
@@ -1086,6 +1087,28 @@ visible, et on le referait.
 triées par rang : un tube qui change de place entre deux visites est
 désorientant — on cherche le sien, il a bougé. Le rang voyage sur la ligne.
 
+### Comment un nombre de points s'écrit
+
+`lib/points/affichage.ts`, **et nulle part ailleurs**. La mise en forme était
+recopiée dans trois écrans, et chacun arrondissait pour son compte — trois
+copies de la même règle finissent toujours par diverger.
+
+- **Aucune décimale, nulle part** — décision du joueur, 27 août 2026. On lit
+  « 34 », jamais « 34,3 », et surtout « 0 », jamais « 0,0 » : une décimale
+  donne un air de tableur à ce qui doit se lire d'un coup d'œil, et « 0,0 » se
+  lit comme une panne.
+- ⚠️ **Seul l'AFFICHAGE est arrondi.** Le calcul garde sa précision : c'est la
+  valeur exacte qui décide de la hauteur d'un tube et du rang d'une maison.
+  Deux maisons peuvent donc montrer le même nombre avec des tubes légèrement
+  différents — c'est normal, et préférable à un faux ex æquo qu'un arrondi
+  aurait fabriqué.
+- Le **vrai signe moins** (U+2212), jamais le trait d'union : dans une colonne
+  de chiffres, « -15 » et « +15 » ne se lisent pas à la même hauteur. Et
+  jamais « moins zéro » : `Math.round(-0,4)` rend `-0`, que `String` écrit
+  « -0 ».
+- **Zéro est au singulier en français** — « 0 point », « 0 élève ». C'est la
+  faute que tout le monde fait.
+
 ### Les tubes
 
 `components/ecole/TubesDesMaisons.tsx`, d'après la maquette du joueur.
@@ -1114,6 +1137,62 @@ retoucher.
   commune les tubes ne partaient plus du même trait.
 - Tout ce qu'un tube raconte est **écrit en toutes lettres au-dessous**. L'eau,
   les bulles et les reflets sont `aria-hidden`.
+- **Le groupe est resserré**, et poussé à droite **seulement en deux
+  colonnes** — il est alors posé au bord du bureau, contre le journal. En une
+  seule colonne le panneau prend toute la page, et l'y coller creuserait un
+  trou de quatre cents pixels : il se centre. Largeur et écart dans
+  `config/bureau.json`.
+
+### Le Guetteur du Nord
+
+Le journal du château, à gauche des tubes en haut du bureau. Il a **remplacé
+le panneau « Annonces du Grand Hall »** le 27 août 2026.
+
+`components/ecole/JournalDuNord.tsx`, et l'image `public/bureau/journal.webp`
+— fournie déjà traitée, **ne pas la retoucher**.
+
+- **Il n'est PAS dans un `Panneau`.** Le papier est son propre cadre, et une
+  bordure autour d'une une de gazette ferait un cadre dans un cadre.
+- ⚠️ **C'est la HAUTEUR qui est plafonnée, jamais la largeur.** L'inverse
+  déformerait le papier, et une une de journal étirée se voit au premier coup
+  d'œil : d'où `height` sur le conteneur et `width: auto`, et non l'habituel
+  `max-width: 100%`. Deux plafonds — 540 px sur grand écran, 400 sur
+  téléphone : en pleine largeur sur un écran de 375, l'image ferait 560 px de
+  haut et mangerait tout.
+- **Les quatre bornes du cadre vide sont relevées sur l'image** — gauche 26 %,
+  droite 73,6 %, haut 20,5 %, bas 95,1 %, plus 1,5 % de marge. Les réajuster à
+  l'œil ferait sortir le texte du filet. Elles vivent dans `config/bureau.json`.
+- **Le texte est de l'encre sur du papier** : sombre, en serif, et **surtout
+  pas la palette du site**, qui est faite pour un fond nocturne — du parchemin
+  clair sur du papier clair ne se lirait pas.
+- **La colonne défile à l'intérieur du cadre.** Le journal ne s'agrandit
+  jamais, et on ne coupe pas le texte. Elle porte un `tabindex` : une zone qui
+  défile et qu'on ne peut pas parcourir au clavier est une zone dont on ne lit
+  que le début.
+- **Le titre est dans l'image**, en grandes capitales. Celui du document est le
+  même, en `sr-only` : une image ne donne pas son titre à un lecteur d'écran.
+  Le papier porte un `alt` vide — c'est du décor, et **tout ce qui compte est
+  du vrai texte**.
+- Une colonne de journal est **étroite** : 47 % de la largeur du papier, soit
+  cent soixante-dix pixels. Le corps y est réglé à 0,78 rem, pas à la taille
+  de la page.
+
+**Les annonces n'existent pas encore** — `annonces()` rend une liste vide, et
+le lot du Grand Hall reste à faire. Le cadre affiche « Rien à signaler cette
+semaine ». Le jour où elles arriveront, elles s'y afficheront **sans que le
+journal bouge**.
+
+### La rangée haute du bureau
+
+**Sa propre grille** — `lg:grid-cols-[42fr_58fr]` —, et non les deux moitiés
+égales de la grille du bureau : le journal tient dans 42 %, les tubes ont
+besoin du reste.
+
+⚠️ **L'ordre du document est celui du téléphone** : les tubes d'abord, le
+journal ensuite. C'est ce qu'un lecteur d'écran parcourt, et c'est le bon
+ordre — sur un petit écran, le classement compte plus que les annonces. Sur
+grand écran, `lg:order-first` ramène le journal à gauche **sans toucher au
+document**.
 
 ### La clôture d'une année — art. 18.3
 

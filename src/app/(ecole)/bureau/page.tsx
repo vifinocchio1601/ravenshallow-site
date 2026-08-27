@@ -3,6 +3,7 @@ import Image from "next/image";
 import Link from "next/link";
 import Panneau from "@/components/ecole/Panneau";
 import PremiersPas from "@/components/ecole/PremiersPas";
+import JournalDuNord from "@/components/ecole/JournalDuNord";
 import TubesDesMaisons from "@/components/ecole/TubesDesMaisons";
 import {
   annonces,
@@ -92,18 +93,24 @@ export default async function BureauPage() {
           </div>
         ) : null}
 
-        <div className="mt-10 grid gap-5 lg:grid-cols-2">
-          {/* 0 — Le tournoi, en tête et sur toute la largeur.
-              Quatre tubes ne se partagent pas en deux colonnes, et c'est ce
-              qu'on veut voir en arrivant : où en est sa maison.
-              Le panneau disparaît entre deux saisons plutôt que d'afficher
+        {/* ── La rangée haute : le journal et le tournoi, côte à côte ──
+
+            Sa propre grille, et non les deux moitiés égales de la grille du
+            bureau : le journal tient dans 42 %, les tubes ont besoin du reste.
+
+            **L'ordre du document est celui du téléphone** — les tubes d'abord,
+            le journal ensuite. C'est ce qu'un lecteur d'écran parcourt, et
+            c'est le bon ordre : sur un petit écran le classement compte plus
+            que les annonces. Sur grand écran, `lg:order-first` ramène le
+            journal à gauche, sans toucher au document. */}
+        <div className="mt-10 grid items-start gap-5 lg:grid-cols-[42fr_58fr]">
+          {/* Le panneau disparaît entre deux saisons plutôt que d'afficher
               quatre tubes vides, qui laisseraient croire à un tournoi commencé
               que personne n'aurait joué. */}
           {tournoiDesMaisons ? (
             <Panneau
               titre={TEXTES_POINTS.tournoi.titre}
               aide={TEXTES_POINTS.tournoi.aide}
-              className="lg:col-span-2"
             >
               <TubesDesMaisons
                 lignes={tournoiDesMaisons.lignes}
@@ -112,6 +119,16 @@ export default async function BureauPage() {
             </Panneau>
           ) : null}
 
+          {/* Le journal n'est PAS dans un `Panneau` : le papier est son propre
+              cadre, et une bordure autour d'une une de gazette ferait un cadre
+              dans un cadre. Il se cale à gauche de sa colonne, comme un
+              journal posé au coin du bureau. */}
+          <div className="lg:order-first">
+            <JournalDuNord annonces={hall} />
+          </div>
+        </div>
+
+        <div className="mt-5 grid gap-5 lg:grid-cols-2">
           {/* 1 — Ce qui attend une réponse passe en premier. */}
           <Panneau
             titre={t.scenes.titre}
@@ -222,29 +239,6 @@ export default async function BureauPage() {
             </dl>
           </Panneau>
 
-          {/* 4 — Le Grand Hall. */}
-          <Panneau
-            titre={t.annonces.titre}
-            aide={t.annonces.aide}
-            vide={t.annonces.vide}
-            className="lg:col-span-2"
-          >
-            {hall.length > 0 ? (
-              <ul className="space-y-4">
-                {hall.map((annonce) => (
-                  <li key={annonce.id}>
-                    <p className="font-display text-[0.7rem] uppercase tracking-[0.14em] text-parchment">
-                      {annonce.titre}
-                      <span className="text-silver"> · {dateCourte(annonce.publieeLe)}</span>
-                    </p>
-                    <p className="mt-1 font-body leading-relaxed text-parchment-dim">
-                      {annonce.extrait}
-                    </p>
-                  </li>
-                ))}
-              </ul>
-            ) : null}
-          </Panneau>
         </div>
       </div>
     </main>

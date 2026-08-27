@@ -15,6 +15,11 @@ import {
   lireLeTournoi,
   listerLesElevesPourLesPoints,
 } from "@/lib/points/depot";
+import {
+  moyenneAffichee,
+  pointsAffiches,
+  pointsSignes,
+} from "@/lib/points/affichage";
 import { PLANCHER_EFFECTIF } from "@/lib/points/regles";
 
 export const dynamic = "force-dynamic";
@@ -111,9 +116,9 @@ export default async function PointsPage() {
                         <td className="py-3 pr-4 font-body text-parchment">
                           {NOMS_MAISON[ligne.maison] ?? ligne.maison}
                         </td>
-                        <Cellule>{nombre(ligne.points)}</Cellule>
+                        <Cellule>{pointsAffiches(ligne.points)}</Cellule>
                         <Cellule>{ligne.effectif}</Cellule>
-                        <Cellule>{moyenne(ligne.moyenne)}</Cellule>
+                        <Cellule>{moyenneAffichee(ligne.moyenne)}</Cellule>
                         <Cellule>{ligne.rang}</Cellule>
                       </tr>
                     ))}
@@ -160,7 +165,7 @@ export default async function PointsPage() {
                 <ul className="grid grid-cols-1 gap-2">
                   {dons.map((don) => {
                     const repris = don.repriseLe !== null;
-                    const signe = nombreSigne(don.points);
+                    const signe = pointsSignes(don.points);
                     const nom =
                       don.eleve?.prenomNom ?? t.historiqueDesDons.membreParti;
                     return (
@@ -261,7 +266,7 @@ export default async function PointsPage() {
                 <ul className="grid grid-cols-1 gap-2">
                   {historique.map((ligne) => {
                     const annule = ligne.annuleLe !== null;
-                    const signe = nombreSigne(ligne.points);
+                    const signe = pointsSignes(ligne.points);
                     return (
                       <li
                         key={ligne.id}
@@ -338,25 +343,6 @@ export default async function PointsPage() {
   );
 }
 
-/**
- * Le vrai signe moins — U+2212 —, et non le trait d’union du clavier.
- *
- * Le second est plus court, plus haut, et ne s’aligne pas avec le « + » : dans
- * une colonne de chiffres, « -15 » et « +15 » ne se lisent pas à la même
- * hauteur. Même soin que les apostrophes typographiques ailleurs sur le site.
- */
-const MOINS = "\u2212";
-
-/** « 0 », « −15 » — dans le tableau, où le plus va de soi. */
-function nombre(valeur: number): string {
-  return String(valeur).replace("-", MOINS);
-}
-
-/** « +30 », « −15 » — dans l’historique, où le sens du geste doit se voir. */
-function nombreSigne(valeur: number): string {
-  return valeur > 0 ? `+${valeur}` : nombre(valeur);
-}
-
 /** « 27 août 2026 ». */
 function jour(date: Date): string {
   return date.toLocaleDateString("fr-FR", {
@@ -364,16 +350,6 @@ function jour(date: Date): string {
     month: "long",
     year: "numeric",
   });
-}
-
-/**
- * La moyenne à une décimale, virgule française.
- *
- * Une décimale et pas trois : c’est un classement, pas une mesure. « 43,1 »
- * se compare d’un coup d’œil, « 43,111 » demande à être lu.
- */
-function moyenne(valeur: number): string {
-  return valeur.toFixed(1).replace(".", ",").replace("-", MOINS);
 }
 
 function Bloc({

@@ -5,6 +5,7 @@ import { useFormState, useFormStatus } from "react-dom";
 import { cloturerAction, type EtatCloture } from "@/app/admin/cloture/actions";
 import { libelleAnnee } from "@/lib/dossier/etats";
 import { NOMS_MAISON } from "@/lib/ecole/blasons";
+import { enPoints } from "@/lib/points/affichage";
 import { TEXTES_POINTS } from "@/lib/points/constantes";
 import type { Passage } from "@/lib/points/cloture";
 
@@ -124,7 +125,7 @@ export default function FormulaireCloture({ eleves }: { eleves: Passage[] }) {
                               .replace("{de}", libelleAnnee(eleve.fonction))
                               .replace("{a}", libelleAnnee(eleve.versLAnnee!))}
                         {" · "}
-                        {eleve.points} pts
+                        {enPoints(eleve.points)}
                       </span>
                     </div>
                   </li>

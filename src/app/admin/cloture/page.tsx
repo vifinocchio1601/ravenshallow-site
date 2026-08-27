@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import EnTeteAdmin from "@/components/admin/EnTeteAdmin";
 import FormulaireCloture from "@/components/admin/FormulaireCloture";
 import { NOMS_MAISON } from "@/lib/ecole/blasons";
+import { detailDUneMaison, moyenneAffichee } from "@/lib/points/affichage";
 import { TEXTES_POINTS } from "@/lib/points/constantes";
 import { ceQueLaClotureFerait, listerLesSaisonsCloses } from "@/lib/points/cloture";
 
@@ -79,8 +80,9 @@ export default async function CloturePage() {
                         ) : null}
                       </span>
                       <span className="font-body text-xs italic text-silver">
-                        {moyenne(ligne.moyenne)} pts/élève · {ligne.pointsAuTournoi} pts ·{" "}
-                        {ligne.effectif} élèves
+                        {moyenneAffichee(ligne.moyenne)}{" "}
+                        {TEXTES_POINTS.tournoi.moyenneLegende} ·{" "}
+                        {detailDUneMaison(ligne.pointsAuTournoi, ligne.effectif)}
                       </span>
                     </li>
                   ))}
@@ -128,8 +130,9 @@ export default async function CloturePage() {
                         <span className="text-parchment-dim">
                           {l.rang}. {NOMS_MAISON[l.maison] ?? l.maison}
                         </span>{" "}
-                        — {moyenne(l.moyenne)} pts/élève · {l.points} pts · {l.effectif}{" "}
-                        élèves
+                        — {moyenneAffichee(l.moyenne)}{" "}
+                        {TEXTES_POINTS.tournoi.moyenneLegende} ·{" "}
+                        {detailDUneMaison(l.points, l.effectif)}
                       </li>
                     ))}
                   </ul>
@@ -141,10 +144,6 @@ export default async function CloturePage() {
       </div>
     </main>
   );
-}
-
-function moyenne(valeur: number): string {
-  return valeur.toFixed(1).replace(".", ",");
 }
 
 function jour(date: Date): string {

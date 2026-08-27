@@ -4,6 +4,7 @@ import { useEffect, useId, useRef } from "react";
 import { useFormState, useFormStatus } from "react-dom";
 import { donnerAction, type EtatDon } from "@/app/admin/points/actions";
 import { NOMS_MAISON } from "@/lib/ecole/blasons";
+import { enPoints } from "@/lib/points/affichage";
 import { TEXTES_POINTS } from "@/lib/points/constantes";
 import type { Maison } from "@/lib/dossier/etats";
 
@@ -79,7 +80,7 @@ export default function FormulaireDon({ eleves }: { eleves: EleveAChoisir[] }) {
                       ? (NOMS_MAISON[eleve.maison] ?? eleve.maison)
                       : t.sansMaison,
                   )
-                  .replace("{points}", String(eleve.points))}
+                  .replace("{points}", enPoints(eleve.points))}
               </option>
             ))}
           </select>

@@ -213,7 +213,7 @@ export const TEXTES_POINTS = {
       motifPlaceholder: "Ce que le joueur lira dans l’historique…",
       envoyer: "Accorder les points",
       /** « Sigrid Vale — Bryggeld · 34 pts » dans la liste déroulante. */
-      option: "{nom} — {maison} · {points} pts",
+      option: "{nom} — {maison} · {points}",
       sansMaison: "sans maison",
       aucunEleve: "Aucun dossier accepté pour l’instant.",
       suggestions: [

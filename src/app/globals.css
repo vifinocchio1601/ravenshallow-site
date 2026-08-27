@@ -1633,7 +1633,10 @@
 
 .tube {
   position: relative;
-  width: min(100%, 86px);
+  /* La largeur vient de `config/bureau.json` — c'est une mesure, elle
+     s'ajuste à l'œil sur un vrai écran. Quatre-vingt-six pixels perdus au
+     milieu d'une colonne de deux cent soixante-dix, c'était le défaut. */
+  width: min(100%, var(--tube-largeur, 80px));
   /* Le rapport exact du fichier : 512 × 1716. */
   aspect-ratio: 512 / 1716;
   margin: 0 auto;
@@ -1779,4 +1782,148 @@
   .tube__eau::before {
     display: none;
   }
+}
+
+/* ————————————————————————————————
+   Le Guetteur du Nord — le journal du bureau
+
+   Une une de gazette photographiée, dont on remplit le cadre vide du milieu.
+   Le principe est celui des tubes : l'image est du décor, et **tout ce qui
+   compte est du vrai texte** posé par-dessus — sélectionnable, lisible par un
+   lecteur d'écran, jamais une image de mots.
+
+   ⚠️ **C'est la HAUTEUR qui est plafonnée, et la largeur qui suit.** L'inverse
+   déformerait le papier : une une de journal étirée se voit au premier coup
+   d'œil. D'où `height` sur le conteneur et `width: auto` — et non l'habituel
+   `max-width: 100%`.
+   ———————————————————————————————— */
+
+.journal {
+  position: relative;
+  /* La hauteur commande, la largeur suit le rapport 900 × 1350 de l'image. */
+  height: var(--journal-h-telephone);
+  aspect-ratio: 900 / 1350;
+  width: auto;
+  max-width: 100%;
+  /* Centré en une seule colonne, où le panneau prend toute la page ; calé à
+     gauche en deux colonnes, comme un journal posé au coin du bureau. */
+  margin: 0 auto;
+}
+
+@media (min-width: 1024px) {
+  .journal {
+    margin: 0;
+  }
+}
+
+@media (min-width: 1024px) {
+  .journal {
+    height: var(--journal-h-grand);
+  }
+}
+
+.journal__papier {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+/* Le cadre vide du milieu, relevé sur l'image. Les quatre bornes viennent de
+   `config/bureau.json` et arrivent en variables : les réécrire ici les
+   sortirait du seul endroit où on pense à les ajuster. */
+.journal__colonne {
+  position: absolute;
+  left: var(--cadre-gauche);
+  right: calc(100% - var(--cadre-droite));
+  top: var(--cadre-haut);
+  bottom: calc(100% - var(--cadre-bas));
+  padding: var(--cadre-marge);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+
+  /* De l'encre sur du papier ancien : sombre, et une serif. Surtout pas la
+     palette du site, qui est faite pour un fond nocturne — du parchemin clair
+     sur du papier clair ne se lirait pas. */
+  color: #2b2318;
+  font-family: var(--font-body), "EB Garamond", Georgia, serif;
+  text-align: left;
+
+  /* **Une colonne de journal est étroite** : le cadre ne fait que 47 % de la
+     largeur du papier, soit cent soixante-dix pixels sur grand écran. À la
+     taille du corps de page — seize pixels —, on y tiendrait dix mots par
+     ligne et le texte serait haché. Ces deux tailles-ci sont celles d'un
+     vrai filet de gazette. */
+  font-size: 0.7rem;
+  line-height: 1.5;
+}
+
+@media (min-width: 1024px) {
+  .journal__colonne {
+    font-size: 0.78rem;
+  }
+}
+
+/* La barre de défilement, discrète : une barre grise vif sur du papier
+   jauni se verrait plus que le texte. */
+.journal__colonne {
+  scrollbar-width: thin;
+  scrollbar-color: rgb(43 35 24 / 0.35) transparent;
+}
+
+.journal__colonne::-webkit-scrollbar {
+  width: 6px;
+}
+
+.journal__colonne::-webkit-scrollbar-thumb {
+  background: rgb(43 35 24 / 0.35);
+  border-radius: 3px;
+}
+
+.journal__vide {
+  font-style: italic;
+  color: rgb(43 35 24 / 0.62);
+}
+
+/* Une annonce : son titre, sa date, son extrait. Le filet qui les sépare est
+   à l'encre, comme le reste. */
+.journal__annonce + .journal__annonce {
+  margin-top: 0.9em;
+  padding-top: 0.9em;
+  border-top: 1px solid rgb(43 35 24 / 0.22);
+}
+
+.journal__titre {
+  font-family: var(--font-display), Cinzel, Georgia, serif;
+  font-weight: 700;
+  /* À peine plus grand que le corps : dans une colonne aussi étroite, un
+     titre deux fois plus gros passerait à la ligne trois fois. */
+  font-size: 1.05em;
+  line-height: 1.2;
+  color: #211a11;
+}
+
+.journal__date {
+  display: block;
+  margin-top: 0.15em;
+  font-size: 0.82em;
+  font-style: italic;
+  color: rgb(43 35 24 / 0.66);
+}
+
+.journal__extrait {
+  margin-top: 0.35em;
+  line-height: 1.5;
+}
+
+/* Le lien d'une annonce reste de l'encre : un bleu de lien sur du papier
+   ancien casserait l'illusion, et le soulignement suffit à dire qu'on clique. */
+.journal__annonce a {
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-color: rgb(43 35 24 / 0.4);
+  text-underline-offset: 2px;
+}
+
+.journal__annonce a:hover {
+  text-decoration-color: rgb(43 35 24 / 0.85);
 }

@@ -63,10 +63,24 @@ export const TEXTES_ECOLE = {
       maisonInconnue: "Le compteur de maison s’ouvrira à la répartition.",
       sansDate: "Aucune session annoncée.",
     },
-    annonces: {
-      titre: "Annonces du Grand Hall",
-      aide: "Les mots de l’administration, en lecture seule.",
-      vide: "Le Grand Hall est silencieux.",
+    /**
+     * **Le journal du château**, qui a remplacé le panneau « Annonces du
+     * Grand Hall » le 27 août 2026. Le papier est son propre cadre : une
+     * bordure de panneau autour d’une une de gazette ferait un cadre dans un
+     * cadre.
+     *
+     * Le titre est dans l’image, en grandes capitales. Celui d’ici est le
+     * même, **invisible à l’œil et lu à voix haute** : une image ne donne pas
+     * son titre à un lecteur d’écran, et un panneau sans titre ne se repère
+     * pas dans une page.
+     */
+    journal: {
+      titre: "Le Guetteur du Nord",
+      /** L’image est de la décoration : tout ce qui compte est du vrai texte. */
+      altDecor: "",
+      vide: "Rien à signaler cette semaine.",
+      /** Le nom accessible de la zone qui défile, dans le cadre. */
+      regionAnnonces: "Les annonces du château",
     },
   },
 

@@ -1,8 +1,10 @@
 import Image from "next/image";
 import type { CSSProperties } from "react";
+import reglages from "@/config/bureau.json";
 import type { Maison } from "@/lib/dossier/etats";
 import { blasonDe, NOMS_MAISON } from "@/lib/ecole/blasons";
 import type { LigneDeClassement } from "@/lib/ecole/tournoi";
+import { detailDUneMaison, moyenneAffichee } from "@/lib/points/affichage";
 import { TEXTES_POINTS } from "@/lib/points/constantes";
 
 /**
@@ -51,16 +53,6 @@ const BULLES = [
   { gauche: 12, taille: 2.5, monte: 96, duree: 5.1 },
 ] as const;
 
-/** Zéro est au singulier en français : « 0 point », « 0 élève ». */
-function accorde(n: number, un: string, plusieurs: string): string {
-  return (n > 1 ? plusieurs : un).replace("{n}", String(n));
-}
-
-/** La moyenne à une décimale, virgule française. */
-function moyenne(valeur: number): string {
-  return valeur.toFixed(1).replace(".", ",");
-}
-
 export default function TubesDesMaisons({
   lignes,
   maMaison,
@@ -80,7 +72,24 @@ export default function TubesDesMaisons({
           Quatre éprouvettes posées sur une étagère reposent sur la même
           planche ; c'est par le HAUT qu'elles s'alignent ici, le bloc du
           blason et du nom ayant partout la même hauteur. */}
-      <ul className="grid grid-cols-4 items-start gap-2 sm:gap-4">
+      {/* **Le groupe est resserré**, et non étalé sur toute la largeur : le
+          panneau peut faire six cents pixels, quatre tubes de quatre-vingts
+          n'en occupent que trois cent cinquante. Étalés, ils flottaient chacun
+          au milieu de sa colonne, séparés par deux cents pixels de vide.
+
+          Poussé à droite **seulement en deux colonnes** — il est alors posé au
+          bord du bureau, contre le journal. En une seule colonne le panneau
+          prend toute la page, et le coller à droite y creuserait un trou de
+          quatre cents pixels : il se centre. */}
+      <ul
+        className="mx-auto grid grid-cols-4 items-start lg:mr-0"
+        style={
+          {
+            gap: `${reglages.tubeEcart}px`,
+            maxWidth: `${reglages.tubeLargeurMax * 4 + reglages.tubeEcart * 3}px`,
+          } as CSSProperties
+        }
+      >
         {lignes.map((ligne, rang) => {
           const blason = blasonDe(ligne.maison);
           const mienne = ligne.maison === maMaison;
@@ -100,7 +109,7 @@ export default function TubesDesMaisons({
                 // large pour 900 de haut —, et une largeur commune les
                 // rendrait de hauteurs différentes. Les tubes en dessous ne
                 // partiraient plus du même trait.
-                className="mx-auto mb-2 h-[44px] w-auto drop-shadow-[0_5px_12px_rgba(0,0,0,0.85)] sm:h-[68px]"
+                className="mx-auto mb-2 h-[40px] w-auto drop-shadow-[0_5px_12px_rgba(0,0,0,0.85)] sm:h-[52px]"
               />
 
               {/* `mb-3` et non `mb-2` : le liseré de « ma maison » est posé à huit
@@ -116,6 +125,7 @@ export default function TubesDesMaisons({
                 className={`tube${mienne ? " tube--mienne" : ""}`}
                 style={
                   {
+                    "--tube-largeur": `${reglages.tubeLargeurMax}px`,
                     "--tube-h": `${(ligne.part * HAUTEUR_INTERIEURE).toFixed(2)}%`,
                     "--eau-1": `var(--eau-${ligne.maison.toLowerCase()}-1)`,
                     "--eau-2": `var(--eau-${ligne.maison.toLowerCase()}-2)`,
@@ -155,9 +165,16 @@ export default function TubesDesMaisons({
                 <div className="tube__reflet" />
               </div>
 
-              {/* La moyenne en gros : c'est elle qui classe. */}
-              <p className="mt-3 font-display text-[0.95rem] leading-tight text-parchment sm:text-[1.06rem]">
-                {moyenne(ligne.moyenne)}
+              {/* La moyenne en gros : c'est elle qui classe.
+
+                  ⚠️ **Arrondie à l'entier, alors que le calcul garde sa
+                  précision.** C'est la valeur exacte qui décide de la hauteur
+                  du tube et du rang ; seul ce chiffre-ci est arrondi. Deux
+                  maisons peuvent donc montrer le même nombre avec des tubes
+                  légèrement différents — c'est normal, et préférable à un faux
+                  ex æquo qu'un arrondi aurait fabriqué. */}
+              <p className="mt-3 font-display text-[1.05rem] leading-tight text-parchment sm:text-[1.2rem]">
+                {moyenneAffichee(ligne.moyenne)}
                 <span className="mt-0.5 block font-body text-[0.6rem] uppercase tracking-[0.1em] text-silver">
                   {t.moyenneLegende}
                 </span>
@@ -166,12 +183,8 @@ export default function TubesDesMaisons({
               {/* Puis le total et l'effectif, en petit — sans eux, on voit la
                   maison qui a le plus de points porter le plus petit tube et
                   l'on croit à un défaut. */}
-              <p className="mt-1 font-body text-[0.68rem] italic leading-snug text-silver">
-                {accorde(ligne.pointsAuTournoi, t.unPoint, t.desPoints)}
-                <span className="mx-1" aria-hidden="true">
-                  ·
-                </span>
-                {accorde(ligne.effectif, t.unEleve, t.desEleves)}
+              <p className="mt-1 font-body text-[0.66rem] italic leading-snug text-silver">
+                {detailDUneMaison(ligne.pointsAuTournoi, ligne.effectif)}
               </p>
 
               {/* Le liseré ne parle qu'aux yeux. Le mot se lit aussi. */}
