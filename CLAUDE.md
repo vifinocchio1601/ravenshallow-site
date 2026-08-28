@@ -558,19 +558,23 @@ espace  →  section  →  section (facultative)  →  sujet  →  post
 besoin de trois étages — l'aile, la pièce, le sujet ; « Le monde des non-mages »
 de deux. La base tient les deux niveaux et refuse le troisième.
 
-**Trois espaces, un seul moteur.** Ce qui les distingue tient dans des
-colonnes, jamais dans du code : construire trois fois le même forum serait le
-meilleur moyen d'en avoir trois qui divergent.
+**Quatre espaces, un seul moteur.** Ce qui les distingue tient dans des
+colonnes, jamais dans du code : construire quatre fois le même forum serait le
+meilleur moyen d'en avoir quatre qui divergent.
 
-| | `domaine` | `non-mages` | `maison` |
-| --- | --- | --- | --- |
-| ce qu'on y écrit | du jeu de rôle | **hors RP** | du jeu de rôle |
-| lignes minimum | **10** (art. 12.2) | aucune | aucune |
-| qui ouvre un sujet | tout membre | tout membre | préfets et permission |
-| qui répond | tout membre | tout membre | membres de la maison |
-| points | **oui** | non | non |
-| compte les scènes | **oui** | non | non |
-| visibilité | tous | tous | **sa maison** |
+| | `domaine` | `alentours` | `non-mages` | `maison` |
+| --- | --- | --- | --- | --- |
+| ce qu'on y écrit | du jeu de rôle | du jeu de rôle | **hors RP** | du jeu de rôle |
+| lignes minimum | **10** (art. 12.2) | **10** | aucune | aucune |
+| qui ouvre un sujet | tout membre | tout membre | tout membre | préfets et permission |
+| qui répond | tout membre | tout membre | tout membre | membres de la maison |
+| points | **oui** | **oui** | non | non |
+| compte les scènes | **oui** | **oui** | non | non |
+| visibilité | tous | tous | tous | **sa maison** |
+
+⚠️ **`domaine` et `alentours` ont exactement le même réglage**, et ce n'est pas
+une duplication à supprimer : ce sont deux **adresses** du bandeau, et l'espace
+est l'unité d'adressage. Voir « Les alentours du château ».
 
 **Une section ne peut que RESSERRER ce que l'espace ouvre.** L'année, la
 visibilité et l'ouverture se résolvent en prenant la **plus stricte** des deux
@@ -1048,8 +1052,8 @@ membre très actif ne fasse pas gagner sa maison à lui seul ; un geste
 délibéré n'est pas cela. C'est `accorderLePointDUnPost` qui écarte la source
 `ADMINISTRATION` de sa lecture du carnet.
 
-**Un point par post publié dans un espace qui compte** — `domaine` seul —, à
-condition qu'il atteigne le minimum du lieu. `Espace.comptePourLesPoints`
+**Un point par post publié dans un espace qui compte** — `domaine` et
+`alentours` —, à condition qu'il atteigne le minimum du lieu. `Espace.comptePourLesPoints`
 décide, jamais le nom de l'espace ; `maisonQuiCompte` décide pour qui.
 
 **La maison est figée au moment du gain**, comme l'année d'un sujet à son
@@ -1872,6 +1876,96 @@ redirigeait vers `/ecole/…` après création : un sujet ouvert dans
 « Présentations » atterrissait au château, sous le vocabulaire du jeu de rôle.
 Le sujet était pourtant créé au bon endroit — c'était l'adresse d'arrivée qui
 mentait.
+
+---
+
+## Les alentours du château
+
+Posés le 28 août 2026. **Ce qui commence là où le château s'arrête** —
+`/alentours`, cinq zones, seize lieux : la falaise et la mer, le lac, la Forêt
+Sombre, Kaldvik, les Hauts Plateaux de Givre.
+
+### Un QUATRIÈME espace, réglé comme le domaine
+
+`/alentours` et `/ecole` sont deux adresses du bandeau depuis le lot du menu :
+des zones posées dans l'espace `domaine` s'afficheraient dans « L'école », qui
+est l'intérieur du château. D'où un espace à part — **et pas une ligne de
+moteur** : ce qui distingue un espace tient dans des colonnes, et celles-ci
+sont exactement celles du domaine.
+
+| | |
+| --- | --- |
+| dix lignes (art. 12.2) | oui |
+| les points | **oui** — décision du joueur : une scène sur la grève vaut une scène dans un couloir |
+| les scènes comptées (art. 17.3) | oui |
+| qui ouvre, qui répond | tout membre |
+
+La description de `domaine` disait « Le château **et ce qui l'entoure** » — ce
+n'est plus vrai, et la migration la corrige. Deux espaces qui se disputent le
+même territoire finissent par se contredire.
+
+**Le vocabulaire est celui du jeu de rôle, à un mot près.** `MOTS_ALENTOURS`
+est **dérivé** de `motsRp` et ne redéfinit que `retour` — « Retour à l'école »
+sur une grève serait faux. Onze clés recopiées pour une seule qui diffère, et
+les deux espaces cesseraient un jour de parler la même langue.
+
+### Ce que le joueur a arbitré, et ce que la carte a tranché
+
+- **Kaldvik s'écrit en entier** — quais, place et ruelles, échoppe, phare. La
+  bible ne décrivait que l'échoppe et rangeait le village parmi ses points « à
+  approfondir » ; l'article 12.4 fait de son accord la condition pour
+  l'inventer. **Ces quatre textes font donc autorité pour le RP.** Le gardien
+  du phare est la seule figure ajoutée.
+- **Les Hauts Plateaux et le large sont « sur convocation »** — la bible les
+  dit « peu exploités », et la zone des naufrages ne se visite pas de son
+  propre chef. Le lieu existe, le staff ouvre, l'élève convoqué répond. Ne pas
+  confondre avec `ouverte: false`, qui ferait taire le convoqué.
+- **Le chemin escarpé n'exige rien**, et c'est le seul lieu que tout le monde a
+  traversé : c'est par là qu'on arrive. Le verrouiller fermerait la porte
+  d'entrée.
+
+**Quatre détails viennent de la carte, et d'elle seule** — aucun nom de lieu ne
+les laissait deviner : le Lac est au **nord-ouest** et se vide vers le sud par
+une rivière qui tombe en cascade **au-dessus du port** ; le chemin escarpé
+part du **haut** du village (la scène de Bjornstav le dit aussi — « le sentier
+commence à trente pas de la porte ») ; le passage secret ressort **aux abords
+du village**, pas au château ; les épaves sont au large, **au sud-est**.
+
+L'échoppe reprend mot pour mot les détails de la scène d'achat de la baguette —
+l'enseigne gravée, le crâne d'ours au linteau. **Deux textes qui se
+contredisent coûtent plus cher qu'une répétition** : c'est la leçon de la Salle
+de Banquet, et un essai en base le fige.
+
+### Les trois contrôles sont désormais mécaniques
+
+Ils étaient à refaire à la main après toute écriture de lieu. Deux vivaient
+déjà dans `forum/en-base.essai.ts` ; le troisième y est entré avec ce lot.
+
+| | Ce qu'il relit |
+| --- | --- |
+| la grotte et le sceau | **toutes** les sections, tous espaces confondus |
+| les créatures du bestiaire | idem — art. 13.6 : elles ne s'invitent pas, et une description qui en annonce une revient à l'inviter |
+| s'adresser au joueur | les **lieux de jeu de rôle seulement** |
+
+⚠️ **Le troisième écarte le hors RP, et ce n'est pas une exception de
+confort.** « Le monde des non-mages » est l'espace d'où l'on parle quand on
+n'est pas son personnage : ses cinq sections s'adressent au joueur parce qu'il
+n'y a personne d'autre à qui s'adresser — « Prévenez quand vous partez » n'a
+pas de version à la troisième personne. Le contrôle a commencé par les
+signaler toutes les cinq.
+
+Au passage, l'essai en base a été remis à jour : il affirmait encore que
+« les deux autres espaces sont vides », ce qui avait cessé d'être vrai le jour
+du hors RP — **sans que rien ne tombe**, ce fichier ne tournant pas avec
+`npm test`. Le relire quand un lot touche aux espaces.
+
+### « Il manque 1 lignes »
+
+Corrigé au passage, et rencontré en éprouvant les dix lignes dans le nouvel
+espace : `tropCourtUneLigne` existe à côté de `tropCourt`. C'est **le message
+le plus lu des trois** — on est presque toujours refusé à une ligne près —, et
+c'est la faute que personne ne relit. Même règle que « 0 point », au singulier
+lui aussi.
 
 ---
 
@@ -2705,10 +2799,10 @@ accordéon par groupe sur téléphone, et le sous-menu atteignable au clavier �
 Entrée ou Espace l'ouvre, Échap le referme en rendant le focus au bouton, et
 sortir du groupe par Tab le referme seul.
 
-Sept adresses nouvelles, dont six sont des **pages « à venir »** partageant un
-gabarit unique (`ecole/PageAVenir.tsx`) : `/ecole`, `/cours`, `/alentours`,
-`/maison`, `/non-mages`, `/archives/histoire`. La septième porte vraiment
-quelque chose : `/archives/reglement` rend le règlement sous le bandeau, **à
+Sept adresses nouvelles, dont six étaient des **pages « à venir »** partageant
+un gabarit unique (`ecole/PageAVenir.tsx`). **Il n'en reste que deux** —
+`/cours` et `/archives/histoire` : `/ecole`, `/maison`, `/non-mages` et
+`/alentours` portent maintenant quelque chose. La septième l'a toujours fait : `/archives/reglement` rend le règlement sous le bandeau, **à
 partir de la même source** que la page publique — recopier les 87 points pour
 les mettre sous le parchemin, ce serait en avoir deux versions dont une fausse.
 
@@ -2721,11 +2815,10 @@ compte de joueur n'en porte : le staff écrit les annonces en attendant, et le
 jour où le joueur nomme un préfet, il n'y a rien à développer.
 
 **Le moteur du forum est posé, et L'école est meublée** : quatre tables, les
-trois espaces avec leur paramétrage, **cinq sections et vingt pièces** en base,
+quatre espaces avec leur paramétrage, **cinq sections et vingt pièces** en base,
 la couture qui dit qui lit et qui écrit, les dix lignes, le repère de scènes,
-et deux écrans — `/ecole` et `/ecole/<pièce>` — qui se parcourent déjà. Les
-espaces `non-mages` et `maison` existent, vides : on les remplira quand on
-aura de quoi.
+et deux écrans — `/ecole` et `/ecole/<pièce>` — qui se parcourent déjà. Seul
+l'espace `maison` reste vide : on le remplira quand on aura de quoi.
 
 **On écrit dedans.** Ouvrir une scène, répondre, le compteur de dix lignes
 pendant la frappe, les balises `[HRP]`, l'avertissement de contenu proposé au
@@ -2754,6 +2847,13 @@ d'une maison » et « Le salon d'une maison ».
 **Le hors RP est ouvert** : « Le monde des non-mages » a cessé d'être du jeu de
 rôle, et porte cinq sections — présentations, liens, rôles, absences,
 suggestions. Voir « Le hors RP ».
+
+**Les alentours sont ouverts** : un quatrième espace, cinq zones et seize
+lieux — la falaise et la mer, le lac, la Forêt Sombre, Kaldvik en entier, le
+massif du nord. On y écrit du jeu de rôle aux mêmes règles qu'au château, et
+les points s'y gagnent. Vérifié à l'écran : une scène ouverte sur le chemin
+escarpé accorde bien son point à la maison, et la même scène à neuf lignes est
+refusée. Voir « Les alentours du château ».
 
 **Pas encore** : les cours et leurs QCM, les examens, le calendrier, et le
 contenu de l'espace de forum `maison`. **Les cours viendront en dernier** —

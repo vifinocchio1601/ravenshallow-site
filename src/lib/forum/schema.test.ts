@@ -79,6 +79,20 @@ describe("le corps d’un post", () => {
     }
   });
 
+  /**
+   * **« Il manque 1 lignes » est la faute que personne ne relit.** Et c’est
+   * le message le plus lu des trois : on est presque toujours refusé à une
+   * ligne près. Même règle que « 0 point », au singulier lui aussi.
+   */
+  it("une seule ligne manquante se dit au singulier", () => {
+    const lu = validerPost(post(9), 10);
+    expect(lu.ok).toBe(false);
+    if (!lu.ok) {
+      expect(lu.message).toContain("une ligne");
+      expect(lu.message).not.toContain("1 lignes");
+    }
+  });
+
   it("le hors-RP ne fait pas le compte", () => {
     const triche = `[HRP]\n${post(12)}\n[/HRP]\nUne seule ligne de jeu.`;
     expect(validerPost(triche, 10).ok).toBe(false);

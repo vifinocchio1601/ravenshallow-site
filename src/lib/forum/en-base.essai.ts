@@ -383,7 +383,7 @@ async function creerEspaceEssai() {
   });
 }
 
-describe("les trois espaces sont posés, avec leur paramétrage", () => {
+describe("les quatre espaces sont posés, avec leur paramétrage", () => {
   it("le domaine exige dix lignes, compte les points et les scènes", async () => {
     const domaine = await prisma.espace.findUnique({ where: { cle: "domaine" } });
     expect(domaine).not.toBeNull();
@@ -391,6 +391,24 @@ describe("les trois espaces sont posés, avec leur paramétrage", () => {
     expect(domaine!.comptePourLesPoints).toBe(true);
     expect(domaine!.compteLesScenes).toBe(true);
     expect(domaine!.visibilite).toBe("TOUS");
+  });
+
+  /**
+   * **Les alentours sont réglés comme le domaine, et c’est le point.**
+   *
+   * Un quatrième espace parce que `/alentours` et `/ecole` sont deux adresses
+   * du bandeau — pas parce que les règles y diffèrent. Une scène sur la grève
+   * vaut une scène dans un couloir : dix lignes, des points, une scène de
+   * plus au compteur.
+   */
+  it("les alentours exigent dix lignes, comptent les points et les scènes", async () => {
+    const e = await prisma.espace.findUnique({ where: { cle: "alentours" } });
+    expect(e).not.toBeNull();
+    expect(e!.lignesMinimum).toBe(10);
+    expect(e!.comptePourLesPoints).toBe(true);
+    expect(e!.compteLesScenes).toBe(true);
+    expect(e!.visibilite).toBe("TOUS");
+    expect(e!.quiOuvreUnSujet).toBe("TOUT_MEMBRE");
   });
 
   it("les non-mages n’exigent rien et ne comptent rien", async () => {
@@ -407,7 +425,7 @@ describe("les trois espaces sont posés, avec leur paramétrage", () => {
     expect(e!.quiRepond).toBe("MEMBRES_MAISON");
   });
 
-  it("les trois, et rien de plus pour l’instant", async () => {
+  it("les quatre, et rien de plus pour l’instant", async () => {
     const cles = (
       await prisma.espace.findMany({
         where: { cle: { not: ESPACE_ESSAI } },
@@ -415,14 +433,29 @@ describe("les trois espaces sont posés, avec leur paramétrage", () => {
         select: { cle: true },
       })
     ).map((e) => e.cle);
-    expect(cles).toEqual(["domaine", "non-mages", "maison"]);
+    // L’ordre est celui de l’affichage : le château, ses alentours, le hors
+    // RP, puis les maisons.
+    expect(cles).toEqual(["domaine", "alentours", "non-mages", "maison"]);
   });
 
-  it("les deux autres espaces sont vides, et c’est voulu", async () => {
-    const sections = await prisma.section.count({
-      where: { espace: { cle: { in: ["non-mages", "maison"] } } },
+  /**
+   * **Un seul espace reste vide, et c’est celui des maisons.**
+   *
+   * Ce test disait « les deux autres » jusqu’au 28 août 2026, et il avait
+   * cessé d’être vrai le jour où le hors RP a reçu ses cinq sections — sans
+   * que rien ne tombe, cet essai-ci ne tournant pas avec `npm test`. Corrigé
+   * en même temps que les alentours.
+   */
+  it("l’espace des maisons est le seul encore vide", async () => {
+    const vide = await prisma.section.count({
+      where: { espace: { cle: "maison" } },
     });
-    expect(sections).toBe(0);
+    expect(vide).toBe(0);
+
+    const horsRp = await prisma.section.count({
+      where: { espace: { cle: "non-mages" }, parentId: null },
+    });
+    expect(horsRp).toBe(5);
   });
 });
 
@@ -568,6 +601,167 @@ describe("L’école est meublée : cinq sections, vingt pièces", () => {
     expect(tour!.anneeMinimale).toBeNull();
     // Sa description reste dans le monde : elle ne parle pas de la messagerie.
     expect(tour!.description.toLowerCase()).not.toContain("messagerie");
+  });
+});
+
+describe("Les alentours sont meublés : cinq zones, seize lieux", () => {
+  it("cinq zones, dans l’ordre — et la carte fait autorité", async () => {
+    const zones = await prisma.section.findMany({
+      where: { parentId: null, espace: { cle: "alentours" } },
+      orderBy: { ordre: "asc" },
+      select: { nom: true },
+    });
+    expect(zones.map((z) => z.nom)).toEqual([
+      // La mer à l'EST, la forêt à l'OUEST, le lac au nord-ouest, Kaldvik au
+      // sud-ouest au pied du chemin : la rose des vents de la carte du
+      // domaine, opposable en RP (bible §2, art. 12.4).
+      "La falaise et la mer",
+      "Le Lac",
+      "La Forêt Sombre",
+      "Kaldvik, le village-port",
+      "Les Hauts Plateaux de Givre",
+    ]);
+  });
+
+  it("seize lieux, et aucun au troisième étage", async () => {
+    const lieux = await prisma.section.findMany({
+      where: { parentId: { not: null }, espace: { cle: "alentours" } },
+      select: { id: true, parent: { select: { parentId: true } } },
+    });
+    expect(lieux).toHaveLength(16);
+    for (const l of lieux) expect(l.parent?.parentId).toBeNull();
+  });
+
+  /**
+   * **Dehors, personne n’est chez soi.** Les dortoirs sont réservés à leur
+   * maison ; une grève ne l’est pas, et n’a aucune raison de l’être.
+   */
+  it("aucun lieu des alentours n’est réservé à une maison", async () => {
+    const reserves = await prisma.section.count({
+      where: { maisonReservee: { not: null }, espace: { cle: "alentours" } },
+    });
+    expect(reserves).toBe(0);
+  });
+
+  /**
+   * Deux lieux « sur convocation », et pour la même raison : rien ne s’y joue
+   * qui ne soit encadré. Ce n’est pas `ouverte: false`, qui ferait taire
+   * l’élève convoqué.
+   */
+  it("deux lieux seulement sont « sur convocation »", async () => {
+    const convocations = await prisma.section.findMany({
+      where: {
+        quiOuvreUnSujet: "STAFF_SEULEMENT",
+        espace: { cle: "alentours" },
+      },
+      select: { nom: true },
+    });
+    expect(convocations.map((c) => c.nom).sort()).toEqual(
+      ["La montée aux plateaux", "Le large et les épaves"].sort(),
+    );
+  });
+
+  it("les années exigées sont celles qui ont été décidées", async () => {
+    const verrous = await prisma.section.findMany({
+      where: { anneeMinimale: { not: null }, espace: { cle: "alentours" } },
+      select: { nom: true, anneeMinimale: true },
+    });
+    expect(
+      Object.fromEntries(verrous.map((v) => [v.nom, v.anneeMinimale])),
+    ).toEqual({
+      "Le sentier des corniches": "TROISIEME_ANNEE",
+      "Les sentiers": "TROISIEME_ANNEE",
+      "Le phare": "TROISIEME_ANNEE",
+      "Le lac, en barque": "QUATRIEME_ANNEE",
+      "Le passage secret": "QUATRIEME_ANNEE",
+      "La grève, sous la falaise": "CINQUIEME_ANNEE",
+      "Le cœur de la forêt": "CINQUIEME_ANNEE",
+    });
+  });
+
+  /**
+   * **Le chemin escarpé reste ouvert à la première année**, et c’est le seul
+   * lieu du domaine que tout le monde a traversé : c’est par là qu’on arrive.
+   * Le verrouiller reviendrait à fermer la porte d’entrée.
+   */
+  it("le chemin escarpé n’exige rien", async () => {
+    const chemin = await prisma.section.findFirst({
+      where: { slug: "le-chemin-escarpe" },
+      select: { anneeMinimale: true, ouverte: true, quiOuvreUnSujet: true },
+    });
+    expect(chemin!.anneeMinimale).toBeNull();
+    expect(chemin!.ouverte).toBe(true);
+    expect(chemin!.quiOuvreUnSujet).toBeNull();
+  });
+
+  /**
+   * **L’échoppe reprend mot pour mot les détails de la scène d’achat de la
+   * baguette.** Deux textes qui se contredisent coûtent plus cher qu’une
+   * répétition — c’est la leçon de la Salle de Banquet, payée le 27 août 2026.
+   */
+  it("l’échoppe Bjornstav dit la même chose que la scène de la boutique", async () => {
+    const echoppe = await prisma.section.findFirst({
+      where: { slug: "l-echoppe-bjornstav" },
+      select: { description: true },
+    });
+    expect(echoppe!.description).toContain("crâne d’ours");
+    expect(echoppe!.description).toContain("enseigne");
+  });
+
+  /**
+   * **Aucune créature du bestiaire n’est nommée nulle part** — art. 13.6.
+   *
+   * Elles ne s’invitent pas d’elles-mêmes dans une scène : leur apparition
+   * demande l’accord du staff, qui dit ce qu’elles peuvent faire. Une
+   * description de lieu qui en annoncerait une reviendrait à l’inviter, et
+   * personne ne pourrait plus la refuser.
+   *
+   * Ce qui reste dans les textes, ce sont des rumeurs qui se contredisent —
+   * la consigne de la bible côté joueurs : on spécule, on redoute, on se
+   * trompe.
+   */
+  it("aucun lieu ne nomme une créature du bestiaire", async () => {
+    const lieux = await prisma.section.findMany({
+      select: { nom: true, description: true },
+    });
+
+    const bavards = lieux
+      .filter((l) =>
+        /draugr|t[åa]kesong|n[øo]kk|huldra|skoggrim|blodskygge/i.test(
+          `${l.nom} ${l.description}`,
+        ),
+      )
+      .map((l) => l.nom);
+
+    expect(bavards).toEqual([]);
+  });
+
+  /**
+   * **Une description de lieu décrit le monde, elle ne parle pas au joueur.**
+   *
+   * Le troisième des contrôles à refaire après toute écriture de lieu, et le
+   * seul qui n’était pas mécanisé. Les consignes vivent dans le règlement,
+   * approuvé à l’inscription ; une pièce qui donne un conseil cesse d’être un
+   * lieu et devient un panneau.
+   *
+   * ⚠️ **Le hors RP est écarté, et c’est tout l’inverse d’une exception de
+   * confort** : « Le monde des non-mages » est l’espace d’où l’on parle quand
+   * on n’est pas son personnage. Ses cinq sections s’adressent au joueur parce
+   * qu’il n’y a personne d’autre à qui s’adresser — « Prévenez quand vous
+   * partez » n’a pas de version à la troisième personne. Le contrôle a
+   * d’ailleurs commencé par les signaler toutes les cinq.
+   */
+  it("aucun lieu de jeu de rôle ne s’adresse au joueur", async () => {
+    const lieux = await prisma.section.findMany({
+      where: { espace: { cle: { in: ["domaine", "alentours", "maison"] } } },
+      select: { nom: true, description: true },
+    });
+
+    const bavards = lieux
+      .filter((l) => /\b(vous|votre|vos)\b/i.test(l.description))
+      .map((l) => l.nom);
+
+    expect(bavards).toEqual([]);
   });
 });
 

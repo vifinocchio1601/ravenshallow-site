@@ -144,6 +144,21 @@ export const TEXTES_FORUM = {
       "L’intérieur du château : les Tours centrales et les quatre ailes. Tout ce qui s’y écrit est du jeu de rôle — dix lignes au minimum, et les points s’y gagnent.",
   },
 
+  /**
+   * **Ce qui commence là où le château s’arrête.**
+   *
+   * Un espace à part, et non des sections du domaine : `/alentours` et
+   * `/ecole` sont deux adresses du bandeau, et des zones posées dans le
+   * domaine s’afficheraient dans « L’école ». Le paramétrage, lui, est le
+   * même — dix lignes, les points, les scènes comptées.
+   */
+  alentours: {
+    eyebrow: "Le domaine",
+    titre: "Les alentours",
+    accroche:
+      "La falaise et la mer, le lac, la Forêt Sombre, Kaldvik en contrebas et le massif du nord. Les mêmes règles qu’au château — dix lignes au minimum, et les points s’y gagnent.",
+  },
+
   lieu: {
     retour: "Retour à l’école",
     /** L’aile d’où l’on vient, en tête de la page d’une pièce. */
@@ -391,6 +406,13 @@ export const TEXTES_FORUM = {
     titreTropLong: "Le titre ne peut pas dépasser {max} signes.",
     corpsVide: "Il n’y a rien à publier.",
     corpsTropLong: "Le post ne peut pas dépasser {max} signes.",
+    /**
+     * **Une ligne manquante se dit au singulier.** « Il manque 1 lignes » est
+     * la faute que personne ne relit — et c’est justement le message qu’un
+     * joueur voit au moment où son post est refusé, à une ligne près.
+     */
+    tropCourtUneLigne:
+      "Il manque une ligne : le minimum est de {min} dans cet espace (article 12.2). Le hors-RP entre balises [HRP] ne compte pas.",
     tropCourt:
       "Il manque {n} lignes : le minimum est de {min} dans cet espace (article 12.2). Le hors-RP entre balises [HRP] ne compte pas.",
     avertissementTropLong:
@@ -461,3 +483,19 @@ export function avecLeMot(gabarit: string, mots: MotsDuLieu): string {
     .replace("{cetteScene}", mots.cetteScene)
     .replace("{sceneClose}", mots.sceneClose);
 }
+
+/**
+ * **Le vocabulaire des alentours : celui du jeu de rôle, à un mot près.**
+ *
+ * Dehors comme au château on ouvre une scène, on la clôt, on compte ses dix
+ * lignes. Seule l’adresse du retour change — « Retour à l’école » sur une
+ * grève serait faux.
+ *
+ * ⚠️ **Dérivé, jamais recopié.** Onze clés dupliquées pour une seule qui
+ * diffère, et le jour où l’on corrigerait « Ouvrir une scène » d’un côté, les
+ * deux espaces cesseraient de parler la même langue.
+ */
+export const MOTS_ALENTOURS: MotsDuLieu = {
+  ...TEXTES_FORUM.motsRp,
+  retour: "Retour aux alentours",
+};

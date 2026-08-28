@@ -180,12 +180,6 @@ export const TEXTES_ECOLE = {
       corps:
         "Les salles de classe ne sont pas encore ouvertes. Les matières, les emplois du temps et les épreuves viendront avec la rentrée.",
     },
-    alentours: {
-      rune: "ᛚ",
-      titre: "Les alentours",
-      corps:
-        "Ce qui entoure le château — la falaise et la mer, le lac, la forêt sombre, le chemin escarpé qui descend vers Kaldvik. Rien n’y est encore jouable.",
-    },
     nonMages: {
       rune: "ᛜ",
       titre: "Le monde des non-mages",

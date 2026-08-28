@@ -95,10 +95,14 @@ export function validerPost(
     };
   }
   if (!respecteLeMinimum(net, lignesMinimum)) {
+    const manque = lignesManquantes(net, lignesMinimum);
     return {
       ok: false,
-      message: E.tropCourt
-        .replace("{n}", String(lignesManquantes(net, lignesMinimum)))
+      // Une ligne au singulier : c’est le cas le plus fréquent — on est
+      // presque toujours refusé à une ligne près — et « Il manque 1 lignes »
+      // se lit mal au moment précis où l’on vient d’écrire.
+      message: (manque === 1 ? E.tropCourtUneLigne : E.tropCourt)
+        .replace("{n}", String(manque))
         .replace("{min}", String(lignesMinimum)),
     };
   }
