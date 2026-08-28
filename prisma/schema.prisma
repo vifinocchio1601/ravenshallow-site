@@ -348,6 +348,10 @@ model Eleve {
   /// d'ici qu'on le refera.
   pointsGagnes PointGagne[]
 
+  /// Les mots qu'il a épinglés au tableau de sa maison. Ils lui survivent :
+  /// le lien s'annule, le mot reste au mur.
+  motsDuTableau MotDuTableau[]
+
   creeLe DateTime @default(now())
   majLe  DateTime @updatedAt
 
@@ -1534,4 +1538,47 @@ model Annonce {
 
   @@index([publieeLe(sort: Desc)])
   @@map("annonces")
+}
+
+// ─────────────────────────────────────────────────────────────
+//  Partie VII — Le tableau d'affichage d'une maison
+// ─────────────────────────────────────────────────────────────
+
+/// Un mot épinglé au tableau d'une maison.
+///
+/// **À ne pas confondre avec une `Annonce`** — celle du Grand Hall est
+/// officielle, vaut pour tout le site, n'a pas d'auteur, et peut faire courir
+/// les sept jours du préambule. Un mot de tableau n'engage rien, ne vaut que
+/// pour une maison, et il est **signé**. Deux objets, deux tables.
+///
+/// **Aucune permission nouvelle** : qui l'écrit est déjà écrit dans
+/// `peutEcrireLesAnnoncesDe` — le staff, le préfet de la maison, ou le
+/// détenteur de `ANNONCES_MAISON`.
+model MotDuTableau {
+  id String @id @default(cuid())
+
+  /// **Une maison, et jamais nulle.** Un `null` qui voudrait dire « toutes »
+  /// ferait porter deux sens à la même case.
+  maison Maison
+
+  /// Du texte brut, 500 signes au plus — pas de balisage. Un tableau porte
+  /// des mots, pas des articles.
+  corps String @db.Text
+
+  /// **Le mot est signé**, et c'est ce qui le distingue d'une annonce du
+  /// Grand Hall. Nul quand le compte s'en va : le mot reste au mur.
+  auteurId String?
+  auteur   Eleve?  @relation(fields: [auteurId], references: [id], onDelete: SetNull)
+
+  epingleLe DateTime @default(now())
+
+  /// Retirer n'efface pas. ⚠️ `retirePar` est un **nom figé**, pas un lien —
+  /// procédé de `Post.masquePar` : un identifiant serait vidé le jour où ce
+  /// compte disparaît, et la contrainte « les deux ensemble » tomberait toute
+  /// seule au milieu d'une suppression.
+  retireLe  DateTime?
+  retirePar String?
+
+  @@index([maison, epingleLe(sort: Desc)])
+  @@map("mots_du_tableau")
 }

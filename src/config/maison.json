@@ -1,0 +1,18 @@
+{
+  "note": "Les mesures du tableau d'affichage d'une maison — pas ses règles. Voir components/maison/TableauDAffichage.tsx. Le principe est celui du journal du bureau : le RAPPORT est tenu par la boîte, jamais par l'image, parce que les quatre bornes du cadre sont des pourcentages de cette boîte.",
+  "noteImage": "Les dimensions du fichier APRÈS conversion — l'image d'origine faisait 1536 × 1024 avec un damier de transparence PEINT DEDANS, qui a été rendu transparent puis rogné. Elles ne donnent que le rapport, jamais la taille d'affichage.",
+  "imageLargeur": 1313,
+  "imageHauteur": 870,
+  "noteHauteur": "La hauteur est PLAFONNÉE, et sa largeur suit le rapport — l'inverse déformerait le bois. Deux valeurs : en pleine largeur sur un téléphone de 375 px, un tableau 3:2 ferait 250 px de haut, ce qui ne tient pas trois parchemins.",
+  "tableauHauteurMax": 560,
+  "tableauHauteurMaxTelephone": 420,
+  "noteCadre": "Les bornes du bois nu, en pourcentage des dimensions de l'image, RELEVÉES DESSUS — en dessinant le rectangle sur la photo, jamais à l'œil sur la page : le fer et le bois ont la même luminance, aucun profil ne les sépare. Les réajuster de tête ferait passer les parchemins sur le cadre.",
+  "cadreGauche": 4.0,
+  "cadreDroite": 96.4,
+  "cadreHaut": 14.6,
+  "cadreBas": 94.4,
+  "noteMarge": "Pour qu'un parchemin ne touche pas le fer, en pourcentage de la largeur du tableau.",
+  "cadreMarge": 2.0,
+  "noteInclinaison": "L'angle maximal d'un parchemin, en degrés. Il est calculé depuis l'identifiant du mot — jamais tiré au hasard : un composant serveur doit rendre deux fois la même chose. Au-delà de trois degrés, le texte se lit de travers.",
+  "inclinaisonMax": 1.8
+}

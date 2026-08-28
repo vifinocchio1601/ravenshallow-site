@@ -1,7 +1,7 @@
 import "server-only";
 import type { Prisma } from "@prisma/client";
 import { transaction } from "@/lib/base/transaction";
-import { MAISONS, type Maison } from "@/lib/dossier/etats";
+import { libellePlace, MAISONS, type Maison } from "@/lib/dossier/etats";
 import {
   classement,
   effectifsParMaison,
@@ -12,7 +12,13 @@ import {
 import { prisma } from "@/lib/prisma";
 import { nettoyerTexteLibre } from "@/lib/texte";
 import { TEXTES_POINTS } from "./constantes";
-import { etatDuPlafond, pointDUnPost, type VerdictPoint } from "./regles";
+import {
+  bornesDuMois,
+  etatDuPlafond,
+  pointDUnPost,
+  rangsPartages,
+  type VerdictPoint,
+} from "./regles";
 
 /**
  * L’accès aux points.
@@ -429,6 +435,98 @@ export async function listerLesElevesPourLesPoints(): Promise<
     maison: maisonQuiCompte(f),
     points: f.points,
   }));
+}
+
+/** Une ligne du top du mois, telle que le tableau d’une maison l’affiche. */
+export type LigneDuTop = {
+  eleveId: string;
+  prenomNom: string;
+  /** L’année, ou le titre au château qui la remplace. */
+  place: string;
+  /** Ce qu’il a rapporté À SA MAISON ce mois-ci. Jamais son total personnel. */
+  points: number;
+  /** Les ex æquo partagent leur rang : 1, 2, 2, 4. */
+  rang: number;
+};
+
+/**
+ * **Le top du mois d’une maison** — les cinq qui lui ont le plus rapporté.
+ *
+ * ⚠️ **Ce n’est pas un extrait de `Eleve.points`.** Le compteur personnel
+ * traverse les années et porte les dons de l’administration ; ce top-ci
+ * répond à « qui a fait vivre la maison ce mois-ci ». Il se lit donc dans le
+ * carnet, sur la colonne `maison` **figée au moment du gain** : une joueuse de
+ * Bryggeld nommée professeure garde ce qu’elle a rapporté en août, et ne
+ * figure plus dans le top de septembre.
+ *
+ * **Cinq lignes quoi qu’il arrive** — décision du joueur, 28 août 2026 —, les
+ * zéros compris. L’effectif vient de `maisonQuiCompte` et jamais de la colonne
+ * `maison` : un professeur ne marque pour personne et n’a rien à y faire.
+ *
+ * Les lignes du carnet **reprises** ne comptent pas : un post masqué pour
+ * correction (art. 19.3) retire son point, et le top doit dire la même chose
+ * que le tube.
+ *
+ * À égalité, l’ordre alphabétique départage — sinon le tableau change d’ordre
+ * entre deux visites sans que rien n’ait bougé.
+ */
+export async function topDuMois(
+  maison: Maison,
+  instant: Date,
+  combien = 5,
+): Promise<LigneDuTop[]> {
+  const { debut, fin } = bornesDuMois(instant);
+
+  // L’effectif d’abord : ce sont des têtes, et il en faut cinq même si aucune
+  // n’a marqué. Une requête sur le carnet seul ne rendrait que ceux qui ont
+  // des points, et le top serait vide en début de mois.
+  const fiches = await prisma.eleve.findMany({
+    where: { statut: "ACCEPTE", maison },
+    orderBy: { prenomNom: "asc" },
+    select: {
+      id: true,
+      prenomNom: true,
+      maison: true,
+      etatMaison: true,
+      fonction: true,
+      roleAffiche: true,
+    },
+  });
+  const effectif = fiches.filter((f) => maisonQuiCompte(f) === maison);
+  if (effectif.length === 0) return [];
+
+  const gains = await prisma.pointGagne.groupBy({
+    by: ["eleveId"],
+    where: {
+      maison,
+      repriseLe: null,
+      gagneLe: { gte: debut, lt: fin },
+      eleveId: { in: effectif.map((f) => f.id) },
+    },
+    _sum: { points: true },
+  });
+
+  const parEleve = new Map(
+    gains.map((g) => [g.eleveId, g._sum.points ?? 0] as const),
+  );
+
+  const classees = effectif
+    .map((fiche) => ({
+      eleveId: fiche.id,
+      prenomNom: fiche.prenomNom,
+      place: libellePlace(fiche.fonction, fiche.roleAffiche),
+      points: parEleve.get(fiche.id) ?? 0,
+    }))
+    // `localeCompare` et non `<` : « Élise » se range après « Erik » avec une
+    // comparaison de codes, et avant avec celle du français.
+    .sort(
+      (a, b) =>
+        b.points - a.points || a.prenomNom.localeCompare(b.prenomNom, "fr"),
+    )
+    .slice(0, combien);
+
+  const rangs = rangsPartages(classees.map((l) => l.points));
+  return classees.map((ligne, i) => ({ ...ligne, rang: rangs[i]! }));
 }
 
 // ─────────────────────────────────────────────────────────────

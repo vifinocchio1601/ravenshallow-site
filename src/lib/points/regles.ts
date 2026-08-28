@@ -155,3 +155,50 @@ export function pointDUnPost(faits: {
   }
   return { gagne: true, points: POINTS_PAR_POST };
 }
+
+/**
+ * **Les bornes du mois en cours** — début inclus, fin exclue.
+ *
+ * Le top du tableau d'une maison se lit sur le **mois civil** : « le top
+ * d'août » se comprend sans explication, là où trente jours glissants
+ * donneraient un classement qui bouge tous les jours sans qu'on sache
+ * pourquoi.
+ *
+ * ⚠️ **C'est le choix inverse de celui du plafond quotidien**, et les deux se
+ * défendent. Le plafond glisse sur vingt-quatre heures parce qu'il **oppose**
+ * quelque chose à un joueur en train d'écrire : calé sur minuit du serveur,
+ * qui vit en UTC, il se remettrait à zéro en pleine soirée. Le top, lui,
+ * n'oppose rien — il raconte un mois. Un mois qui commencerait le 3 à 2 h du
+ * matin ne raconterait rien du tout.
+ *
+ * Pure : elle reçoit l'instant, ne lit ni horloge ni base, et se teste donc
+ * sur douze mois sans attendre.
+ */
+export function bornesDuMois(instant: Date): { debut: Date; fin: Date } {
+  const debut = new Date(instant.getFullYear(), instant.getMonth(), 1, 0, 0, 0, 0);
+  // Le mois suivant, le 1er : `Date` reporte tout seul décembre sur janvier,
+  // et c'est la seule écriture qui n'ait pas à connaître la longueur des mois
+  // ni les années bissextiles.
+  const fin = new Date(instant.getFullYear(), instant.getMonth() + 1, 1, 0, 0, 0, 0);
+  return { debut, fin };
+}
+
+/**
+ * **Le rang de chacun, les ex æquo partagés.**
+ *
+ * Deux élèves à quatorze points sont tous les deux troisièmes, et le suivant
+ * est cinquième — jamais quatrième. C'est la règle du classement des maisons,
+ * appliquée aux personnes : `classement()` la tient déjà pour les quatre
+ * tubes, et deux façons de compter un rang finiraient par se contredire à
+ * l'écran.
+ *
+ * Reçoit une liste **déjà triée**, du meilleur au moins bon.
+ */
+export function rangsPartages(points: readonly number[]): number[] {
+  const rangs: number[] = [];
+  for (let i = 0; i < points.length; i += 1) {
+    const precedent = i > 0 ? points[i - 1] : null;
+    rangs.push(precedent !== null && points[i] === precedent ? rangs[i - 1]! : i + 1);
+  }
+  return rangs;
+}

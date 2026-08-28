@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
+  bornesDuMois,
   etatDuPlafond,
   pointDUnPost,
   PLAFOND_PAR_JOUR,
   POINTS_PAR_POST,
+  rangsPartages,
 } from "./regles";
 
 /**
@@ -172,5 +174,77 @@ describe("le plafond quotidien", () => {
     // voulu : ces deux nombres se règlent avec le joueur, jamais au passage.
     expect(POINTS_PAR_POST).toBe(1);
     expect(PLAFOND_PAR_JOUR).toBe(10);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────
+//  Le mois du top, et les rangs partagés
+// ─────────────────────────────────────────────────────────────
+
+describe("les bornes du mois", () => {
+  it("commencent le 1er à minuit et finissent au 1er suivant", () => {
+    const { debut, fin } = bornesDuMois(new Date(2026, 7, 28, 14, 32));
+    expect(debut.getFullYear()).toBe(2026);
+    expect(debut.getMonth()).toBe(7);
+    expect(debut.getDate()).toBe(1);
+    expect(debut.getHours()).toBe(0);
+    expect(fin.getMonth()).toBe(8);
+    expect(fin.getDate()).toBe(1);
+  });
+
+  /** Décembre se reporte tout seul : c'est l'intérêt de passer par `Date`. */
+  it("passent de décembre à janvier de l’année suivante", () => {
+    const { debut, fin } = bornesDuMois(new Date(2026, 11, 31, 23, 59));
+    expect(debut.getMonth()).toBe(11);
+    expect(fin.getFullYear()).toBe(2027);
+    expect(fin.getMonth()).toBe(0);
+  });
+
+  it("n’oublient pas le 29 février", () => {
+    const { debut, fin } = bornesDuMois(new Date(2028, 1, 29, 12));
+    expect(debut.getDate()).toBe(1);
+    expect(fin.getMonth()).toBe(2);
+    expect(fin.getDate()).toBe(1);
+  });
+
+  /** La fin est EXCLUE : le dernier instant du mois y est, le suivant non. */
+  it("bornent un mois entier, fin exclue", () => {
+    const { debut, fin } = bornesDuMois(new Date(2026, 7, 15));
+    const dernier = new Date(2026, 7, 31, 23, 59, 59, 999);
+    expect(dernier >= debut && dernier < fin).toBe(true);
+    expect(new Date(2026, 8, 1, 0, 0, 0, 0) < fin).toBe(false);
+  });
+
+  it("les douze mois d’une année tiennent bout à bout, sans trou", () => {
+    for (let mois = 0; mois < 12; mois += 1) {
+      const courant = bornesDuMois(new Date(2026, mois, 10));
+      const suivant = bornesDuMois(new Date(2026, mois + 1, 10));
+      expect(courant.fin.getTime(), `mois ${mois}`).toBe(
+        suivant.debut.getTime(),
+      );
+    }
+  });
+});
+
+describe("les rangs du top", () => {
+  it("se suivent quand personne n’est à égalité", () => {
+    expect(rangsPartages([9, 5, 3, 1])).toEqual([1, 2, 3, 4]);
+  });
+
+  /**
+   * Deux à quatorze sont tous deux troisièmes, et le suivant est cinquième —
+   * jamais quatrième. C'est la règle du classement des maisons, appliquée aux
+   * personnes.
+   */
+  it("partagent le rang, et sautent celui qui suit", () => {
+    expect(rangsPartages([20, 18, 14, 14, 9])).toEqual([1, 2, 3, 3, 5]);
+  });
+
+  it("mettent tout le monde premier quand tout le monde est à zéro", () => {
+    expect(rangsPartages([0, 0, 0, 0, 0])).toEqual([1, 1, 1, 1, 1]);
+  });
+
+  it("ne bronchent pas sur une liste vide", () => {
+    expect(rangsPartages([])).toEqual([]);
   });
 });

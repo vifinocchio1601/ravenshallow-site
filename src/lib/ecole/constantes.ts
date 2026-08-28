@@ -12,6 +12,23 @@ export const TEXTES_ECOLE = {
     sousMenuAria: "{groupe} — sous-menu",
   },
 
+  /**
+   * **Ma maison** — la page, pas le tableau qu'elle porte. Les textes du
+   * tableau d'affichage vivent dans `lib/tableau/constantes.ts` : ce sont
+   * deux choses, et l'une pourrait un jour vivre ailleurs.
+   */
+  maison: {
+    /**
+     * Le chapeau dit où l'on est, le titre dit laquelle. L'inverse — « Le
+     * tournoi des maisons » en chapeau — annonçait le panneau du bas
+     * au-dessus du nom de la maison, et le disait deux fois.
+     */
+    eyebrow: "Ma maison",
+    rune: "ᛗ",
+    /** Le blason est du décor : le nom de la maison est écrit à côté. */
+    altBlason: "",
+  },
+
   bureau: {
     titre: "Mon bureau",
     eyebrow: "Ravenshallow",
@@ -152,12 +169,6 @@ export const TEXTES_ECOLE = {
       titre: "Les alentours",
       corps:
         "Ce qui entoure le château — la falaise et la mer, le lac, la forêt sombre, le chemin escarpé qui descend vers Kaldvik. Rien n’y est encore jouable.",
-    },
-    maison: {
-      rune: "ᛗ",
-      titre: "Ma maison",
-      corps:
-        "Le dortoir, les annonces et les espaces réservés à ta maison. Cette porte s’ouvrira en même temps que le forum.",
     },
     nonMages: {
       rune: "ᛜ",

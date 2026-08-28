@@ -123,6 +123,8 @@ logique ailleurs, l'y ajouter.
 | `lib/forum/suppression.ts` | **qui peut retirer quoi** — une scène, son post — et ce qu'il en reste. Pur, sans base : l'écran et la route posent la même question |
 | `lib/forum/depot.ts` | l'accès au forum. Filtre en **appelant** `peutLireLeLieu`, jamais en recopiant sa condition dans un `where` |
 | `lib/forum/schema.ts` | ce qu'un titre, un post et un avertissement ont le droit d'être — **partagé mot pour mot** entre le champ et la route |
+| `lib/tableau/depot.ts` | l'accès au tableau d'une maison. **Seul endroit qui compose une requête** sur `mots_du_tableau` — et le seul qui sache qu'un mot retiré ne s'affiche plus. Ne décide d'aucun droit : il les reçoit |
+| `lib/tableau/schema.ts` | ce qu'un mot a le droit d'être — **partagé mot pour mot** entre le champ et l'action serveur. Le seul schéma des trois qui ne soit **pas** `server-only` : pas de balisage, donc rien à cacher |
 | `lib/annonces/depot.ts` | l'accès aux annonces. **Seul endroit qui compose une requête** sur `annonces` — et le seul qui sache qu'une annonce retirée ne s'affiche plus |
 | `lib/annonces/schema.ts` | ce qu'une annonce a le droit d'être — `server-only`, et **la seule porte** par laquelle elle entre en base |
 | `lib/annonces/extrait.ts` | **les premiers mots d'une annonce**, pour le journal du bureau. Calculé, jamais stocké |
@@ -1422,6 +1424,122 @@ une charge qu'on délègue.
 
 ---
 
+## Le tableau d'affichage d'une maison
+
+Posé le 28 août 2026, avec la page `/maison`. **Un mur de bois dans la salle
+commune**, où un préfet ou la directrice épinglent un mot.
+
+⚠️ **À ne pas confondre avec une annonce du Grand Hall.** Celle-là est
+officielle, vaut pour tout le site, n'a pas d'auteur, et peut faire courir les
+sept jours du préambule. Un mot de tableau n'engage rien, ne vaut que pour une
+maison, et il est **signé**. Deux objets, deux tables, deux vocabulaires : on
+**affiche** une annonce au Grand Hall, on **épingle** un mot au tableau.
+
+### Aucune permission nouvelle, et c'est le point
+
+Qui écrit était **déjà écrit** : `peutEcrireLesAnnoncesDe` — le staff, le
+préfet de la maison, ou le détenteur de `ANNONCES_MAISON`. Le lot des pouvoirs
+avait posé la permission et son nom ; il ne manquait que le mur.
+
+**Le droit du préfet dérive de sa nomination**, donc le démettre reprend tout
+(art. 13.5). Vérifié à l'écran : un compte d'essai nommé préfet de Bryggeld,
+sans aucune permission accordée, épingle et décroche ; un élève ordinaire de
+la même maison voit les mots, sans champ ni bouton.
+
+**Retirer se joue à deux droits** : le sien, toujours, et le ménage pour qui
+peut épingler. Un préfet qui ne pourrait pas décrocher le mot d'un autre
+n'aurait aucun moyen de tenir son tableau.
+
+⚠️ **Le dépôt ne calcule aucun droit** — il les reçoit. Recopier
+`peutEcrireLesAnnoncesDe` dedans en ferait une seconde source, qui divergerait
+le jour où l'on toucherait aux préfets.
+
+⚠️ **La maison ne vient jamais du formulaire.** L'action serveur la relit sur
+la fiche du compte : un champ caché laisserait épingler un mot au tableau
+d'une autre maison en changeant une valeur.
+
+### Du texte brut, et c'est un choix
+
+Pas de balisage : un tableau porte des mots, pas des articles, et l'éditeur
+inviterait à écrire long. React échappe le texte d'office, il n'y a donc
+**aucune liste blanche à tenir de ce côté** — c'est le parti pris de la Tour
+aux Corbeaux. `tableau/schema.ts` est pour cette raison le seul des trois
+schémas qui ne soit pas `server-only`, et le champ partage avec l'action **le
+même fichier**.
+
+Cinq cents signes, `MOT_MAX`. À revoir après avoir vu de vrais mots.
+
+### Le bois est une photographie, les parchemins sont du CSS
+
+**Le tableau est un objet**, comme le journal et les tubes : l'image est du
+décor — `alt` vide —, et tout ce qui compte est du vrai texte par-dessus.
+
+**Les mots sont sur du parchemin, et c'est ce qui les rend lisibles.** Le bois
+est sombre ; du texte clair posé dessus se battrait avec le grain. De l'encre
+sur du papier clair, non. Décision du joueur, et elle a réglé d'un coup le
+seul vrai risque du lot.
+
+⚠️ **L'inclinaison d'un parchemin est calculée depuis son identifiant**, jamais
+tirée au hasard. Le composant est rendu sur le serveur : un `Math.random()`
+donnerait un angle au rendu et un autre à l'hydratation, React s'en plaindrait,
+et le parchemin sauterait sous les yeux du lecteur au chargement.
+
+⚠️ **L'image d'origine portait un damier de transparence PEINT DEDANS**, sans
+couche alpha : posée telle quelle, elle aurait flotté sur un damier blanc. Le
+damier a été rendu transparent par propagation depuis les bords — tout ce qui
+est clair **et relié au bord** —, puis l'image rognée : 1536 × 1024 est devenu
+**1313 × 870**, rapport 1,5092, 164 Ko en WebP. Le faire à un simple seuil
+aurait troué un éclat clair à l'intérieur du cadre.
+
+Il n'y a **ni Pillow, ni ImageMagick, ni `cwebp`** sur ce poste. `sharp` a été
+installé en `--no-save` le temps de la conversion : `package.json` et son
+verrou sont restés intacts, et le site n'en dépend pas.
+
+⚠️ **Les quatre bornes du cadre se relèvent EN DESSINANT le rectangle sur la
+photo**, jamais à l'œil sur la page et jamais par un profil de luminance : le
+fer et le bois ont la même luminance, aucun seuil ne les sépare. Elles vivent
+dans `config/maison.json`.
+
+### Le mur grandit sur téléphone, et la fenêtre reste sur grand écran
+
+Le cadre est large et bas. À 375 px, il ne fait plus que 222 px de haut et sa
+fenêtre intérieure 177 : **un mot et demi sur cinq**, le reste derrière un
+défilement de la taille d'un timbre — le contraire d'un tableau d'affichage,
+qu'on lit d'un coup d'œil.
+
+Sous 640 px, le bois remplit donc la hauteur qu'il faut (`object-fit: cover`,
+les bandes de fer des côtés rognées) et le mur cesse d'être positionné : les
+cinq mots tiennent, sans défilement. **Le décor cède, le texte passe.**
+
+Au-delà, le cadre entier reparaît et le mur redevient la fenêtre posée sur ses
+quatre bornes. ⚠️ **Le rapport est tenu par la BOÎTE, jamais par l'image** —
+`width: 100%` + `max-width: calc(hauteur × rapport)` + `aspect-ratio`, et
+**surtout pas** `height` + `width: auto`. Piège déjà payé sur le journal.
+
+### Le top du mois
+
+Cinq lignes **quoi qu'il arrive**, zéros compris — décision du joueur. Dans une
+maison de six, c'est presque le classement de tout le monde ; c'est assumé, et
+ça s'estompera à trente.
+
+- **Ce n'est pas un extrait de `Eleve.points`.** Le compteur personnel traverse
+  les années ; ce top-ci répond à « qui a fait vivre la maison ce mois-ci », et
+  se lit dans le carnet, sur la colonne `maison` **figée au moment du gain**.
+- L'effectif vient de `maisonQuiCompte`, jamais de la colonne : un professeur
+  ne marque pour personne et n'a rien à y faire.
+- Les lignes **reprises** ne comptent pas — un post masqué retire son point, et
+  le top doit dire la même chose que le tube.
+- **Mois civil**, `bornesDuMois`. ⚠️ **C'est le choix inverse du plafond
+  quotidien**, et les deux se défendent : le plafond glisse sur vingt-quatre
+  heures parce qu'il **oppose** quelque chose à quelqu'un en train d'écrire ;
+  le top n'oppose rien, il raconte un mois — et un mois qui commencerait le 3 à
+  2 h du matin ne raconterait rien.
+- **Les ex æquo partagent leur rang** — 1, 2, 2, 4 —, par `rangsPartages` : la
+  règle du classement des maisons, appliquée aux personnes. À égalité, l'ordre
+  alphabétique départage, sinon le tableau change entre deux visites.
+
+---
+
 ## Les transactions
 
 **Toute transaction interactive passe par `transaction()`**, dans
@@ -2293,10 +2411,32 @@ d'administration qui les écrit, les corrige et les retire, la page sous le
 bandeau, et le journal du bureau qui cesse d'être vide. Le groupe « Les
 archives » a pris son nom. Voir « Le Grand Hall ».
 
+**La page de maison est ouverte** : le tableau d'affichage, le rappel des
+quatre tubes, et le top du mois. Voir « Le tableau d'affichage d'une maison ».
+
 **Pas encore** : les cours et leurs QCM, les examens, le calendrier, le
-Registre magique, et le contenu des espaces `non-mages` et `maison`. Le point
-d'accroche des cours est posé : `SourcePoint.QCM` et `SourcePoint.EXAMEN`
-existent dans l'enum et n'attendent que d'être écrits.
+Registre magique, **le salon de discussion d'une maison**, et le contenu des
+espaces de forum `non-mages` et `maison`. Le point d'accroche des cours est
+posé : `SourcePoint.QCM` et `SourcePoint.EXAMEN` existent dans l'enum et
+n'attendent que d'être écrits.
+
+⚠️ **Le salon en direct est demandé, et il n'est pas fait** — décision du
+joueur du 28 août 2026 : la page d'abord, le salon ensuite. Trois choses à
+trancher avant de l'écrire, et aucune n'est technique : **qui lit**, **ce
+qu'on garde**, et **ce qui se passe quand quelqu'un dérape**. Ce sera le
+premier endroit du site sans relecture — ni dix lignes, ni avertissement de
+contenu, ni trace de modération.
+
+⚠️ **Et il faudra l'écrire noir sur blanc : un salon de maison n'est PAS un
+corbeau.** « Le staff ne lit pas les conversations privées » est une règle dure,
+tenue par `etancheite.test.ts`. Un salon est une **pièce**, pas une
+correspondance : le staff peut y lire. Sans cette phrase, la règle se déforme
+dans un sens ou dans l'autre.
+
+Côté technique, le direct n'existe pas sur cette architecture : Vercel exécute
+des fonctions courtes, pas des connexions ouvertes — **pas de WebSocket**. Ce
+qui se fait est une interrogation de quelques secondes, et le mécanisme existe
+déjà : `useRafraichissement`, qui s'arrête quand l'onglet est caché.
 
 Le Grand Hall, lui, n'a que ses annonces : la bible (§12) y met aussi **le
 calendrier, les résultats et les événements à venir**. Le règlement y est déjà
@@ -2316,10 +2456,11 @@ Le plancher qui existe est **d'affichage** — `pointsAuTournoi` —, pas de bas
 la trace doit rester vraie même quand le tournoi arrondit à zéro.
 
 ⚠️ **L'historique des ajustements n'est visible que de l'administration.** Le
-brief du joueur le veut « affiché dans l'historique public de la maison » — or
-il n'existe pas encore de page de maison, l'espace `maison` étant vide. À
-poser sous les tubes ou avec le lot de cet espace : **c'est une décision qui
-lui appartient**, et elle est en attente.
+brief du joueur le veut « affiché dans l'historique public de la maison ». **La
+page de maison existe maintenant** — c'est donc devenu faisable, et ça ne l'est
+plus par manque d'écran : la question qui reste est de savoir s'il le veut sous
+les tubes, sous le top, ou pas du tout. **C'est une décision qui lui
+appartient**, et elle est toujours en attente.
 
 Le **Registre magique** — l'annuaire des membres, trié par maison et par
 fonction — n'existe pas : c'est lui qui portera « bloquer depuis sa fiche »,

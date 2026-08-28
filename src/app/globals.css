@@ -1935,3 +1935,231 @@
 .journal__annonce a:hover {
   text-decoration-color: rgb(43 35 24 / 0.85);
 }
+
+/* ————————————————————————————————
+   Le tableau d'affichage d'une maison
+   Le bois est une photographie ; les parchemins sont du CSS, et le texte
+   dessus est du VRAI texte. Même parti pris que le journal et les tubes.
+   ———————————————————————————————— */
+
+/* Un mot épinglé : un carré de parchemin sur le bois sombre.
+
+   C'est ce qui rend le tableau lisible sans retoucher l'image — de l'encre
+   sur du papier clair, jamais du texte clair posé sur du bois. */
+.mot-epingle {
+  color: var(--ink);
+  /* L'inclinaison vient de l'identifiant du mot, posée en variable par le
+     composant : deux rendus successifs doivent donner le même angle, sinon
+     React se plaint de l'hydratation et le parchemin saute au chargement. */
+  transform: rotate(var(--inclinaison, 0deg));
+  background-image:
+    /* les fibres, à peine perceptibles */
+    repeating-linear-gradient(
+      92deg,
+      rgba(43, 35, 24, 0.03) 0 1px,
+      transparent 1px 5px
+    ),
+    /* le grain, plus sombre sur les bords : une feuille posée se creuse */
+    radial-gradient(
+      120% 100% at 50% 0%,
+      #efe7d4 0%,
+      #e2d8bd 55%,
+      #cec0a0 100%
+    );
+  box-shadow:
+    0 10px 20px -12px rgb(0 0 0 / 0.85),
+    0 2px 4px -2px rgb(0 0 0 / 0.6);
+}
+
+/* Le clou qui le tient. Décor pur — `aria-hidden` sur le balisage. */
+.mot-epingle__clou {
+  background-image: radial-gradient(
+    60% 60% at 35% 30%,
+    #8d8d93 0%,
+    #4a4a51 55%,
+    #202024 100%
+  );
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.35),
+    0 2px 3px -1px rgb(0 0 0 / 0.8);
+}
+
+/* La zone qui défile à l'intérieur du cadre. Comme la colonne du journal :
+   le tableau ne s'agrandit jamais, et l'on ne coupe pas les mots. */
+.tableau__mur {
+  scrollbar-width: thin;
+  scrollbar-color: rgb(255 255 255 / 0.18) transparent;
+}
+
+/* Le mur lui-même : le rapport est tenu par la BOÎTE, jamais par l'image.
+   Voir components/maison/TableauDAffichage.tsx — le piège est le même que
+   celui déjà payé sur le journal du bureau. */
+/* ── Sur téléphone : le mur GRANDIT avec ses mots ──
+
+   Le cadre est large et bas (3:2). À 375 px de large il ne fait plus que
+   222 px de haut, et la fenêtre intérieure 177 : un mot et demi sur cinq, le
+   reste derrière un défilement de la taille d'un timbre. C'est le contraire
+   d'un tableau d'affichage, qu'on lit d'un coup d'œil.
+
+   Le bois remplit donc la hauteur qu'il faut — `cover`, donc les bandes de fer
+   des côtés sont rognées, et l'on garde un mur de bois plein cadre. Le décor
+   cède, le texte passe : c'est le bon ordre. */
+.tableau {
+  position: relative;
+  margin-inline: auto;
+  width: 100%;
+  min-height: calc(var(--tableau-h-telephone) * 0.55);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.tableau__bois {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.tableau__mur {
+  position: relative;
+  padding: 1.1rem 0.9rem;
+}
+
+/* ── À partir de la tablette : le cadre entier, et la fenêtre dedans ──
+
+   ⚠️ Le rapport est tenu par la BOÎTE, jamais par l'image : les quatre bornes
+   du mur sont des pourcentages de cette boîte. `height` + `width: auto` ne
+   marcherait pas — sur un bloc, `auto` vaut « toute la largeur disponible »,
+   les deux dimensions deviennent définies et `aspect-ratio` est ignoré. Piège
+   déjà payé sur le journal du bureau. */
+@media (min-width: 640px) {
+  .tableau {
+    --tableau-h: var(--tableau-h-telephone);
+    max-width: calc(var(--tableau-h) * var(--tableau-rapport));
+    aspect-ratio: var(--tableau-rapport);
+    min-height: 0;
+    overflow: visible;
+  }
+
+  .tableau__bois {
+    object-fit: contain;
+  }
+
+  /* Les quatre bornes viennent de `config/maison.json` et arrivent en
+     variables : les réécrire ici les sortirait du seul endroit où on pense à
+     les ajuster. */
+  .tableau__mur {
+    position: absolute;
+    left: var(--cadre-gauche);
+    right: calc(100% - var(--cadre-droite));
+    top: var(--cadre-haut);
+    bottom: calc(100% - var(--cadre-bas));
+    padding: var(--cadre-marge);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+}
+
+@media (min-width: 1024px) {
+  .tableau {
+    --tableau-h: var(--tableau-h-grand);
+  }
+}
+
+.tableau__mots {
+  display: grid;
+  /* `minmax(0, 1fr)` et non `1fr` : un mot sans espace — une adresse collée —
+     élargirait sa colonne au-delà du cadre, et le parchemin sortirait du
+     bois. Piège déjà rencontré sur la liste des conversations. */
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0.9rem;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+@media (min-width: 640px) {
+  .tableau__mots {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.tableau__vide {
+  color: var(--parchment-dim);
+  font-family: var(--font-body), "EB Garamond", Georgia, serif;
+  font-style: italic;
+  text-align: center;
+  padding: 1.5rem 0.5rem;
+}
+
+.mot-epingle {
+  position: relative;
+  padding: 1.5rem 0.9rem 0.7rem;
+  border-radius: 2px;
+  font-family: var(--font-body), "EB Garamond", Georgia, serif;
+  /* Le parchemin est petit : à seize pixels on y tiendrait six mots par
+     ligne. Même raisonnement que la colonne du journal. */
+  font-size: 0.86rem;
+  line-height: 1.55;
+}
+
+.mot-epingle__clou {
+  position: absolute;
+  top: 0.45rem;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: 50%;
+}
+
+.mot-epingle__corps {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  margin: 0;
+}
+
+.mot-epingle__signature {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 0.5rem;
+  margin: 0.6rem 0 0;
+  font-size: 0.72rem;
+  color: #5a4c37;
+}
+
+.mot-epingle__nom {
+  font-weight: 600;
+}
+
+.mot-epingle__place,
+.mot-epingle__date {
+  font-style: italic;
+}
+
+.mot-epingle__retrait {
+  margin-top: 0.4rem;
+}
+
+/* Discret sur le parchemin, franc au survol et au focus : décrocher n'est pas
+   le geste principal d'un tableau, mais il ne doit pas se chercher. */
+.mot-epingle__retrait-bouton {
+  font-family: var(--font-display), Cinzel, Georgia, serif;
+  font-size: 0.6rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #7a6a4f;
+  transition: color 0.3s ease;
+}
+
+.mot-epingle__retrait-bouton:hover,
+.mot-epingle__retrait-bouton:focus-visible {
+  color: #8c2f1f;
+}
+
+.mot-epingle__retrait-bouton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
