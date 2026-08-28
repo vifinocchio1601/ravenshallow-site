@@ -156,6 +156,54 @@ export function peutLireLesEspacesDe(
   return detient(pouvoirs, "LIRE_ESPACES_MAISON", maison);
 }
 
+/**
+ * **Peut-il entrer dans cette maison-là ?** — le tableau d'affichage, le salon.
+ *
+ * Chez soi, toujours. Ailleurs, il faut `peutLireLesEspacesDe` : le staff, ou
+ * le détenteur de `LIRE_ESPACES_MAISON` sur cette maison précise.
+ *
+ * **Cette question n'existait pas avant le 28 août 2026, et son absence était
+ * un trou :** `peutEcrireLesAnnoncesDe` accordait au staff le tableau de
+ * toutes les maisons, mais la seule adresse qui y menait exigeait d'avoir une
+ * maison. Une directrice avait donc un pouvoir sans chemin.
+ *
+ * ⚠️ **Elle ne peut pas vivre dans `session/acces.ts`**, et c'est pour cela
+ * qu'il a fallu une seconde adresse. Le middleware tourne au bord du réseau
+ * et ne joint pas la base : il sait lire l'état d'un compte dans son cookie,
+ * jamais ses permissions. « A-t-elle une maison ? » il sait ; « est-elle
+ * directrice ? » il ne saura jamais.
+ */
+export function peutVisiterLaMaison(
+  pouvoirs: Pouvoirs,
+  /** La maison du compte — celle qui s'affiche, jamais la colonne brute. */
+  laSienne: Maison | null,
+  visee: Maison,
+): boolean {
+  if (laSienne === visee) return true;
+  return peutLireLesEspacesDe(pouvoirs, visee);
+}
+
+/**
+ * **Peut-il parler au salon de cette maison-là ?**
+ *
+ * Chez soi, toujours. Ailleurs, **le staff seul** — une directrice s'adresse
+ * à une maison dans sa salle commune, et c'est une décision du joueur du
+ * 28 août 2026.
+ *
+ * ⚠️ **`LIRE_ESPACES_MAISON` n'ouvre pas la parole**, et son nom le dit :
+ * lire n'est pas écrire. Un professeur à qui l'on donne la lecture d'un
+ * dortoir ne doit pas se retrouver à y bavarder sans que personne l'ait
+ * voulu.
+ */
+export function peutParlerDansLeSalonDe(
+  pouvoirs: Pouvoirs,
+  laSienne: Maison | null,
+  visee: Maison,
+): boolean {
+  if (laSienne === visee) return true;
+  return estStaff(pouvoirs);
+}
+
 /** Clore une scène — art. 17.2. Tout le forum. */
 export function peutCloreUneScene(pouvoirs: Pouvoirs): boolean {
   return estStaff(pouvoirs) || detient(pouvoirs, "CLORE_SCENE", null);

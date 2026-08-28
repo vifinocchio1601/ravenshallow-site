@@ -13,6 +13,8 @@ export const TEXTES_SALON = {
   lienAide: "La salle commune, en direct. Hors jeu de rôle.",
   titre: "Le salon de {maison}",
   retour: "Retour à ma maison",
+  /** Depuis une maison qui n'est pas la sienne : le mot « ma » serait faux. */
+  retourVisite: "Retour à la maison",
 
   /**
    * Dit trois choses en une phrase, et les trois comptent : c'est la maison
@@ -22,6 +24,8 @@ export const TEXTES_SALON = {
     "La salle commune de votre maison. Tout le monde ici vous lit, le château compris — et ce qui s’y dit reste écrit.",
 
   vide: "Personne n’a encore parlé. À vous de commencer.",
+  /** Pour qui entre sans avoir la parole : on le dit, on ne cache pas le champ en silence. */
+  enVisite: "Vous n’êtes pas de cette maison : vous lisez, vous n’y parlez pas.",
   ariaFil: "Les messages du salon",
   /** Le message est vivant : un lecteur d'écran doit apprendre les nouveaux. */
   ariaNouveaux: "Nouveaux messages",

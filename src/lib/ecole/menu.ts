@@ -47,6 +47,17 @@ export const ROUTES = {
 
   // Le domaine
   ecole: "/ecole",
+  /**
+   * **Les quatre maisons, au pluriel** — à ne pas confondre avec `maison`,
+   * qui est la sienne.
+   *
+   * ⚠️ **Aucune collision entre les deux**, et c'est vérifié : la garde comme
+   * le middleware comparent `chemin === href` ou `href + "/"`, jamais un
+   * simple préfixe. `/maisons` n'hérite donc pas de l'`exigeUneMaison` de
+   * `/maison`, ce qui est tout l'intérêt — une directrice n'a pas de maison
+   * et doit pourtant pouvoir entrer dans les quatre.
+   */
+  maisons: "/maisons",
   cours: "/cours",
   alentours: "/alentours",
 
@@ -177,6 +188,18 @@ export const MENU: readonly EntreeMenu[] = [
     libelle: "Le domaine",
     liens: [
       { href: ROUTES.ecole, libelle: "L’école" },
+      {
+        // **Ouverte à tous, et sans `exigeUneMaison`** : chacun n'entre que
+        // chez soi, le staff entre partout, et c'est la PAGE qui en décide —
+        // le middleware ne joint pas la base et ne connaîtra jamais les
+        // permissions d'un compte.
+        //
+        // Un élève y voit les quatre maisons et trois portes closes, ce qui
+        // est vrai d'une école. Un élève que le Miroir attend n'y voit que des
+        // portes closes, et c'est vrai aussi.
+        href: ROUTES.maisons,
+        libelle: "Les maisons",
+      },
       { href: ROUTES.cours, libelle: "Les cours" },
       { href: ROUTES.alentours, libelle: "Les alentours" },
     ],

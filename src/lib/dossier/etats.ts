@@ -103,6 +103,27 @@ export const MAISONS: readonly Maison[] = [
   "TIDEAL",
 ];
 
+/**
+ * **La clé d'une maison dans une adresse** — « kaldrafn », « tideal ».
+ *
+ * La valeur de l'enum, en minuscules, et rien d'autre : une table de
+ * correspondance tenue à la main finirait par diverger, et l'on se
+ * retrouverait avec une maison joignable par deux adresses ou par aucune.
+ *
+ * ⚠️ **`TIDEAL` n'a pas d'accent dans le code**, et sa clé n'en a donc pas non
+ * plus. Le nom qui s'affiche — « Tideål » — vit dans `NOMS_MAISON`, et c'est
+ * le seul endroit où il porte son rond.
+ */
+export function cleDeMaison(maison: Maison): string {
+  return maison.toLowerCase();
+}
+
+/** L'inverse, et il refuse tout ce que `MAISONS` ne reconnaît pas. */
+export function maisonDepuisCle(cle: string): Maison | null {
+  const cherchee = MAISONS.find((m) => cleDeMaison(m) === cle.toLowerCase());
+  return cherchee ?? null;
+}
+
 export const LIBELLES_STATUT_DOSSIER: Record<StatutDossier, string> = {
   BROUILLON: "Brouillon",
   EN_ATTENTE: "En attente de lecture",

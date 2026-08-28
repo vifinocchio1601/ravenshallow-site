@@ -30,8 +30,11 @@ export default function TableauDAffichage({
   mots,
   moiId,
   peutFaireLeMenage,
+  maison,
 }: {
   mots: MotAffiche[];
+  /** La maison dont c'est le tableau — pas forcément celle du lecteur. */
+  maison: string;
   /** Pour savoir quels mots sont les siens : on décroche toujours le sien. */
   moiId: string | null;
   /** Un préfet tient son tableau : il décroche aussi le mot des autres. */
@@ -126,6 +129,7 @@ export default function TableauDAffichage({
                     <BoutonRetirerMot
                       id={mot.id}
                       qui={mot.auteurNom ?? t.auteurParti}
+                      maison={maison}
                     />
                   ) : null}
                 </article>

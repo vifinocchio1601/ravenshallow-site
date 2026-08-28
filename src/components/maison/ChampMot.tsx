@@ -11,8 +11,9 @@ import { validerMot } from "@/lib/tableau/schema";
  * **Épingler un mot au tableau.**
  *
  * Le champ n'apparaît qu'à qui peut écrire — préfet, permission, staff —, et
- * **c'est l'action serveur qui protège** : elle refait la question en entier.
- * Un champ absent n'a jamais gardé une porte.
+ * **c'est l'action serveur qui protège** : elle refait la question en entier,
+ * y compris le droit d'être dans cette maison-là. Un champ absent n'a jamais
+ * gardé une porte, et un champ caché encore moins.
  *
  * **Le compteur lit le même fichier que l'action** — `tableau/schema.ts`,
  * partagé mot pour mot. Deux validations qui divergent, c'est quelqu'un à qui
@@ -23,7 +24,7 @@ import { validerMot } from "@/lib/tableau/schema";
  * annonces : il n'y a pas de balisage à nettoyer, donc rien à cacher au
  * navigateur.
  */
-export default function ChampMot() {
+export default function ChampMot({ maison }: { maison: string }) {
   const t = TEXTES_TABLEAU.ecrire;
   const [etat, envoyer] = useFormState<EtatMot, FormData>(epinglerAction, {
     erreur: null,
@@ -50,6 +51,10 @@ export default function ChampMot() {
 
   return (
     <form ref={formulaire} action={envoyer} className="mt-6">
+      {/* La maison visée voyage avec le formulaire — et l'action serveur
+          vérifie qu'on a le droit d'y être. Une directrice épingle chez les
+          quatre ; sans ce champ, elle n'épinglerait nulle part. */}
+      <input type="hidden" name="maison" value={maison} />
       <label
         htmlFor={idChamp}
         className="font-display text-[0.66rem] uppercase tracking-[0.18em] text-parchment-dim"

@@ -1,7 +1,7 @@
 import { TEXTES_ANNONCES } from "@/lib/annonces/constantes";
 import { describe, expect, it } from "vitest";
 import type { EtatAcces } from "@/lib/session/acces";
-import { liensVisibles, menuVisible } from "@/lib/session/acces";
+import { liensVisibles, menuVisible, routeAutorisee } from "@/lib/session/acces";
 import {
   ENTREES_MENU,
   MENU,
@@ -89,6 +89,18 @@ describe("l’arbre du parchemin", () => {
     for (const route of ROUTES_HORS_MENU) {
       expect(PREFIXES_ECOLE, route.href).toContain(route.href);
     }
+  });
+
+  it("« Le domaine » porte l’école, les maisons, les cours et les alentours", () => {
+    const domaine = MENU.find(
+      (e): e is GroupeMenu => estUnGroupe(e) && e.libelle === "Le domaine",
+    );
+    expect(domaine?.liens.map((l) => l.href)).toEqual([
+      ROUTES.ecole,
+      ROUTES.maisons,
+      ROUTES.cours,
+      ROUTES.alentours,
+    ]);
   });
 
   it("le Grand Hall reste extensible — le calendrier et les résultats y viendront", () => {
@@ -249,6 +261,22 @@ describe("« Ma maison » n’apparaît qu’à qui en a une", () => {
       ROUTES.fiche,
       ROUTES.corbeaux,
     ]);
+  });
+
+  /**
+   * ⚠️ **Le piège d'adressage du 28 août 2026**, et il ne se voit pas en
+   * lisant : « /maisons » commence par « /maison ».
+   *
+   * S'il en héritait, la page des quatre maisons se refermerait sur une
+   * directrice — exactement ce qu'elle est là pour ouvrir. Elle n'en hérite
+   * pas parce que la garde compare `chemin === href` ou `href + "/"`, jamais
+   * un simple préfixe. Ce test fige ce détail, qu'un jour de refactorisation
+   * pourrait défaire sans que rien d'autre ne tombe.
+   */
+  it("« Les maisons » ne se referme pas sur qui n’a pas de maison", () => {
+    expect(routeAutorisee(DIRECTRICE, ROUTES.maison)).toBe(false);
+    expect(routeAutorisee(DIRECTRICE, ROUTES.maisons)).toBe(true);
+    expect(routeAutorisee(DIRECTRICE, `${ROUTES.maisons}/kaldrafn`)).toBe(true);
   });
 
   it("l’adresse elle-même se referme, pas seulement l’entrée", () => {

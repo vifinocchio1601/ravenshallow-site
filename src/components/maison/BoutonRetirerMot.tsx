@@ -19,14 +19,18 @@ import { TEXTES_TABLEAU } from "@/lib/tableau/constantes";
 export default function BoutonRetirerMot({
   id,
   qui,
+  maison,
 }: {
   id: string;
   /** Le nom de qui l'a épinglé, pour le dire au clavier comme à l'écran. */
   qui: string;
+  /** La maison visée : l'action serveur vérifie qu'on a le droit d'y être. */
+  maison: string;
 }) {
   return (
     <form action={retirerAction} className="mot-epingle__retrait">
       <input type="hidden" name="id" value={id} />
+      <input type="hidden" name="maison" value={maison} />
       <Bouton qui={qui} />
     </form>
   );

@@ -1,6 +1,7 @@
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
+import { MAISONS } from "@/lib/dossier/etats";
 import type { EtatAcces } from "@/lib/session/acces";
 import {
   AUCUN_POUVOIR,
@@ -12,7 +13,9 @@ import {
   peutEcrireLesAnnoncesDe,
   peutEpinglerUnSujet,
   peutLireLesEspacesDe,
+  peutParlerDansLeSalonDe,
   peutVerrouillerUneSection,
+  peutVisiterLaMaison,
   porteSurUneMaison,
   type Permission,
   type Pouvoirs,
@@ -273,5 +276,86 @@ describe("un pouvoir n’est pas un libellé, et un libellé n’ouvre rien", ()
     // erreur, et la compilation s’arrête sur cette directive.
     const jamais: EtatAcces["permissions"] = undefined;
     expect(jamais).toBeUndefined();
+  });
+});
+
+// ─────────────────────────────────────────────────────────────
+//  Entrer dans une maison, et y parler
+// ─────────────────────────────────────────────────────────────
+
+/**
+ * **Ces deux questions comblent un trou trouvé par le joueur**, le 28 août
+ * 2026 : `peutEcrireLesAnnoncesDe` accordait au staff le tableau des quatre
+ * maisons, mais la seule adresse qui y menait exigeait d'en avoir une. Sa
+ * directrice avait donc un pouvoir sans chemin.
+ */
+describe("entrer dans une maison", () => {
+  it("chez soi, toujours — même sans le moindre pouvoir", () => {
+    expect(peutVisiterLaMaison(AUCUN_POUVOIR, "KALDRAFN", "KALDRAFN")).toBe(true);
+  });
+
+  it("ailleurs, non", () => {
+    expect(peutVisiterLaMaison(AUCUN_POUVOIR, "KALDRAFN", "NATTORM")).toBe(false);
+  });
+
+  /** Le cas de la directrice : aucune maison à elle, et les quatre ouvertes. */
+  it("le staff entre partout, sans maison à lui", () => {
+    const staff = membre({ role: "ADMIN" });
+    for (const maison of MAISONS) {
+      expect(peutVisiterLaMaison(staff, null, maison), maison).toBe(true);
+    }
+  });
+
+  it("sans maison et sans pouvoir, aucune porte ne s’ouvre", () => {
+    for (const maison of MAISONS) {
+      expect(peutVisiterLaMaison(AUCUN_POUVOIR, null, maison), maison).toBe(false);
+    }
+  });
+
+  it("la lecture d’un dortoir ouvre CETTE maison, et pas une autre", () => {
+    const lecteur = membre({
+      permissions: [{ permission: "LIRE_ESPACES_MAISON", maison: "NATTORM" }],
+    });
+    expect(peutVisiterLaMaison(lecteur, "KALDRAFN", "NATTORM")).toBe(true);
+    expect(peutVisiterLaMaison(lecteur, "KALDRAFN", "BRYGGELD")).toBe(false);
+  });
+});
+
+describe("parler au salon d’une maison", () => {
+  it("chez soi, toujours", () => {
+    expect(peutParlerDansLeSalonDe(AUCUN_POUVOIR, "TIDEAL", "TIDEAL")).toBe(true);
+  });
+
+  it("le staff s’adresse à n’importe quelle maison", () => {
+    const staff = membre({ role: "MODERATEUR" });
+    for (const maison of MAISONS) {
+      expect(peutParlerDansLeSalonDe(staff, null, maison), maison).toBe(true);
+    }
+  });
+
+  /**
+   * ⚠️ **Lire n'est pas écrire, et le nom de la permission le dit.** Un
+   * professeur à qui l'on donne la lecture d'un dortoir ne doit pas se
+   * retrouver à y bavarder sans que personne l'ait voulu.
+   */
+  it("la lecture d’un dortoir ne donne pas la parole", () => {
+    const lecteur = membre({
+      permissions: [{ permission: "LIRE_ESPACES_MAISON", maison: "NATTORM" }],
+    });
+    expect(peutVisiterLaMaison(lecteur, "KALDRAFN", "NATTORM")).toBe(true);
+    expect(peutParlerDansLeSalonDe(lecteur, "KALDRAFN", "NATTORM")).toBe(false);
+  });
+
+  /** Écrire les annonces d’une maison n’est pas non plus y parler. */
+  it("la permission d’annonce ne donne pas la parole au salon", () => {
+    const annonceur = membre({
+      permissions: [{ permission: "ANNONCES_MAISON", maison: "NATTORM" }],
+    });
+    expect(peutParlerDansLeSalonDe(annonceur, "KALDRAFN", "NATTORM")).toBe(false);
+  });
+
+  it("un préfet ne parle pas dans la maison qu’il ne partage pas", () => {
+    const prefet = membre({ prefetDe: ["NATTORM"] });
+    expect(peutParlerDansLeSalonDe(prefet, "KALDRAFN", "NATTORM")).toBe(false);
   });
 });

@@ -24,6 +24,22 @@ export const TEXTES_ECOLE = {
      * au-dessus du nom de la maison, et le disait deux fois.
      */
     eyebrow: "Ma maison",
+
+    /** La page des quatre — à ne pas confondre avec « Ma maison ». */
+    toutes: {
+      eyebrow: "Ravenshallow",
+      titre: "Les maisons",
+      chapeau:
+        "Les quatre maisons de l’école. On entre chez soi ; le reste se regarde de loin.",
+      /** Ce qui distingue une porte ouverte d’une porte close, en toutes lettres. */
+      laSienne: "Votre maison",
+      ouverte: "Entrer",
+      close: "Vous n’entrez pas ici",
+      /** Le cas de la directrice : aucune maison à elle, et les quatre ouvertes. */
+      aucuneSienne:
+        "Vous n’êtes d’aucune maison — et vous entrez dans les quatre.",
+      ariaListe: "Les quatre maisons",
+    },
     rune: "ᛗ",
     /** Le blason est du décor : le nom de la maison est écrit à côté. */
     altBlason: "",

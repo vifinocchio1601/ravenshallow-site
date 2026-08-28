@@ -27,15 +27,25 @@ import type { MessageAffiche } from "@/lib/salon/depot";
  * insupportables.
  */
 export default function Salon({
+  maison,
   messagesInitiaux,
   jusqua,
   moiId,
+  peutParler,
   peutFaireLeMenage,
 }: {
+  /** La clé de la pièce — pas forcément celle du lecteur. */
+  maison: string;
   messagesInitiaux: MessageAffiche[];
   /** L'instant du serveur au chargement : le premier « depuis » du tour suivant. */
   jusqua: string;
   moiId: string | null;
+  /**
+   * ⚠️ **Lire n'est pas parler.** Un professeur à qui l'on donne la lecture
+   * d'un dortoir entre et lit ; le champ ne lui est pas offert. C'est la route
+   * qui protège — un champ absent n'a jamais gardé une porte.
+   */
+  peutParler: boolean;
   peutFaireLeMenage: boolean;
 }) {
   const t = TEXTES_SALON;
@@ -71,7 +81,7 @@ export default function Salon({
   const rafraichir = useCallback(async () => {
     const collé = enBas();
     const reponse = await fetch(
-      `/api/maison/salon?depuis=${encodeURIComponent(depuis)}`,
+      `/api/maison/salon?maison=${maison}&depuis=${encodeURIComponent(depuis)}`,
       { cache: "no-store" },
     );
     if (!reponse.ok) return;
@@ -98,7 +108,7 @@ export default function Salon({
     });
 
     if (collé) requestAnimationFrame(descendre);
-  }, [depuis, descendre]);
+  }, [depuis, descendre, maison]);
 
   useRafraichissement(rafraichir, RAFRAICHISSEMENT_MS);
 
@@ -110,7 +120,7 @@ export default function Salon({
       const reponse = await fetch("/api/maison/salon", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ corps: texte }),
+        body: JSON.stringify({ maison, corps: texte }),
       });
       const donnees = await reponse.json().catch(() => ({}));
 
@@ -135,7 +145,7 @@ export default function Salon({
     const reponse = await fetch("/api/maison/salon", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id }),
+      body: JSON.stringify({ maison, id }),
     });
     if (!reponse.ok) return;
     setMessages((avant) => avant.filter((m) => m.id !== id));
@@ -201,6 +211,7 @@ export default function Salon({
         )}
       </ol>
 
+      {peutParler ? (
       <div className="salon__saisie">
         <label htmlFor={idChamp} className="sr-only">
           {t.champ.libelle}
@@ -248,6 +259,9 @@ export default function Salon({
           {t.champ.envoyer}
         </button>
       </div>
+      ) : (
+        <p className="salon__aide">{t.enVisite}</p>
+      )}
     </div>
   );
 }

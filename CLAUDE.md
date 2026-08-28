@@ -114,7 +114,7 @@ logique ailleurs, l'y ajouter.
 | `lib/corbeaux/depot.ts` | l'accès aux conversations. **Seul endroit qui compose une requête** sur les messages |
 | `lib/corbeaux/schema.ts` | ce qu'un corbeau a le droit de porter — **partagé mot pour mot** entre le champ et la route |
 | `lib/corbeaux/constantes.ts` | tous les textes de la Tour, **et aucun import** : c'est ce qui permet à `ecole/menu.ts` d'y prendre le nom de l'entrée sans ouvrir un cycle |
-| `lib/forum/pouvoirs.ts` | **qui a le droit de quoi, et sur quelle maison.** Les cinq permissions, le staff qui passe partout, et le droit du préfet qui **dérive** de sa nomination |
+| `lib/forum/pouvoirs.ts` | **qui a le droit de quoi, et sur quelle maison.** Les cinq permissions, le staff qui passe partout, le droit du préfet qui **dérive** de sa nomination — et **qui entre dans une maison, qui y parle** |
 | `lib/forum/depot-pouvoirs.ts` | l'accès aux permissions et aux préfets. **Seul endroit qui écrit** dans `permissions_accordees` et `prefets` — et qui journalise chaque geste dans la même transaction |
 | `lib/forum/lieux.ts` | **qui lit un lieu, qui y ouvre un sujet, qui y répond.** Et la règle qu'une section ne peut que **resserrer** ce que l'espace ouvre |
 | `lib/forum/longueur.ts` | ce qui fait dix lignes — **partagé mot pour mot** entre le compteur du champ et la route. On y compte des **caractères réels**, jamais des retours à la ligne ; le balisage et le hors-RP sont retirés avant comptage |
@@ -180,8 +180,9 @@ refuserait de toute façon.
 **Le menu est un ARBRE, mais les règles portent sur ses FEUILLES.**
 
 `MENU` est la source : cinq entrées, dont trois ouvrent un sous-menu — « Mon
-personnage », « Le domaine » et **« Le Grand Hall »**, qui s'appelait « Les
-archives » jusqu'au 28 août 2026. Un groupe n'a **pas d'adresse** — on ne
+personnage », « Le domaine » (qui porte **« Les maisons »** depuis le 28 août
+2026) et **« Le Grand Hall »**, qui s'appelait « Les archives » jusqu'au même
+jour. Un groupe n'a **pas d'adresse** — on ne
 clique pas sur « Le domaine », on l'ouvre. `ENTREES_MENU` est la liste plate des feuilles, **déduite** de
 l'arbre : deux listes tenues à la main finiraient par diverger, et l'entrée
 oubliée dans la seconde serait une route sans garde.
@@ -1539,6 +1540,83 @@ maison de six, c'est presque le classement de tout le monde ; c'est assumé, et
 - **Les ex æquo partagent leur rang** — 1, 2, 2, 4 —, par `rangsPartages` : la
   règle du classement des maisons, appliquée aux personnes. À égalité, l'ordre
   alphabétique départage, sinon le tableau change entre deux visites.
+
+---
+
+## Entrer dans une maison qui n'est pas la sienne
+
+Posé le 28 août 2026, **parce que le joueur s'en est aperçu** : sa directrice
+ne pouvait aller dans aucune maison.
+
+### Le trou, et pourquoi il ne se voyait pas
+
+`peutEcrireLesAnnoncesDe` accordait au staff le tableau d'affichage **des
+quatre maisons** — écrit depuis le lot des pouvoirs, testé, juste. Mais la
+seule adresse qui menait à un tableau, `/maison`, est gardée par
+`exigeUneMaison`, et une directrice est en `SANS_OBJET`. **Un pouvoir sans
+chemin** : rien ne tombait, aucun test ne s'en plaignait, et il fallait jouer
+le personnage pour le voir.
+
+⚠️ **Ce n'était pas réparable en desserrant `/maison`.** Cette porte-là est
+gardée par le **middleware**, qui tourne en runtime Edge et **ne joint pas la
+base** : il lit l'état d'un compte dans son cookie, jamais ses permissions.
+« A-t-elle une maison ? » il sait ; « est-elle directrice ? » il ne saura
+jamais. D'où une **seconde adresse**, dont la page décide elle-même.
+
+### Deux adresses, une seule implémentation
+
+| | |
+| --- | --- |
+| `/maison` | la sienne. Gardée par `exigeUneMaison`, inchangée |
+| `/maisons` | les quatre. **Ouverte à tous**, et c'est la page qui trie |
+| `/maisons/<clé>` | une maison, si l'on a le droit d'y être |
+
+**Les écrans sont partagés** — `MaisonVisitee` et `SalonVisite` — et c'est
+l'essentiel : deux copies finiraient par diverger, et c'est la copie oubliée
+qui montrerait un jour un tableau à quelqu'un qui n'y a pas droit.
+
+⚠️ **Le piège d'adressage : « /maisons » commence par « /maison ».** S'il en
+héritait, la page des quatre se refermerait sur une directrice — exactement ce
+qu'elle est là pour ouvrir. Il n'en hérite pas parce que la garde **et** le
+middleware comparent `chemin === href` ou `href + "/"`, jamais un simple
+préfixe. `menu.test.ts` fige ce détail, qu'une refactorisation pourrait défaire
+sans que rien d'autre ne tombe.
+
+**La clé d'une maison est la valeur de l'enum en minuscules** — `cleDeMaison`,
+dans `dossier/etats.ts`. Une table de correspondance tenue à la main finirait
+par laisser une maison joignable par deux adresses ou par aucune. `TIDEAL` n'a
+pas d'accent dans le code, et sa clé n'en a donc pas non plus ; le rond de
+« Tideål » ne vit que dans `NOMS_MAISON`.
+
+### Deux questions, et il ne faut pas les confondre
+
+| | Vraie quand |
+| --- | --- |
+| `peutVisiterLaMaison` | c'est la sienne, ou `peutLireLesEspacesDe` — staff, ou `LIRE_ESPACES_MAISON` sur celle-là |
+| `peutParlerDansLeSalonDe` | c'est la sienne, ou **le staff seul** |
+
+⚠️ **Lire n'est pas écrire, et le nom de la permission le dit.** Un professeur
+à qui l'on donne `LIRE_ESPACES_MAISON` sur un dortoir entre et lit ; il n'y
+bavarde pas. Épingler au tableau reste `peutEcrireLesAnnoncesDe`, inchangée —
+trois droits distincts sur la même pièce, et c'est voulu.
+
+**Une maison qu'on n'a pas le droit de visiter rend 404**, comme une clé qui ne
+correspond à rien : « elle existe, mais pas pour vous » se lit comme une
+confirmation. Même choix que le forum, la Tour et le Grand Hall.
+
+**Une porte close s'affiche**, elle ne disparaît pas : sur `/maisons`, un élève
+voit les quatre maisons et trois « Vous n'entrez pas ici ». C'est vrai d'une
+école, et une absence ne dirait rien. Le blason pâlit **et** la phrase le dit :
+un état ne se signale jamais par la seule couleur.
+
+### Ce que la maison n'est plus
+
+⚠️ **La maison vient maintenant de la requête, et le serveur vérifie qu'on a le
+droit d'y être.** C'était l'inverse jusqu'à ce lot — elle était relue sur la
+fiche —, et c'est précisément ce qui interdisait tout à la directrice. Le sens
+de la garde n'a pas changé : **c'est `peutVisiterLaMaison` qui décide**, jamais
+le champ caché ni le paramètre. Vérifié à l'écran : un élève de Bryggeld qui
+poste vers Nattorm reçoit 403, la page 404.
 
 ---
 

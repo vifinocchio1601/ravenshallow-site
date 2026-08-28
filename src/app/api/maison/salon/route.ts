@@ -2,7 +2,11 @@ import { NextResponse } from "next/server";
 import { aUneMaison } from "@/lib/session/acces";
 import { compteConnecte } from "@/lib/session/garde";
 import { pouvoirsDe } from "@/lib/forum/depot-pouvoirs";
-import { peutEcrireLesAnnoncesDe } from "@/lib/forum/pouvoirs";
+import {
+  peutEcrireLesAnnoncesDe,
+  peutParlerDansLeSalonDe,
+  peutVisiterLaMaison,
+} from "@/lib/forum/pouvoirs";
 import { TEXTES_SALON } from "@/lib/salon/constantes";
 import {
   lireLeSalon,
@@ -10,7 +14,11 @@ import {
   parlerAuSalon,
   retirerDuSalon,
 } from "@/lib/salon/depot";
-import { libellePlace, type Maison } from "@/lib/dossier/etats";
+import {
+  libellePlace,
+  maisonDepuisCle,
+  type Maison,
+} from "@/lib/dossier/etats";
 
 /**
  * Le salon d'une maison : ce qui s'y dit, et ce qu'on y dit.
@@ -29,9 +37,16 @@ import { libellePlace, type Maison } from "@/lib/dossier/etats";
  * « vous n'avez pas le droit » à quelqu'un qui a seulement parlé trop vite.
  * Un message refusé ne partira jamais ; celui-là partira dans trois secondes.
  *
- * ⚠️ **La maison ne vient jamais de la requête.** Elle est relue sur la fiche
- * du compte : la recevoir en paramètre laisserait lire et écrire dans le salon
- * d'une autre maison en changeant une valeur.
+ * ⚠️ **La maison vient de la requête, et le serveur vérifie qu'on a le droit
+ * d'y être.** C'était l'inverse jusqu'au 28 août 2026 — elle était relue sur
+ * la fiche —, et cela interdisait le salon d'une autre maison à tout le monde,
+ * staff compris : une directrice n'a pas de maison, et n'atteignait donc aucun
+ * salon. Le sens de la garde n'a pas changé : **c'est `peutVisiterLaMaison`
+ * qui décide**, jamais le paramètre.
+ *
+ * ⚠️ **Et entrer ne donne pas la parole.** `peutParlerDansLeSalonDe` est une
+ * seconde question : un professeur à qui l'on donne la lecture d'un dortoir y
+ * lit sans y bavarder.
  */
 
 export const dynamic = "force-dynamic";
@@ -45,27 +60,37 @@ type DansLaPiece =
       maison: Maison;
       nom: string;
       place: string;
+      peutParler: boolean;
       peutFaireLeMenage: boolean;
     };
 
-async function danslaPiece(): Promise<DansLaPiece> {
+async function danslaPiece(cle: unknown): Promise<DansLaPiece> {
+  const visee = typeof cle === "string" ? maisonDepuisCle(cle) : null;
+  if (!visee) return { ok: false, code: 403 };
+
   const compte = await compteConnecte();
   if (!compte) return { ok: false, code: 401 };
-  if (!compte.eleveId || !aUneMaison(compte)) return { ok: false, code: 403 };
-
-  const maison = (compte.maison ?? null) as Maison | null;
-  if (!maison) return { ok: false, code: 403 };
+  if (!compte.eleveId) return { ok: false, code: 403 };
 
   const pouvoirs = await pouvoirsDe(compte.id);
+  // Sa maison **au sens de l'affichage** : une directrice en `SANS_OBJET` n'en
+  // a aucune, même si la colonne en garde une au chaud.
+  const laSienne = aUneMaison(compte) ? ((compte.maison ?? null) as Maison) : null;
+
+  if (!peutVisiterLaMaison(pouvoirs, laSienne, visee)) {
+    return { ok: false, code: 403 };
+  }
+
   return {
     ok: true,
     eleveId: compte.eleveId,
-    maison,
+    maison: visee,
     nom: compte.prenomNom,
     place: libellePlace(compte.fonction, compte.roleAffiche),
+    peutParler: peutParlerDansLeSalonDe(pouvoirs, laSienne, visee),
     // Le même partage que le tableau d'affichage : préfets et staff tiennent
     // la pièce, chacun retire toujours le sien.
-    peutFaireLeMenage: peutEcrireLesAnnoncesDe(pouvoirs, maison),
+    peutFaireLeMenage: peutEcrireLesAnnoncesDe(pouvoirs, visee),
   };
 }
 
@@ -83,16 +108,18 @@ function refus(code: 401 | 403) {
  * message décroché resterait à l'écran des autres.
  */
 export async function GET(requete: Request) {
-  const dans = await danslaPiece();
+  const parametres = new URL(requete.url).searchParams;
+  const dans = await danslaPiece(parametres.get("maison"));
   if (!dans.ok) return refus(dans.code);
 
-  const brut = new URL(requete.url).searchParams.get("depuis");
+  const brut = parametres.get("depuis");
   if (!brut) {
     const messages = await lireLeSalon(dans.maison);
     return NextResponse.json({
       messages,
       retires: [],
       jusqua: new Date().toISOString(),
+      peutParler: dans.peutParler,
       peutFaireLeMenage: dans.peutFaireLeMenage,
       moiId: dans.eleveId,
     });
@@ -109,15 +136,17 @@ export async function GET(requete: Request) {
 
 /** Parler. */
 export async function POST(requete: Request) {
-  const dans = await danslaPiece();
+  const charge = await requete.json().catch(() => ({}));
+  const dans = await danslaPiece((charge as { maison?: unknown }).maison);
   if (!dans.ok) return refus(dans.code);
 
-  const charge = await requete.json().catch(() => ({}));
   const resultat = await parlerAuSalon({
     maison: dans.maison,
     auteurId: dans.eleveId,
     corps: (charge as { corps?: unknown }).corps,
-    aLeDroit: true,
+    // **Entrer ne donne pas la parole.** Le champ est caché à qui ne l'a pas,
+    // mais c'est ici que ça se refuse.
+    aLeDroit: dans.peutParler,
   });
 
   if (resultat.sort === "ATTENDRE") {
@@ -150,10 +179,10 @@ export async function POST(requete: Request) {
  * masquages de la Tour.
  */
 export async function PATCH(requete: Request) {
-  const dans = await danslaPiece();
+  const charge = await requete.json().catch(() => ({}));
+  const dans = await danslaPiece((charge as { maison?: unknown }).maison);
   if (!dans.ok) return refus(dans.code);
 
-  const charge = await requete.json().catch(() => ({}));
   const id = String((charge as { id?: unknown }).id ?? "");
   if (!id) {
     return NextResponse.json(
