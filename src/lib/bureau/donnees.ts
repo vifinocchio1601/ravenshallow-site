@@ -1,4 +1,6 @@
 import "server-only";
+import { listerAnnonces } from "@/lib/annonces/depot";
+import reglages from "@/config/bureau.json";
 import { TEXTES_CORBEAUX } from "@/lib/corbeaux/constantes";
 import { listerConversations } from "@/lib/corbeaux/depot";
 import { compterScenesOuvertes, listerScenesDe } from "@/lib/forum/depot";
@@ -27,8 +29,10 @@ import type { CompteConnecte } from "@/lib/session/garde";
  * il a tenu quatre fois : le courrier avec la Tour aux Corbeaux, les scènes
  * avec le forum, la progression et le tournoi avec les points.
  *
- * Il ne reste qu’`annonces`, qui attend le Grand Hall, et
- * `prochainesEpreuves`, qui attend le calendrier scolaire.
+ * Il a tenu cinq fois : le courrier avec la Tour aux Corbeaux, les scènes
+ * avec le forum, la progression et le tournoi avec les points, les annonces
+ * avec le Grand Hall. Il ne reste que `prochainesEpreuves`, qui attend le
+ * calendrier scolaire.
  *
  * Aucune ne lève d’exception. Un bureau qui s’effondre parce qu’une brique
  * n’est pas construite serait le pire des accueils.
@@ -215,9 +219,28 @@ export async function tournoi(
   return { lignes: lu.lignes, maMaison: maisonQuiCompte(compte) };
 }
 
-/** Lot « Grand Hall » — table à créer. */
+/**
+ * **Les dernières annonces du Grand Hall**, pour le journal du bureau.
+ *
+ * Le panneau n’a pas eu à bouger : il attendait cette liste depuis le lot du
+ * journal, et l’adresse vers laquelle il pointe — `/annonces/<id>` — a été
+ * écrite avant que la page n’existe.
+ *
+ * Le nombre est un réglage et non une règle : une colonne de journal est
+ * étroite, et ce qui déborde ne se voit qu’à l’écran. Il vit donc dans
+ * `config/bureau.json`, avec les bornes du cadre.
+ *
+ * ⚠️ **Le journal n’est pas le Grand Hall.** Il en montre les premiers, pas
+ * la liste : `listerAnnonces` sans limite est ce que la page affiche.
+ */
 export async function annonces(): Promise<Annonce[]> {
-  return [];
+  const dernieres = await listerAnnonces(reglages.journalAnnoncesMax);
+  return dernieres.map((annonce) => ({
+    id: annonce.id,
+    titre: annonce.titre,
+    publieeLe: annonce.publieeLe,
+    extrait: annonce.extrait,
+  }));
 }
 
 // ─────────────────────────────────────────────────────────────

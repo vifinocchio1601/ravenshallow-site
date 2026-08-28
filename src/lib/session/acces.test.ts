@@ -162,19 +162,27 @@ describe("où atterrit chaque compte", () => {
 
 describe("le nouvel arrivant", () => {
   /**
-   * Trois entrées, et non deux : la Tour aux Corbeaux s’ouvre dès le premier
-   * jour. C’est un choix du joueur, et il se tient — le moment où l’on a le
-   * plus besoin d’écrire à quelqu’un, c’est celui où l’on ne connaît encore
-   * personne et où l’on ne sait pas comment le forum fonctionne.
+   * Quatre entrées, et non deux.
+   *
+   * La Tour aux Corbeaux s’ouvre dès le premier jour : c’est un choix du
+   * joueur, et il se tient — le moment où l’on a le plus besoin d’écrire à
+   * quelqu’un, c’est celui où l’on ne connaît encore personne et où l’on ne
+   * sait pas comment le forum fonctionne.
+   *
+   * Le Grand Hall aussi, et pour une raison de forme : le journal du bureau
+   * affiche les dernières annonces et renvoie vers elles. Le bureau est
+   * justement ce qu’un nouvel arrivant garde — fermer l’adresse lui donnerait
+   * des liens morts sur sa propre page d’accueil.
    *
    * Les cours et l’école, eux, restent fermés : ils demandent une baguette et
    * une maison.
    */
-  it("a son bureau, sa fiche et les corbeaux — rien d’autre", () => {
+  it("a son bureau, sa fiche, les corbeaux et les annonces — rien d’autre", () => {
     expect(liensVisibles(NOUVEL_ARRIVANT).map((e) => e.href)).toEqual([
       ROUTES.bureau,
       ROUTES.fiche,
       ROUTES.corbeaux,
+      ROUTES.annonces,
     ]);
   });
 
@@ -234,22 +242,29 @@ describe("l’élève réparti", () => {
 
 describe("le membre banni", () => {
   /**
-   * L’entrée des corbeaux reste au bandeau pendant une suspension, et c’est
-   * une exception raisonnée à « le bureau et la fiche, rien d’autre » :
-   * l’article 8.5 donne quinze jours pour contester une sanction, par message
-   * privé à un administrateur. Fermer la Tour supprimerait ce recours pour la
-   * seule personne à qui il sert.
+   * **Deux exceptions raisonnées à « le bureau et la fiche, rien d’autre »,
+   * et toutes deux sont écrites dans le règlement.**
    *
-   * Ce qu’il y trouve — le fil de l’administration, et lui seul — ne se décide
-   * pas ici : c’est `lib/corbeaux/droits.ts` qui en répond, et ses propres
-   * tests le vérifient. Un drapeau de menu ne sait dire qu’ouvert ou fermé.
+   * L’entrée des corbeaux, parce que l’article 8.5 donne quinze jours pour
+   * contester une sanction, par message privé à un administrateur. Fermer la
+   * Tour supprimerait ce recours pour la seule personne à qui il sert.
+   *
+   * Le Grand Hall, parce que le préambule y fait entrer en vigueur toute
+   * modification du règlement, sept jours après son affichage, et ajoute
+   * qu’« il appartient à chaque membre d’en prendre connaissance ». Une
+   * suspension ne dispense pas d’un règlement : elle en fait dépendre.
+   *
+   * Ce que le membre trouve derrière chacune ne se décide pas ici. Pour la
+   * Tour, c’est `lib/corbeaux/droits.ts` qui en répond ; un drapeau de menu ne
+   * sait dire qu’ouvert ou fermé.
    */
-  it("garde son bureau, sa fiche et la voie de recours, réparti ou non", () => {
+  it("garde son bureau, sa fiche, la voie de recours et les annonces, réparti ou non", () => {
     for (const etat of [BANNI, BANNI_REPARTI]) {
       expect(liensVisibles(etat).map((e) => e.href)).toEqual([
         ROUTES.bureau,
         ROUTES.fiche,
         ROUTES.corbeaux,
+        ROUTES.annonces,
       ]);
     }
   });

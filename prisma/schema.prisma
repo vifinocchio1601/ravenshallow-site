@@ -1466,3 +1466,72 @@ model ClassementArchive {
   @@unique([saisonId, maison])
   @@map("classements_archives")
 }
+
+// ─────────────────────────────────────────────────────────────
+//  Partie VI — Le Grand Hall
+//
+//  L'espace officiel de l'administration (bible §12) : « Règlement, annonces,
+//  calendrier, résultats, événements à venir. Seul lieu officiel d'annonce.
+//  **On y lit, on n'y débat pas.** »
+//
+//  Le préambule du règlement s'appuie dessus : une modification du règlement
+//  y est affichée et « entre en vigueur sept jours après son affichage ».
+//  C'est la seule promesse du site qui fasse courir un délai.
+// ─────────────────────────────────────────────────────────────
+
+/// Une annonce officielle du château.
+///
+/// **Une table à part, et non un quatrième espace de forum** — décision du
+/// joueur, 28 août 2026. Le moteur du forum ne sait pas dire « personne ne
+/// répond » : `QuiRepond` ne connaît que TOUT_MEMBRE et MEMBRES_MAISON, et
+/// fermer le lieu ferait taire le staff avec les autres. Il aurait fallu lui
+/// ajouter une valeur — une porte qu'on peut rouvrir par mégarde. Et une
+/// annonce n'a ni année exigée, ni clôture, ni épinglage : autant de colonnes
+/// vides, et une colonne qui ne décide de rien finit par décider de quelque
+/// chose.
+///
+/// Sept garanties vivent dans `20260828100000_grand_hall` et nulle part
+/// ailleurs — titre et corps non vides au sens de Postgres (`~
+/// '[^[:space:]]'`, jamais `btrim`), leurs bornes, le retrait complet ou
+/// absent, et **l'entrée en vigueur jamais antérieure à l'affichage**.
+model Annonce {
+  id String @id @default(cuid())
+
+  titre String
+
+  /// **En balisage**, comme un post : même liste blanche, même éditeur, même
+  /// `nettoyerHtml` à l'enregistrement et à l'affichage. Une annonce qui ne
+  /// pourrait pas poser un lien vers le règlement serait un pense-bête.
+  corps String @db.Text
+
+  /// La date d'AFFICHAGE — celle qui fait courir les sept jours du préambule.
+  /// Elle ne bouge plus : antidater une annonce ferait courir un délai déjà
+  /// écoulé.
+  publieeLe DateTime @default(now())
+
+  /// **Facultative.** Renseignée, l'écran annonce « En vigueur le
+  /// 4 septembre » ; vide, l'annonce ne promet aucune date. Le site ne
+  /// calcule rien et ne bloque rien : les sept jours sont une règle du
+  /// joueur, pas un minuteur.
+  entreeEnVigueurLe DateTime?
+
+  /// « Modifié le », comme sur un post : une annonce est ce qu'on lit une
+  /// fois, et l'on doit voir qu'elle a bougé depuis.
+  modifieLe DateTime?
+
+  /// **Retirer n'efface pas.** L'annonce sort du Grand Hall et du journal, et
+  /// reste entière en base : ce qui a fait courir un délai doit rester
+  /// consultable. Les deux colonnes vont ensemble ou pas du tout.
+  retireeLe  DateTime?
+  retireePar String?
+
+  /// « Administration » — la zone d'administration n'a pas de comptes
+  /// distincts, il n'y a personne d'autre à nommer. Même convention que
+  /// `Eleve.roleAffichePosePar`.
+  posePar String
+
+  creeLe DateTime @default(now())
+
+  @@index([publieeLe(sort: Desc)])
+  @@map("annonces")
+}

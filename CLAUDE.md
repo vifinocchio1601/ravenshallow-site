@@ -123,6 +123,9 @@ logique ailleurs, l'y ajouter.
 | `lib/forum/suppression.ts` | **qui peut retirer quoi** — une scène, son post — et ce qu'il en reste. Pur, sans base : l'écran et la route posent la même question |
 | `lib/forum/depot.ts` | l'accès au forum. Filtre en **appelant** `peutLireLeLieu`, jamais en recopiant sa condition dans un `where` |
 | `lib/forum/schema.ts` | ce qu'un titre, un post et un avertissement ont le droit d'être — **partagé mot pour mot** entre le champ et la route |
+| `lib/annonces/depot.ts` | l'accès aux annonces. **Seul endroit qui compose une requête** sur `annonces` — et le seul qui sache qu'une annonce retirée ne s'affiche plus |
+| `lib/annonces/schema.ts` | ce qu'une annonce a le droit d'être — `server-only`, et **la seule porte** par laquelle elle entre en base |
+| `lib/annonces/extrait.ts` | **les premiers mots d'une annonce**, pour le journal du bureau. Calculé, jamais stocké |
 | `lib/texte.ts` | le ménage sur un texte libre écrit par un joueur, **partagé** par les corbeaux et par les posts |
 | `lib/forum/mise-en-forme.ts` | **ce qu'un joueur a le droit de faire à son texte** — les outils, la palette, et les classes qu'ils produisent. Les listes de classes sont **déduites** des outils |
 | `lib/forum/nettoyer-html.ts` | la **liste blanche** du balisage — `server-only`, appelée à l'enregistrement et à l'affichage. Rien d'autre ne protège du HTML d'un joueur |
@@ -172,9 +175,10 @@ refuserait de toute façon.
 
 **Le menu est un ARBRE, mais les règles portent sur ses FEUILLES.**
 
-`MENU` est la source : cinq entrées, dont trois ouvrent un sous-menu. Un
-groupe n'a **pas d'adresse** — on ne clique pas sur « Le domaine », on
-l'ouvre. `ENTREES_MENU` est la liste plate des feuilles, **déduite** de
+`MENU` est la source : cinq entrées, dont trois ouvrent un sous-menu — « Mon
+personnage », « Le domaine » et **« Le Grand Hall »**, qui s'appelait « Les
+archives » jusqu'au 28 août 2026. Un groupe n'a **pas d'adresse** — on ne
+clique pas sur « Le domaine », on l'ouvre. `ENTREES_MENU` est la liste plate des feuilles, **déduite** de
 l'arbre : deux listes tenues à la main finiraient par diverger, et l'entrée
 oubliée dans la seconde serait une route sans garde.
 
@@ -1287,6 +1291,137 @@ lit comme la durée et contredit la ligne d'en dessous.
 choix que pour la clôture.
 
 
+## Le Grand Hall
+
+Posé le 28 août 2026. **L'espace officiel de l'administration** — bible §12 :
+« Règlement, annonces, calendrier, résultats, événements à venir. Seul lieu
+officiel d'annonce. **On y lit, on n'y débat pas.** »
+
+**Le site le promettait déjà**, dans le texte que chaque membre accepte à
+l'inscription : le préambule du règlement dit que toute modification « est
+affiché dans le Grand Hall, et entre en vigueur **sept jours après son
+affichage** », et que c'est « le seul lieu officiel d'annonce en la matière ».
+Ce lieu n'existait pas : il n'y avait donc aucun moyen conforme de faire
+évoluer le règlement.
+
+⚠️ **« Grand Hall » et « Grande Salle » ne se confondent jamais.** La bible et
+le règlement les distinguent explicitement, et demandent que « toute
+interface, tout menu et toute annonce respectent cette séparation sans
+exception ». `menu.test.ts` vérifie qu'aucun libellé du bandeau ne dit
+« Grande Salle ».
+
+### Une table, et non un quatrième espace de forum
+
+Décision du joueur. Deux raisons, et la première est mécanique :
+
+- **le moteur du forum ne sait pas dire « personne ne répond ».** `QuiRepond`
+  ne connaît que `TOUT_MEMBRE` et `MEMBRES_MAISON` ; fermer le lieu
+  (`ouverte: false`) ferait taire le staff avec les autres. Il aurait fallu
+  ajouter une valeur à l'enum — c'est-à-dire une porte qu'on peut rouvrir par
+  mégarde ;
+- **une annonce n'est pas une scène** : ni année exigée, ni clôture, ni
+  épinglage, ni réponses. Autant de colonnes vides, et une colonne qui ne
+  décide de rien finit par décider de quelque chose.
+
+**Sept garanties en base**, dans `20260828100000_grand_hall`, **éprouvées sur
+la vraie base dans une transaction annulée** — 14 essais, 14 tenus, rien de
+resté écrit : titre et corps non vides au sens de Postgres (`~ '[^[:space:]]'`,
+jamais `btrim`), leurs bornes, `posePar` non vide, le retrait complet ou
+absent, et **l'entrée en vigueur jamais antérieure à l'affichage**.
+
+### Les trois dates d'une annonce
+
+| | |
+| --- | --- |
+| `publieeLe` | l'affichage — **c'est elle qui fait courir les sept jours**, et elle ne bouge plus |
+| `entreeEnVigueurLe` | **facultative.** Vide, l'annonce ne promet aucune date |
+| `modifieLe` | la marque « modifiée le », comme sur un post |
+
+**Le site ne calcule pas les sept jours et ne les oppose à personne** —
+décision du joueur : c'est une règle qu'il applique, pas un minuteur. Le champ
+est un `<input type="date">`, et l'aide du formulaire rappelle le délai.
+
+⚠️ **On compare des JOURS et l'on stocke un instant.** La date choisie est
+posée à **midi** — à minuit UTC, la moitié de la planète lirait la veille. Mais
+une annonce publiée à 14 h et applicable « aujourd'hui » porterait midi, donc
+deux heures avant sa propre publication : la contrainte la refuserait. D'où le
+refus du seul jour **entièrement** derrière l'affichage, et l'instant retenu
+qui est le plus tardif des deux. « En vigueur immédiatement » est une annonce
+légitime.
+
+⚠️ **Le champ `date` se relit en heure LOCALE, jamais par `toISOString`.** Le
+formulaire de correction afficherait sinon la veille de ce qu'on a saisi.
+
+### Retirer n'efface pas, et remettre existe
+
+Une annonce retirée sort du Grand Hall et du journal ; **la ligne reste**. Ce
+qui a fait courir un délai doit rester consultable — et c'est ce qui permet à
+« Remettre au Grand Hall » d'exister, sans quoi un clic malheureux serait
+définitif.
+
+`lireAnnonce` rend `null` pour une annonce retirée **comme** pour une annonce
+qui n'a jamais existé : l'écran répond « Ce couloir ne mène nulle part » dans
+les deux cas. Distinguer les deux se lirait comme une confirmation — même
+choix que le forum et la Tour.
+
+**Les annonces retirées ne s'affichent que dans `/admin/annonces`**, par
+`listerPourAdministration`, qui est le seul chemin qui les voie.
+
+### Ouvert au suspendu et au nouvel arrivant
+
+C'est la **deuxième exception raisonnée** à « le bureau et la fiche, rien
+d'autre », après la Tour aux Corbeaux, et elle est écrite dans le règlement :
+le préambule ajoute qu'« il appartient à chaque membre d'en prendre
+connaissance ». Un membre suspendu reste tenu par un règlement qui change.
+
+S'y ajoute une raison de forme : **le journal du bureau renvoie vers
+`/annonces/<id>`**, et le bureau est justement ce que ces deux-là gardent.
+Fermer l'adresse leur donnerait des liens morts sur leur propre page
+d'accueil.
+
+Le reste du groupe — Règlement, Histoire — leur reste fermé : le règlement est
+public sans compte, à `/reglement`.
+
+### Le journal du bureau, et le nom au bandeau
+
+`annonces()` cesse d'être vide, **et le panneau n'a pas eu à bouger** — c'était
+le plan depuis le lot du journal, qui pointait déjà vers `/annonces/<id>` avant
+que la page n'existe. Le plan tient maintenant cinq fois.
+
+**L'extrait est calculé, jamais stocké** : on corrige l'annonce, et un extrait
+figé garderait l'ancienne phrase — le bureau annoncerait autre chose que le
+Grand Hall. `journalAnnoncesMax` vit dans `config/bureau.json` : c'est une
+mesure, pas une règle.
+
+⚠️ **« Le Grand Hall » porte une espace insécable entre « Grand » et
+« Hall »** — `TEXTES_ANNONCES.nomBandeau`. Sans elle, à 1024 px, l'entrée se
+casse en trois lignes quand ses quatre voisines en font deux, et le parchemin
+grandit pour elle seule. **Avec deux espaces insécables**, elle tient sur une
+ligne, gagne cinquante pixels, et c'est « Se déconnecter » qui sort du cadre.
+Une seule, la seconde. C'est le procédé du trait d'union insécable des
+non‑mages.
+
+### La liste blanche est celle du forum, et il n'y en a qu'une
+
+Une annonce est du balisage, écrite dans **le même éditeur que les posts** :
+même barre, mêmes couleurs, même `nettoyerHtml` à l'enregistrement et à
+l'affichage. `forum/nettoyer-html.ts` porte le nom du forum parce qu'il y est
+né, mais c'est le filtre du site entier — en écrire un second pour les
+annonces, ce serait garantir qu'un jour l'un des deux laisse passer ce que
+l'autre refuse.
+
+**Aucun minimum de lignes** : les dix de l'article 12.2 pèsent sur le jeu de
+rôle, et « Les inscriptions rouvrent lundi » est une annonce complète. Ce qui
+rattrape un envoi vide est `porteQuelqueChose` — « <p></p> » pèse sept signes
+et ne dit rien.
+
+**Aucune permission attribuable n'ouvre ce geste**, et il ne faut pas en
+ajouter une : le préambule fait du Grand Hall le seul endroit officiel où
+annoncer une modification des règles. C'est une décision d'administration, pas
+une charge qu'on délègue.
+
+---
+
 ## Les transactions
 
 **Toute transaction interactive passe par `transaction()`**, dans
@@ -1628,8 +1763,8 @@ affiché.
 
 **Aucun texte en dur dans un composant.** Les libellés vivent dans :
 `lib/dossier/constantes.ts`, `lib/dossier/etats.ts`, `lib/connexion/constantes.ts`,
-`lib/ecole/constantes.ts`, `lib/ceremonie/constantes.ts`, `lib/content.ts`
-(site vitrine).
+`lib/ecole/constantes.ts`, `lib/ceremonie/constantes.ts`,
+`lib/annonces/constantes.ts`, `lib/content.ts` (site vitrine).
 
 Le barème de la cérémonie fait exception : il vit dans
 `lib/ceremonie/questionnaire.ts`, avec les énoncés, **et ce fichier est
@@ -2153,10 +2288,20 @@ confidentialité —, liées au pied de page et au moment de la saisie du dossie
 carnet, les deux compteurs, l'écran d'administration, les tubes du bureau, la
 clôture d'année et l'archivage des comptes. Voir « Les points de maison ».
 
-**Pas encore** : les cours et leurs QCM, les examens, les annonces du Grand
-Hall, le Registre magique, et le contenu des espaces `non-mages` et `maison`.
-Le point d'accroche des cours est posé : `SourcePoint.QCM` et
-`SourcePoint.EXAMEN` existent dans l'enum et n'attendent que d'être écrits.
+**Le Grand Hall est ouvert** : les annonces officielles, l'écran
+d'administration qui les écrit, les corrige et les retire, la page sous le
+bandeau, et le journal du bureau qui cesse d'être vide. Le groupe « Les
+archives » a pris son nom. Voir « Le Grand Hall ».
+
+**Pas encore** : les cours et leurs QCM, les examens, le calendrier, le
+Registre magique, et le contenu des espaces `non-mages` et `maison`. Le point
+d'accroche des cours est posé : `SourcePoint.QCM` et `SourcePoint.EXAMEN`
+existent dans l'enum et n'attendent que d'être écrits.
+
+Le Grand Hall, lui, n'a que ses annonces : la bible (§12) y met aussi **le
+calendrier, les résultats et les événements à venir**. Le règlement y est déjà
+— c'est la feuille « Règlement » du groupe. Les trois autres viendront s'y
+ranger sans que rien ne bouge, une ligne dans `liens` chacune.
 
 ⚠️ **`totauxParMaison` a disparu**, et il ne faut pas le réécrire. Il sommait
 `Eleve.points` par maison — il supposait « compteur de maison = somme des
@@ -2180,10 +2325,10 @@ Le **Registre magique** — l'annuaire des membres, trié par maison et par
 fonction — n'existe pas : c'est lui qui portera « bloquer depuis sa fiche »,
 et c'est pourquoi ce lot-ci ne pose le blocage que depuis la conversation. Les panneaux du bureau lisent `lib/bureau/donnees.ts` — **une fonction par
 panneau, et chaque lot en remplace une seule**, sans toucher aux panneaux. Le
-plan a tenu quatre fois : le courrier avec la Tour aux Corbeaux, les scènes
-avec le forum, la progression et le tournoi avec les points. Il ne reste
-qu'`annonces`, qui attend le Grand Hall, et `prochainesEpreuves`, qui attend le
-calendrier scolaire.
+plan a tenu **cinq fois** : le courrier avec la Tour aux Corbeaux, les scènes
+avec le forum, la progression et le tournoi avec les points, les annonces avec
+le Grand Hall. Il ne reste que `prochainesEpreuves`, qui attend le calendrier
+scolaire.
 
 **Limites connues** — les blasons ne sont plus une limite : passés en WebP et
 munis de leur `sizes`, la ligne de conversation de la Tour en charge 7 Ko au

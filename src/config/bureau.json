@@ -13,6 +13,9 @@
   "noteMarge": "Pour que le texte ne touche pas le filet du cadre, en pourcentage de la largeur du journal.",
   "cadreMarge": 1.5,
 
+  "noteAnnonces": "Combien d’annonces le journal montre. Une colonne de journal fait cent soixante-dix pixels de large : au-delà de quelques titres, la colonne défile, et ce qui défile ne se lit pas. Le Grand Hall, lui, les affiche toutes. C’est une mesure, pas une règle — à ajuster à l’œil quand il y aura de vraies annonces.",
+  "journalAnnoncesMax": 4,
+
   "noteTubes": "La largeur maximale d’un tube, et l’écart entre deux. Le groupe REMPLIT sa colonne : plafonné à quatre-vingts, il laissait deux cents pixels de vide à sa gauche sur un grand écran, et le plafond seul décide donc de la taille. À ne pas monter beaucoup plus haut : au-delà, la photographie du verre est agrandie au-delà de sa définition.",
   "tubeLargeurMax": 100,
   "tubeEcart": 12

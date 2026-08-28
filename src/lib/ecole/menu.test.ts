@@ -1,3 +1,4 @@
+import { TEXTES_ANNONCES } from "@/lib/annonces/constantes";
 import { describe, expect, it } from "vitest";
 import type { EtatAcces } from "@/lib/session/acces";
 import { liensVisibles, menuVisible } from "@/lib/session/acces";
@@ -50,7 +51,7 @@ describe("l’arbre du parchemin", () => {
       "Mon personnage",
       "Le domaine",
       "Les non‑mages",
-      "Les archives",
+      TEXTES_ANNONCES.nomBandeau,
     ]);
   });
 
@@ -90,14 +91,33 @@ describe("l’arbre du parchemin", () => {
     }
   });
 
-  it("les archives restent extensibles — la carte et le bestiaire y viendront", () => {
-    const archives = MENU.find(
-      (e): e is GroupeMenu => estUnGroupe(e) && e.libelle === "Les archives",
+  it("le Grand Hall reste extensible — le calendrier et les résultats y viendront", () => {
+    const grandHall = MENU.find(
+      (e): e is GroupeMenu => estUnGroupe(e) && e.libelle === TEXTES_ANNONCES.nomBandeau,
     );
-    expect(archives?.liens.map((l) => l.href)).toEqual([
+    expect(grandHall?.liens.map((l) => l.href)).toEqual([
+      ROUTES.annonces,
       ROUTES.archivesReglement,
       ROUTES.archivesHistoire,
     ]);
+  });
+
+  /**
+   * **« Le Grand Hall », et jamais « La Grande Salle ».** La bible (§12) et le
+   * préambule du règlement distinguent les deux et demandent que « toute
+   * interface, tout menu et toute annonce respectent cette séparation sans
+   * exception ». Un libellé qui glisserait de l’un à l’autre ferait dire au
+   * bandeau le contraire du règlement qu’il dessert.
+   */
+  it("aucun libellé ne dit « Grande Salle »", () => {
+    for (const entree of MENU) {
+      expect(entree.libelle).not.toMatch(/grande\s+salle/i);
+      if (estUnGroupe(entree)) {
+        for (const lien of entree.liens) {
+          expect(lien.libelle).not.toMatch(/grande\s+salle/i);
+        }
+      }
+    }
   });
 });
 
@@ -188,7 +208,7 @@ describe("l’élève réparti voit tout", () => {
       "Mon personnage",
       "Le domaine",
       "Les non‑mages",
-      "Les archives",
+      TEXTES_ANNONCES.nomBandeau,
     ]);
   });
 
@@ -220,7 +240,7 @@ describe("« Ma maison » n’apparaît qu’à qui en a une", () => {
       "Mon personnage",
       "Le domaine",
       "Les non‑mages",
-      "Les archives",
+      TEXTES_ANNONCES.nomBandeau,
     ]);
     const personnage = menuVisible(DIRECTRICE).find(
       (e): e is GroupeMenu => estUnGroupe(e) && e.libelle === "Mon personnage",
@@ -241,21 +261,37 @@ describe("« Ma maison » n’apparaît qu’à qui en a une", () => {
   });
 });
 
-describe("le nouvel arrivant n’a que ses trois portes", () => {
-  it("le bureau, sa fiche et les corbeaux", () => {
+describe("le nouvel arrivant n’a que ses quatre portes", () => {
+  /**
+   * Quatre, et la quatrième est le Grand Hall — l’adresse des annonces, pas
+   * le groupe entier. Le journal du bureau y renvoie, et le bureau est
+   * précisément ce qu’un nouvel arrivant garde : la fermer lui donnerait des
+   * liens morts sur sa propre page d’accueil.
+   */
+  it("le bureau, sa fiche, les corbeaux et les annonces", () => {
     expect(liensVisibles(NOUVEL_ARRIVANT).map((l) => l.href)).toEqual([
       ROUTES.bureau,
       ROUTES.fiche,
       ROUTES.corbeaux,
+      ROUTES.annonces,
     ]);
   });
 
   /** Un groupe dont toutes les feuilles sont fermées **disparaît**. */
-  it("« Le domaine » et « Les archives » ne s’affichent pas du tout", () => {
+  it("« Le domaine » ne s’affiche pas du tout", () => {
     expect(libelles(menuVisible(NOUVEL_ARRIVANT))).toEqual([
       "Mon bureau",
       "Mon personnage",
+      TEXTES_ANNONCES.nomBandeau,
     ]);
+  });
+
+  /** Le groupe paraît, mais réduit à sa seule feuille ouverte. */
+  it("« Le Grand Hall » ne montre que les annonces", () => {
+    const grandHall = menuVisible(NOUVEL_ARRIVANT).find(
+      (e): e is GroupeMenu => estUnGroupe(e) && e.libelle === TEXTES_ANNONCES.nomBandeau,
+    );
+    expect(grandHall?.liens.map((l) => l.href)).toEqual([ROUTES.annonces]);
   });
 
   it("« Mon personnage » ne montre que ce qui s’ouvre", () => {
@@ -269,25 +305,43 @@ describe("le nouvel arrivant n’a que ses trois portes", () => {
   });
 });
 
-describe("le membre suspendu garde son bureau, sa fiche et les corbeaux", () => {
+describe("le membre suspendu garde son bureau, sa fiche, les corbeaux et les annonces", () => {
+  /**
+   * **Deux exceptions à « le bureau et la fiche, rien d’autre », et toutes
+   * deux sont écrites dans le règlement.**
+   *
+   * La Tour aux Corbeaux, parce que l’article 8.5 donne quinze jours pour
+   * contester une sanction par message privé — la fermer supprimerait ce
+   * recours pour la seule personne à qui il sert.
+   *
+   * Le Grand Hall, parce que le préambule y fait entrer en vigueur toute
+   * modification du règlement et ajoute qu’« il appartient à chaque membre
+   * d’en prendre connaissance ». Un membre suspendu reste tenu par un
+   * règlement qui change ; c’est même lui qui a le plus besoin de le lire.
+   */
   it("et rien d’autre — y compris les entrées créées par ce lot", () => {
     expect(liensVisibles(SUSPENDUE).map((l) => l.href)).toEqual([
       ROUTES.bureau,
       ROUTES.fiche,
       ROUTES.corbeaux,
+      ROUTES.annonces,
     ]);
   });
 
-  it("les archives lui sont fermées : le règlement reste public sans compte", () => {
+  it("le reste du Grand Hall lui est fermé : le règlement reste public sans compte", () => {
     expect(liensVisibles(SUSPENDUE).map((l) => l.href)).not.toContain(
       ROUTES.archivesReglement,
     );
+    expect(liensVisibles(SUSPENDUE).map((l) => l.href)).not.toContain(
+      ROUTES.archivesHistoire,
+    );
   });
 
-  it("son arbre se réduit à deux entrées", () => {
+  it("son arbre se réduit à trois entrées", () => {
     expect(libelles(menuVisible(SUSPENDUE))).toEqual([
       "Mon bureau",
       "Mon personnage",
+      TEXTES_ANNONCES.nomBandeau,
     ]);
   });
 });

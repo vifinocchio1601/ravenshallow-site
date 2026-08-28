@@ -3,6 +3,8 @@ import Link from "next/link";
 import { ExternalLink } from "lucide-react";
 import AdminCard from "@/components/AdminCard";
 import AdminEmptyState from "@/components/AdminEmptyState";
+import { TEXTES_ANNONCES } from "@/lib/annonces/constantes";
+import { listerAnnonces } from "@/lib/annonces/depot";
 import { TEXTES_CORBEAUX } from "@/lib/corbeaux/constantes";
 import { courrierEnAttente } from "@/lib/corbeaux/courrier";
 import { signalementsEnAttente } from "@/lib/corbeaux/moderation";
@@ -21,9 +23,10 @@ const VERCEL_ANALYTICS_URL = "https://vercel.com/dashboard";
 export const dynamic = "force-dynamic";
 
 export default async function AdminPage() {
-  const [enAttente, lettresEnAttente] = await Promise.all([
+  const [enAttente, lettresEnAttente, affichees] = await Promise.all([
     signalementsEnAttente(),
     courrierEnAttente(),
+    listerAnnonces(),
   ]);
 
   return (
@@ -100,6 +103,33 @@ export default async function AdminPage() {
             </p>
             <Link href="/admin/membres" className="btn btn-ghost mt-6">
               Ouvrir la liste
+            </Link>
+          </AdminCard>
+
+          {/* Le Grand Hall.
+              Le seul endroit officiel où annoncer une modification du
+              règlement : le préambule le dit, et lui donne sept jours pour
+              entrer en vigueur. */}
+          <AdminCard
+            rune="ᛗᚨᛚ"
+            eyebrow={TEXTES_ANNONCES.administration.carteEyebrow}
+            title={TEXTES_ANNONCES.administration.carteTitre}
+          >
+            <p className="leading-[1.7] text-parchment-dim">
+              {TEXTES_ANNONCES.administration.carteAccroche}
+            </p>
+            <p className="mt-4 font-display text-[0.68rem] uppercase tracking-[0.18em] text-silver">
+              {affichees.length === 0
+                ? TEXTES_ANNONCES.administration.carteAucune
+                : affichees.length === 1
+                  ? TEXTES_ANNONCES.administration.carteUneAffichee
+                  : TEXTES_ANNONCES.administration.carteAffichees.replace(
+                      "{n}",
+                      String(affichees.length),
+                    )}
+            </p>
+            <Link href="/admin/annonces" className="btn btn-ghost mt-6">
+              {TEXTES_ANNONCES.administration.carteLien}
             </Link>
           </AdminCard>
 

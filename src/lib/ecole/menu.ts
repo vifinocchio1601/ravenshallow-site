@@ -12,10 +12,11 @@
  * c’est la copie oubliée qui laisserait une route sans garde.
  *
  * **Un groupe n’a pas d’adresse.** On ne clique pas sur « Le domaine » : on
- * l’ouvre. C’est ce qui permet aux archives d’accueillir la carte et le
- * bestiaire plus tard sans rien déplacer.
+ * l’ouvre. C’est ce qui permet au Grand Hall d’accueillir le calendrier et
+ * les résultats plus tard sans rien déplacer.
  */
 
+import { TEXTES_ANNONCES } from "@/lib/annonces/constantes";
 import { NOM_COURT } from "@/lib/corbeaux/constantes";
 
 export const ROUTES = {
@@ -52,7 +53,13 @@ export const ROUTES = {
   // Le monde des non-mages
   nonMages: "/non-mages",
 
-  // Les archives
+  // Le Grand Hall — l'espace officiel de l'administration (bible §12).
+  //
+  // Les annonces vivent à `/annonces` et non sous `/archives/` : c'est
+  // l'adresse vers laquelle le journal du bureau pointait déjà, et une
+  // annonce n'est pas une archive — c'est ce qu'on lit cette semaine.
+  // L'adresse d'une feuille n'a pas à répéter le nom de son groupe.
+  annonces: "/annonces",
   archivesReglement: "/archives/reglement",
   archivesHistoire: "/archives/histoire",
 
@@ -188,8 +195,35 @@ export const MENU: readonly EntreeMenu[] = [
   },
 
   {
-    libelle: "Les archives",
+    // **« Le Grand Hall », et surtout pas « La Grande Salle ».** La bible
+    // (§12) et le préambule du règlement distinguent les deux, et demandent
+    // que « toute interface, tout menu et toute annonce respectent cette
+    // séparation sans exception ». Le Grand Hall est l'administration : le
+    // règlement, les annonces, l'histoire du château. On y lit.
+    //
+    // Le groupe s'appelait « Les archives ». Il portait déjà le règlement,
+    // c'est-à-dire l'essentiel du Grand Hall — il ne lui manquait que son nom
+    // et ses annonces. Le renommer coûtait moins qu'une sixième entrée : à
+    // cinq, la ligne de parchemin est déjà pleine.
+    libelle: TEXTES_ANNONCES.nomBandeau,
     liens: [
+      {
+        // **Ouverte au membre suspendu et au nouvel arrivant**, à la manière
+        // de la Tour aux Corbeaux, et pour une raison voisine.
+        //
+        // Le journal du bureau affiche les dernières annonces et renvoie
+        // vers elles ; or le bureau reste ouvert à ces deux-là. Fermer
+        // l'adresse leur donnerait des liens morts sur leur propre bureau.
+        //
+        // Et le préambule du règlement dit que « il appartient à chaque
+        // membre d'en prendre connaissance » : un membre suspendu reste tenu
+        // par un règlement qui change, et c'est même lui qui a le plus besoin
+        // de le lire.
+        href: ROUTES.annonces,
+        libelle: TEXTES_ANNONCES.nomCourt,
+        pendantBannissement: true,
+        avantPremiersPas: true,
+      },
       { href: ROUTES.archivesReglement, libelle: "Règlement" },
       { href: ROUTES.archivesHistoire, libelle: "Histoire" },
     ],
