@@ -12,6 +12,8 @@ import { TEXTES_CORBEAUX } from "@/lib/corbeaux/constantes";
 import { courrierEnAttente } from "@/lib/corbeaux/courrier";
 import { signalementsEnAttente } from "@/lib/corbeaux/moderation";
 import { TEXTES_POUVOIRS } from "@/lib/forum/constantes";
+import { TEXTES_PARTENARIAT } from "@/lib/partenariat/constantes";
+import { demandesEnAttente } from "@/lib/partenariat/depot";
 import { TEXTES_POINTS } from "@/lib/points/constantes";
 
 export const metadata: Metadata = {
@@ -26,13 +28,19 @@ const VERCEL_ANALYTICS_URL = "https://vercel.com/dashboard";
 export const dynamic = "force-dynamic";
 
 export default async function AdminPage() {
-  const [enAttente, lettresEnAttente, affichees, calendrier] =
-    await Promise.all([
-      signalementsEnAttente(),
-      courrierEnAttente(),
-      listerAnnonces(),
-      lireLeCalendrier(),
-    ]);
+  const [
+    enAttente,
+    lettresEnAttente,
+    affichees,
+    calendrier,
+    partenariatsEnAttente,
+  ] = await Promise.all([
+    signalementsEnAttente(),
+    courrierEnAttente(),
+    listerAnnonces(),
+    lireLeCalendrier(),
+    demandesEnAttente(),
+  ]);
 
   // Ce que la carte annonce : ce qui vient, jamais le total. Une carte qui
   // dirait « 14 dates » sur un calendrier entièrement passé serait fausse
@@ -312,6 +320,33 @@ export default async function AdminPage() {
             </p>
             <Link href="/admin/absences" className="btn btn-ghost mt-6">
               Ouvrir les absences
+            </Link>
+          </AdminCard>
+
+          {/* Les partenaires.
+              La seule carte qui mène à quelque chose de PUBLIC : la page de
+              partenariat est ouverte à qui n'a pas de compte, parce que le
+              forum qui nous écrit n'en aura jamais un. */}
+          <AdminCard
+            rune={TEXTES_PARTENARIAT.administration.carte.rune}
+            eyebrow={TEXTES_PARTENARIAT.administration.carte.eyebrow}
+            title={TEXTES_PARTENARIAT.administration.carte.titre}
+          >
+            <p className="leading-[1.7] text-parchment-dim">
+              {TEXTES_PARTENARIAT.administration.carte.accroche}
+            </p>
+            {partenariatsEnAttente > 0 ? (
+              <p className="mt-4 font-display text-[0.68rem] uppercase tracking-[0.18em] text-aurora-teal">
+                {partenariatsEnAttente === 1
+                  ? TEXTES_PARTENARIAT.administration.carte.uneEnAttente
+                  : TEXTES_PARTENARIAT.administration.carte.enAttente.replace(
+                      "{n}",
+                      String(partenariatsEnAttente),
+                    )}
+              </p>
+            ) : null}
+            <Link href="/admin/partenaires" className="btn btn-ghost mt-6">
+              {TEXTES_PARTENARIAT.administration.carte.lien}
             </Link>
           </AdminCard>
 

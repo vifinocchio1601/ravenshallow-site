@@ -1695,3 +1695,107 @@ model Evenement {
   @@index([debuteLe])
   @@map("evenements")
 }
+
+/// La suite donnée à une demande de partenariat.
+///
+/// **`EN_ATTENTE` n'est pas un état mou** : c'est le seul pour lequel
+/// `traiteLe` est vide, et la base vérifie l'accord dans les deux sens. Une
+/// demande « acceptée » sans date de traitement, ou datée sans décision,
+/// serait une ligne dont personne ne saurait quoi faire six mois plus tard.
+enum SuiteDemande {
+  EN_ATTENTE
+  ACCEPTEE
+  REFUSEE
+}
+
+/// Un forum ami, affiché dans le bloc de liens de `/partenariat`.
+///
+/// **La page est publique, et c'est tout son objet** (bible §15) : les
+/// partenariats croisés sont la première voie de recrutement, et un forum
+/// démarcheur ne peut pas passer la connexion. C'est la seule table du site
+/// dont le contenu s'affiche à qui n'a pas de compte.
+///
+/// **Les partenaires sortent dans l'ordre alphabétique**, jamais par date
+/// d'ajout : un bloc de liens rangé par ancienneté classe des partenaires, et
+/// personne n'a demandé de classement. Même parti pris que les quatre maisons,
+/// qui sortent toujours dans l'ordre de `MAISONS`.
+model Partenaire {
+  id String @id @default(cuid())
+
+  /// Le nom du forum, tel qu'il s'écrit chez lui.
+  nom String
+
+  /// Son adresse. **`https` seulement** — même règle que les images d'un
+  /// post : le site ne renvoie pas ses visiteurs sur du trafic en clair.
+  ///
+  /// ⚠️ Un **index unique PARTIEL** l'empêche de figurer deux fois au bloc,
+  /// sans interdire de renouer avec un partenaire retiré — le retrait
+  /// n'efface pas, sa ligne reste. Prisma ne sait pas exprimer un index
+  /// partiel : il vit en SQL, et seulement là. Cousin du piège des `NULL`
+  /// déjà payé sur `permissions_accordees`.
+  url String
+
+  /// L'adresse de SA bannière, chez lui. **Facultative** : un partenaire qui
+  /// n'en a pas s'affiche en lien, et attendre une image bloquerait l'échange.
+  ///
+  /// Rien n'est recopié chez nous — l'image reste chez son hébergeur, et
+  /// disparaît du bloc le jour où il ferme. Même choix que les images d'un
+  /// post.
+  banniereUrl String?
+
+  /// Une ligne pour dire ce qu'on y joue. Facultative.
+  description String?
+
+  /// Le jour où le partenariat a été noué. Saisi, jamais deviné : on renoue
+  /// parfois avec un forum connu depuis des années.
+  noueLe DateTime
+
+  /// « Modifié le », comme sur une annonce.
+  modifieLe DateTime?
+
+  /// **Retirer n'efface pas.** Un partenariat rompu sort du bloc ; la ligne
+  /// reste, et « Remettre » existe pour que le clic malheureux ne soit pas
+  /// définitif. Les deux colonnes vont ensemble ou pas du tout.
+  retireLe  DateTime?
+  retirePar String?
+
+  creeLe DateTime @default(now())
+  majLe  DateTime @updatedAt
+
+  @@index([nom])
+  @@map("partenaires")
+}
+
+/// Ce que le formulaire public de `/partenariat` dépose.
+///
+/// ⚠️ **Le seul formulaire du site ouvert à qui n'a pas de compte**, et donc
+/// la seule porte à spam. Trois freins, aucun service tiers : un pot de miel,
+/// un délai minimal de remplissage, et un plafond horaire lu sur `recuLe`.
+///
+/// **Aucune adresse IP n'est conservée**, pas même sous forme d'empreinte : la
+/// politique de confidentialité l'écrit noir sur blanc, et une page qui ment
+/// est pire qu'absente. Le plafond est donc global — un robot acharné peut
+/// fermer le formulaire une heure, et la page dit alors d'écrire sur Discord.
+model DemandePartenariat {
+  id String @id @default(cuid())
+
+  /// Le nom de leur forum, leur adresse, et de quoi leur répondre.
+  nomDuForum String
+  url        String
+  courriel   String
+
+  /// Ce qu'ils écrivent. Obligatoire : une demande sans un mot n'apprend rien,
+  /// et le champ vide est ce qu'un robot remplit le mieux.
+  message String @db.Text
+
+  /// La suite donnée. **Accordée avec `traiteLe` dans les deux sens** par la
+  /// base : `EN_ATTENTE` exige une date vide, toute autre valeur l'exige
+  /// pleine.
+  suite    SuiteDemande @default(EN_ATTENTE)
+  traiteLe DateTime?
+
+  recuLe DateTime @default(now())
+
+  @@index([recuLe(sort: Desc)])
+  @@map("demandes_partenariat")
+}

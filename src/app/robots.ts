@@ -4,7 +4,7 @@ import type { MetadataRoute } from "next";
  * Ce que les moteurs de recherche ont le droit de lire.
  *
  * Le parti pris est **l’inverse de l’habituel** : tout est fermé, et seules
- * les trois pages publiques sont rouvertes une à une. Une liste d’interdits
+ * les pages publiques sont rouvertes une à une. Une liste d’interdits
  * demanderait de penser à l’allonger à chaque nouvelle route — et l’oubli
  * livrerait une page privée à l’indexation, c’est-à-dire au cache de Google,
  * qui survit à la correction. Ici l’oubli va dans le sens de la fermeture,
@@ -24,6 +24,14 @@ export default function robots(): MetadataRoute.Robots {
         "/$",
         "/reglement",
         "/inscription",
+        // La page de partenariat est faite pour être trouvée : c'est la
+        // première voie de recrutement du forum (bible §15), et une page de
+        // partenariat introuvable ne vaut rien.
+        "/partenariat",
+        // Les bannières que les partenaires collent chez eux. Fermées, un
+        // moteur les traiterait comme des images bloquées sur le forum
+        // voisin, à son détriment comme au nôtre.
+        "/bannieres/",
         "/mentions-legales",
         "/confidentialite",
         "/_next/",

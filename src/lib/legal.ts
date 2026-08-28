@@ -31,8 +31,19 @@ export type DocumentLegal = {
 /** Une seule adresse pour tout : signalements, droits, questions. */
 export const CONTACT_LEGAL = "ravenshallow.rp@gmail.com";
 
-/** Le jour où ces deux textes ont été arrêtés. */
+/** Le jour où les mentions légales ont été arrêtées. */
 const MISE_A_JOUR = "2026-08-27";
+
+/**
+ * La politique de confidentialité, elle, a bougé depuis : la page de
+ * partenariat a ouvert un formulaire à qui n'a pas de compte, et ce qu'il
+ * recueille devait y être écrit.
+ *
+ * ⚠️ **Deux dates, et non une seule partagée.** Les faire avancer ensemble
+ * daterait d'aujourd'hui des mentions légales que personne n'a relues — et
+ * la seule chose que ces deux pages doivent au lecteur, c'est d'être vraies.
+ */
+const MISE_A_JOUR_CONFIDENTIALITE = "2026-08-28";
 
 export const MENTIONS_LEGALES: DocumentLegal = {
   rune: "ᛗ",
@@ -83,7 +94,7 @@ export const CONFIDENTIALITE: DocumentLegal = {
   titre: "Ce que le château garde de vous",
   chapeau:
     "Ce site conserve le moins de choses possible, et cette page dit lesquelles. Elle ne promet rien que le site ne fasse réellement.",
-  miseAJour: MISE_A_JOUR,
+  miseAJour: MISE_A_JOUR_CONFIDENTIALITE,
   sections: [
     {
       titre: "Ce qui est conservé",
@@ -92,6 +103,7 @@ export const CONFIDENTIALITE: DocumentLegal = {
         "Votre mot de passe, sous une forme chiffrée à sens unique. Personne ne peut le lire, l’administration pas davantage que quiconque.",
         "Ce que vous écrivez : votre fiche de personnage, vos messages privés, vos publications sur le forum.",
         "La date de votre inscription, celle de l’acceptation de votre dossier, et les décisions prises sur votre compte.",
+        "Et si vous nous écrivez depuis la page de partenariat, sans avoir de compte ici : le nom de votre forum, son adresse, votre adresse de courriel et le message que vous laissez. Rien d’autre — ni votre adresse IP, ni la moindre empreinte de celle-ci.",
       ],
     },
     {
@@ -129,6 +141,7 @@ export const CONFIDENTIALITE: DocumentLegal = {
         "Après trois ans sans aucune connexion, vous recevez un courriel. Sans réponse de votre part dans le mois qui suit, le compte est effacé.",
         "Les empreintes de tentatives de connexion disparaissent au bout d’une heure.",
         "Un signalement conserve une copie des messages visés, y compris si leur auteur les efface ensuite. C’est ce qui permet de traiter une plainte, et ce qui protège la personne qui l’a déposée.",
+        "Une demande de partenariat reste conservée : elle est la trace de l’échange, et de ce qui a été convenu. Rien ne l’efface automatiquement, et vous pouvez en demander l’effacement à l’adresse indiquée plus bas.",
       ],
     },
     {

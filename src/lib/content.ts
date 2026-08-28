@@ -133,12 +133,22 @@ export const PORTES: SiteLink[] = [
 /** Ce que voit un visiteur déjà connecté, à la place des deux portes. */
 export const PORTE_CONNECTE = { label: "Entrer au château" } as const;
 
-/** Le pied de page reste sur les ancres de l'accueil, dont « Rejoindre ». */
+/**
+ * La navigation du pied de page : les ancres de l'accueil, puis le
+ * partenariat, qui est une vraie route.
+ *
+ * ⚠️ **Les ancres sont ABSOLUES** (`/#…`), comme celles de `NAV_LINKS` et pour
+ * la même raison : le pied de page ne vit plus seulement sur l'accueil depuis
+ * la page de partenariat. Une ancre relative y renverrait vers
+ * `/partenariat#le-monde`, qui ne mène nulle part — et rien ne le signalerait,
+ * puisqu'un lien vers une ancre absente ne fait tout simplement rien.
+ */
 export const FOOTER_LINKS: SiteLink[] = [
-  { href: "#le-monde", label: "Le monde" },
-  { href: "#les-maisons", label: "Les maisons" },
-  { href: "#la-fondation", label: "La fondation" },
-  { href: "#rejoindre", label: "Rejoindre" },
+  { href: "/#le-monde", label: "Le monde" },
+  { href: "/#les-maisons", label: "Les maisons" },
+  { href: "/#la-fondation", label: "La fondation" },
+  { href: "/#rejoindre", label: "Rejoindre" },
+  { href: "/partenariat", label: "Partenariat" },
 ];
 
 /**

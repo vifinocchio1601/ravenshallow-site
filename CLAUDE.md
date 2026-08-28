@@ -42,7 +42,7 @@ joueur, pas des choix d'implémentation. Ne pas les réécrire sans demander.
 
 ```bash
 npm run dev              # http://localhost:3000
-npm test                 # vitest, 737 tests — ne touche JAMAIS la base
+npm test                 # vitest, 891 tests — ne touche JAMAIS la base
 npm run lint
 npx tsc --noEmit
 npm run build            # à passer avant tout déploiement
@@ -54,12 +54,13 @@ npm run base:sauvegarder  # recopie toute la base dans un fichier, hors du dép�
 npm run forum:essai       # exerce les pouvoirs ET le forum SUR LA VRAIE BASE
 npm run points:essai      # exerce les points, la clôture et l'archivage SUR LA VRAIE BASE
 npm run calendrier:essai  # exerce le calendrier SUR LA VRAIE BASE
+npm run partenariat:essai # exerce les partenariats SUR LA VRAIE BASE
 ```
 
 `base:migrer` existe parce que la CLI Prisma ne lit pas `.env.local` : le
 script fait le pont, sans jamais afficher la chaîne de connexion.
 
-**Les deux essais en base** sont à part, et leur nom de fichier —
+**Les essais en base** sont à part, et leur nom de fichier —
 `en-base.essai.ts`, et non `.test.ts` — les exclut de `npm test` **à
 dessein** : ils écrivent vraiment en base. Chaque script npm vise **un seul
 fichier par son chemin** ; les lancer ensemble mélangerait deux ménages qui
@@ -134,6 +135,10 @@ logique ailleurs, l'y ajouter.
 | `lib/annonces/extrait.ts` | **les premiers mots d'une annonce**, pour le journal du bureau. Calculé, jamais stocké |
 | `lib/texte.ts` | le ménage sur un texte libre écrit par un joueur, **partagé** par les corbeaux et par les posts |
 | `lib/cours/cursus.ts` | **le cursus des sept années**, écrit par le joueur : les neuf matières, leurs statuts, les trois cycles, les seuils. Toute logique d'inscription le lit, et **rien n'en recopie une valeur** |
+| `lib/partenariat/bannieres.ts` | **les trois formats de bannière, et le code qu'un partenaire colle chez lui** — HTML et BBCode. **Aucun import** : la page, les textes et le composant de copie y puisent sans qu'un cycle se forme. Le seul endroit qui connaisse le nom de domaine du site |
+| `lib/partenariat/freins.ts` | **ce qui distingue un robot d'un partenaire** — le pot de miel, le délai de remplissage, le plafond horaire. Pur : ni horloge, ni base |
+| `lib/partenariat/depot.ts` | l'accès aux partenariats. **Seul endroit qui compose une requête** sur `partenaires` et `demandes_partenariat` |
+| `lib/partenariat/schema.ts` | ce qu'un partenaire et une demande ont le droit d'être — **partagé mot pour mot** entre le champ et l'action serveur |
 | `lib/francais.ts` | les règles de langue qui se recopient mal — l'élision de « de » devant un nom. Ni les points, ni les dates : celles-là vivent où elles servent |
 | `lib/dates.ts` | **une date écrite en toutes lettres** — le « 1er » compris —, et le jour d'un `<input type="date">` **dans les deux sens**. Une douzaine d'écrans d'administration gardent encore leur propre `jour()` : les rallier au fil des lots |
 | `lib/calendrier/depot.ts` | l'accès au calendrier. **Seul endroit qui compose une requête** sur `evenements`, et le seul qui sache qu'une date retirée ne s'affiche plus |
@@ -2017,7 +2022,8 @@ cacherait — un cas particulier à porter pour toujours.
 ⚠️ **Les partenariats n'ont pas de section**, et ce n'est pas un oubli : tout
 le site est derrière la connexion, et une section que les forums démarcheurs
 ne peuvent pas atteindre ne sert à personne. La bible en fait pourtant une
-priorité de recrutement — cela demande une page publique sur la vitrine.
+priorité de recrutement — d'où **la page publique `/partenariat`**, posée le
+28 août 2026. Voir « Le partenariat ».
 
 ### Les écrans sont partagés, les mots ne le sont pas
 
@@ -2243,6 +2249,174 @@ Aucune ne se voyait en lisant le code, et les trois sont du même genre que
 `lib/francais.ts` n'est **pas un fourre-tout** : il ne porte que ce qui doit
 se décider une fois. « 0 point » au singulier reste dans `points/affichage.ts`,
 « le 1er août » dans `dates.ts`.
+
+---
+
+## Le partenariat
+
+Posé le 28 août 2026. `/partenariat` : nos bannières, le texte qui nous
+présente, le bloc de liens, les annuaires, et le formulaire par lequel un
+forum voisin nous propose un échange.
+
+**C'est la première voie de recrutement du forum**, et c'est la bible qui le
+dit (§15) : « les partenariats croisés entre forums donnent de bien meilleurs
+résultats que les annuaires et les tops de vote ». Elle prévoyait les trois
+formats de bannière et cinq textes promotionnels ; il ne manquait qu'une
+adresse où les donner.
+
+### Une page PUBLIQUE, et c'est toute sa raison d'être
+
+⚠️ **Les deux tables de ce lot sont les seules du site dont le contenu
+s'affiche à qui n'a pas de compte.** Ce n'est pas un relâchement : le forum
+qui nous écrit n'a pas de compte ici et n'en ouvrira pas pour proposer un
+échange de bannières. Une section de forum réservée aux partenariats — ce que
+le lot du hors RP avait envisagé puis écarté — ne serait lue par personne.
+
+`robots.ts` ouvre `/partenariat` **et `/bannieres/`** : une page de
+partenariat introuvable ne vaut rien, et des bannières fermées à
+l'indexation se liraient comme des images bloquées sur le forum du voisin.
+
+**Elle vouvoie**, seule de toute la vitrine : elle ne s'adresse pas à un futur
+joueur mais à une administration voisine.
+
+### Les trois bannières, et pourquoi elles sont en PNG
+
+`scripts/fabriquer-bannieres.mjs` les compose à partir du blason et des
+polices du site : 200 × 320, 468 × 60, 88 × 31 — les formats que la bible
+retient parce que ce sont ceux que les blocs de liens attendent.
+
+⚠️ **PNG, et non WebP**, à l'inverse de tout le reste du site. Ces images-là ne
+s'affichent pas chez nous : elles s'affichent chez le partenaire, sur un forum
+qui a parfois quinze ans. Une bannière qui ne s'affiche pas est un
+partenariat perdu sans que personne sache pourquoi.
+
+**Le script n'est pas une dépendance du site.** `sharp` et `opentype.js`
+s'installent le temps du rendu — `npm install --no-save --no-package-lock
+sharp opentype.js` —, comme pour la conversion du tableau d'affichage.
+⚠️ **Les deux drapeaux sont nécessaires**, et un troisième piège s'y ajoute :
+installer un paquet avec `--no-package-lock` **retire les paquets absents de
+`package.json`**, donc `sharp` posé au tour précédent. Les demander ensemble.
+
+⚠️ **Le texte est rendu en CHEMINS, jamais en `<text>`.** librsvg — le moteur
+de `sharp` — ne va chercher que les polices **installées sur la machine** ;
+Cinzel et EB Garamond ne le sont pas, elles sont chargées par `next/font` pour
+le navigateur. Un `<text>` sortirait dans une police système, différente d'un
+poste à l'autre. `opentype.js` lit le fichier de la police et trace chaque
+lettre : ce qui sort ne dépend plus de rien.
+
+⚠️ **Et librsvg TRONQUE un attribut `d` au-delà d'une dizaine de milliers de
+signes, en silence.** Le premier rendu affichait « Ce que la brume s » et
+« RAVENSHAL » — le SVG portait pourtant le texte entier, vérifié. Rien dans
+l'image ne dit que c'est le moteur qui a coupé : on cherche d'abord la faute
+dans sa propre mesure. **Un `<path>` par lettre**, et le défaut disparaît.
+
+⚠️ **On mesure les TRACÉS, jamais les avances.** L'avance d'un glyphe est la
+place qu'il réserve, pas celle qu'il noircit : en capitales espacées, l'écart
+suffit à faire sortir « RAVENSHALLOW » du cadre. `largeurMax` réduit la taille
+plutôt que de laisser déborder — une bannière est un cadre fixe, et ce qui
+dépasse n'est pas coupé proprement, il est tranché au bord.
+
+### Le formulaire, et les trois freins
+
+C'est **le seul formulaire du site ouvert à qui n'a pas de compte**, donc la
+seule porte à spam. Trois verrous, tous côté serveur, aucun service tiers :
+
+| | Ce qu'il attrape |
+| --- | --- |
+| le pot de miel | un champ que l'œil ne voit pas, et qu'une machine remplit |
+| le délai minimal | trois secondes : un robot poste dans la seconde |
+| le plafond horaire | dix demandes, toutes origines confondues |
+
+⚠️ **Aucune adresse IP n'entre là-dedans, pas même sous forme d'empreinte.**
+La politique de confidentialité l'écrit noir sur blanc, et une page légale
+fausse est pire qu'absente. Le prix en est un plafond **global** : un robot
+acharné peut fermer le formulaire une heure. La page dit alors d'écrire sur
+Discord, qui n'a pas de plafond. Le compromis est assumé — un forum de jeu de
+rôle reçoit deux demandes par mois, pas deux par minute.
+
+⚠️ **Un envoi avalé rend un accusé de réception, exactement comme un envoi
+réel.** Répondre « votre pot de miel était rempli » revient à donner le mode
+d'emploi du contournement. C'est `PART_DANS_LE_VIDE` de la Tour aux Corbeaux,
+appliqué aux machines — et l'ordre des freins compte : on avale un robot
+plutôt que de lui dire d'attendre, « revenez dans une heure » étant déjà une
+information.
+
+⚠️ **Le plafond n'est PAS un refus**, et le texte le dit : ce qui est refusé ne
+partira jamais, ceci partira tout à l'heure. Même leçon qu'`ATTENDRE` dans la
+Tour et que le frein du salon.
+
+⚠️ **Un instant d'ouverture ABSENT ne vaut pas un envoi trop rapide.** Un
+navigateur sans JavaScript ne le pose pas ; refuser ce cas fermerait le
+formulaire à qui bloque les scripts, sans que rien ne le lui dise. Un instant
+venu du futur — horloge déréglée — passe aussi : il ne prouve rien.
+
+### Deux tables, deux gestes, et il ne faut pas les enchaîner
+
+`partenaires` est ce que la page affiche ; `demandes_partenariat` est ce qu'on
+nous a écrit. ⚠️ **Marquer une demande acceptée n'ajoute personne au bloc**, et
+l'écran le dit : une demande porte le nom qu'ils se donnent — souvent à
+rallonge — et ne contient même pas l'adresse de leur bannière.
+
+⚠️ **L'index unique sur l'adresse est PARTIEL** (`WHERE "retireLe" IS NULL`),
+et le partiel est tout le sujet : sans lui, un partenariat rompu interdirait
+pour toujours de renouer avec le même forum, puisque sa ligne reste. Prisma ne
+sait pas l'exprimer — il vit en SQL, et seulement là. Cousin exact du piège
+déjà payé sur `permissions_accordees`.
+
+C'est aussi ce qui rend **« Remettre au bloc » faillible**, seul de tous les
+retraits du site : un forum ajouté de nouveau entre-temps occupe la place. Le
+refus est traduit en une phrase, jamais laissé remonter en erreur 500.
+
+**Les partenaires sortent dans l'ordre alphabétique**, jamais par date
+d'ajout : un bloc rangé par ancienneté classe des partenaires, et personne n'a
+demandé de classement. Même parti pris que les quatre maisons.
+
+### Les annuaires sont rangés à part
+
+Le bouton de vote de **Forum RPG Portal** vit dans sa propre section — le
+joueur l'a fourni le 28 août 2026, avec son adresse de vote. ⚠️ **Un annuaire
+n'est pas un partenaire** : il ne nous affiche pas parce qu'on l'affiche, il
+classe des forums au nombre de voix. Les mêler ferait passer un vote pour un
+échange.
+
+Son image est servie par l'annuaire lui-même : c'est le bouton qu'il fournit,
+et on ne le réécrit pas. ⚠️ **Ses dimensions réelles sont 112 × 105**, et non
+88 × 88 comme le code d'origine l'annonce : ce sont les attributs qui donnent
+le rapport, et la classe qui donne la taille affichée.
+
+### Ce que la page promet, la politique de confidentialité le dit
+
+Un formulaire public recueille une adresse de courriel de quelqu'un qui n'est
+pas membre : la section « Ce qui est conservé » le dit maintenant, et
+« Combien de temps » précise que rien ne l'efface automatiquement.
+
+⚠️ **Deux dates de mise à jour désormais, et non une seule partagée.** Faire
+avancer la constante commune daterait d'aujourd'hui des mentions légales que
+personne n'a relues. La seule chose que ces deux pages doivent au lecteur,
+c'est d'être vraies.
+
+**L'information est donnée au moment de la saisie**, sous le formulaire — pas
+seulement dans une page qu'il faudrait penser à ouvrir. C'est déjà ce que fait
+le dossier d'admission.
+
+### Le pied de page a changé de mains
+
+⚠️ **Ses ancres sont devenues ABSOLUES** (`/#le-monde`), comme celles de la
+navigation. Le `Footer` ne vivait que sur l'accueil ; il vit maintenant aussi
+sur `/partenariat`, où une ancre relative pointerait vers
+`/partenariat#le-monde` — qui ne mène nulle part, sans que rien ne le
+signale : un lien vers une ancre absente ne fait tout simplement rien.
+
+### Ce qui reste au joueur
+
+- **Les quatre conditions du partenariat** sont une proposition, tirée du
+  règlement (art. 3.6, l'âge d'entrée) et des usages. À relire, et à corriger
+  si elles ne disent pas ce qu'il veut.
+- **Le bouton de vote n'est que sur cette page.** Il aurait plus d'effet en
+  pied de page du site entier ; c'est son choix, pas le mien.
+- **Aucun courriel n'avertit qu'une demande est arrivée** — la carte de
+  `/admin` porte le compte, comme pour les signalements. Le jour où l'attente
+  se compterait en jours, c'est un envoi qu'il faudra ajouter.
 
 ---
 
@@ -3146,6 +3320,14 @@ d'une maison » et « Le salon d'une maison ».
 **Le hors RP est ouvert** : « Le monde des non-mages » a cessé d'être du jeu de
 rôle, et porte cinq sections — présentations, liens, rôles, absences,
 suggestions. Voir « Le hors RP ».
+
+**Le partenariat est ouvert** : `/partenariat`, publique et indexée — nos
+trois bannières avec leur code à copier, le texte qui nous présente, le bloc
+de liens, le bouton de vote de Forum RPG Portal, et le formulaire par lequel
+un forum voisin nous écrit. Plus `/admin/partenaires`, qui tient le bloc et
+lit les demandes. Vérifié à l'écran : un envoi ordinaire entre en base, un
+envoi instantané reçoit le même accusé de réception et n'y entre pas. Voir
+« Le partenariat ».
 
 **Le cursus est posé, et les cours se parcourent** : les sept années groupées
 par cycle, le programme de chacune, et l'article 14.4 qui décide de ce qu'on
