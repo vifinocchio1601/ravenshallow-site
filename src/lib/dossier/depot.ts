@@ -280,6 +280,14 @@ export async function listerDossiersEnAttente(): Promise<Dossier[]> {
   return base.listerDossiersEnAttente();
 }
 
+/** Le compte des dossiers à lire, pour la pastille du tableau de bord. */
+export async function compterDossiersEnAttente(): Promise<number> {
+  if (baseAbsente()) {
+    return demo().filter((d) => d.statut === "EN_ATTENTE").length;
+  }
+  return base.compterDossiersEnAttente();
+}
+
 export async function listerMembres(): Promise<Dossier[]> {
   if (baseAbsente()) {
     return demo().filter((d) => d.statut === "ACCEPTE").sort((a, b) =>

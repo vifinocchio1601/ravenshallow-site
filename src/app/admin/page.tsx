@@ -4,6 +4,8 @@ import { ExternalLink } from "lucide-react";
 import AdminCard from "@/components/AdminCard";
 import AdminEmptyState from "@/components/AdminEmptyState";
 import { TEXTES_ANNONCES } from "@/lib/annonces/constantes";
+import { compterDossiersEnAttente } from "@/lib/dossier/depot";
+import { TEXTES_ETATS } from "@/lib/dossier/etats";
 import { listerAnnonces } from "@/lib/annonces/depot";
 import { TEXTES_CALENDRIER } from "@/lib/calendrier/constantes";
 import { lireLeCalendrier } from "@/lib/calendrier/depot";
@@ -34,12 +36,14 @@ export default async function AdminPage() {
     affichees,
     calendrier,
     partenariatsEnAttente,
+    dossiersALire,
   ] = await Promise.all([
     signalementsEnAttente(),
     courrierEnAttente(),
     listerAnnonces(),
     lireLeCalendrier(),
     demandesEnAttente(),
+    compterDossiersEnAttente(),
   ]);
 
   // Ce que la carte annonce : ce qui vient, jamais le total. Une carte qui
@@ -104,7 +108,24 @@ export default async function AdminPage() {
             </a>
           </AdminCard>
 
-          <AdminCard rune="ᛗᛁᚱ" eyebrow="Dossiers à lire" title="Inscriptions">
+          {/* La seule carte à porter une pastille, et c'est voulu : un dossier
+              en attente, c'est quelqu'un qui attend derrière, et l'attente se
+              compte en jours. Le reste du tableau de bord annonce ses comptes
+              en toutes lettres, sous le texte. */}
+          <AdminCard
+            rune="ᛗᛁᚱ"
+            eyebrow="Dossiers à lire"
+            title="Inscriptions"
+            compte={dossiersALire}
+            compteAria={
+              dossiersALire === 1
+                ? TEXTES_ETATS.admin.inscriptions.unALire
+                : TEXTES_ETATS.admin.inscriptions.aLire.replace(
+                    "{n}",
+                    String(dossiersALire),
+                  )
+            }
+          >
             <p className="leading-[1.7] text-parchment-dim">
               Les dossiers déposés attendent une lecture : accepter, renvoyer
               en correction ou refuser.

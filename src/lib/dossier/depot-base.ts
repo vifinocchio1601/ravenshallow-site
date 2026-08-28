@@ -131,6 +131,25 @@ export async function listerDossiersEnAttente(): Promise<Dossier[]> {
   return lignes.map(versDossier).filter((d): d is Dossier => d !== null);
 }
 
+/**
+ * **Combien de dossiers attendent une lecture** — la pastille du tableau de
+ * bord, et rien d'autre.
+ *
+ * ⚠️ **La condition est celle de `listerDossiersEnAttente`, mot pour mot.**
+ * Deux filtres qui divergeraient feraient annoncer « 3 » à la carte pour une
+ * page qui n'en montre que deux, et l'on chercherait longtemps où sont passés
+ * les autres. C'est le piège déjà nommé pour `compterNonLus` et
+ * `listerConversations` dans la Tour aux Corbeaux.
+ *
+ * Un `count`, jamais un `.length` sur la liste : celle-ci ramène chaque
+ * dossier entier — portrait compris — pour afficher un chiffre.
+ */
+export async function compterDossiersEnAttente(): Promise<number> {
+  return prisma.utilisateur.count({
+    where: { eleve: { statut: "EN_ATTENTE" } },
+  });
+}
+
 export async function listerMembres(): Promise<Dossier[]> {
   const lignes = await prisma.utilisateur.findMany({
     where: { eleve: { statut: "ACCEPTE" } },

@@ -325,6 +325,13 @@ export const TEXTES_ETATS = {
       vide: "Aucun dossier en attente pour l’instant.",
       lire: "Lire le dossier",
       depuis: "Déposé le",
+      /**
+       * Ce qu'un lecteur d'écran entend à la place de la pastille — « 0 » et
+       * « 1 » sont au singulier en français, et zéro n'affiche rien du tout :
+       * une pastille vide est du bruit sur un tableau de bord.
+       */
+      unALire: "1 dossier à lire",
+      aLire: "{n} dossiers à lire",
     },
     membres: {
       titre: "Liste des membres",
