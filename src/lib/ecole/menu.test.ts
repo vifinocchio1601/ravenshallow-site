@@ -259,6 +259,7 @@ describe("« Ma maison » n’apparaît qu’à qui en a une", () => {
     );
     expect(personnage?.liens.map((l) => l.href)).toEqual([
       ROUTES.fiche,
+      ROUTES.registre,
       ROUTES.corbeaux,
     ]);
   });

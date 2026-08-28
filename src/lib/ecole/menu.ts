@@ -17,6 +17,7 @@
  */
 
 import { TEXTES_ANNONCES } from "@/lib/annonces/constantes";
+import { TEXTES_REGISTRE } from "@/lib/registre/constantes";
 import { NOM_COURT } from "@/lib/corbeaux/constantes";
 
 export const ROUTES = {
@@ -36,6 +37,12 @@ export const ROUTES = {
 
   // Mon personnage
   fiche: "/fiche",
+  /**
+   * **L'annuaire des membres** — à ne pas confondre avec le *registre des
+   * visages* de l'article 6.3, qui recense les acteurs déjà pris et vit dans
+   * le formulaire d'inscription. Deux registres, deux choses.
+   */
+  registre: "/registre",
   maison: "/maison",
   corbeaux: "/corbeaux",
   // Trois adresses de la Tour qui ne sont pas un fil. Elles n’ont pas besoin
@@ -164,6 +171,14 @@ export const MENU: readonly EntreeMenu[] = [
         href: ROUTES.maison,
         libelle: "Ma maison",
         exigeUneMaison: true,
+      },
+      {
+        // **Aucun drapeau**, et c'est le choix par défaut : un membre suspendu
+        // n'y accède pas. La Tour et le Grand Hall sont des exceptions
+        // raisonnées, chacune écrite dans le règlement — un annuaire n'est ni
+        // une voie de recours, ni une obligation à connaître.
+        href: ROUTES.registre,
+        libelle: TEXTES_REGISTRE.nom,
       },
       {
         // La Tour aux Corbeaux s’ouvre dès le premier jour, et reste ouverte

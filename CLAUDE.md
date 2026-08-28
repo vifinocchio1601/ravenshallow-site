@@ -123,6 +123,7 @@ logique ailleurs, l'y ajouter.
 | `lib/forum/suppression.ts` | **qui peut retirer quoi** — une scène, son post — et ce qu'il en reste. Pur, sans base : l'écran et la route posent la même question |
 | `lib/forum/depot.ts` | l'accès au forum. Filtre en **appelant** `peutLireLeLieu`, jamais en recopiant sa condition dans un `where` |
 | `lib/forum/schema.ts` | ce qu'un titre, un post et un avertissement ont le droit d'être — **partagé mot pour mot** entre le champ et la route |
+| `lib/registre/depot.ts` | l'accès à l'annuaire et aux fiches publiques. **Ne lit jamais `statutAcces`** — art. 8.2 : une sanction ne s'expose pas |
 | `lib/salon/depot.ts` | l'accès au salon d'une maison. **Seul endroit qui compose une requête** sur `messages_salon` — interrogée toutes les quatre secondes depuis chaque onglet ouvert |
 | `lib/salon/regles.ts` | **le frein anti-noyade**. Pur : ni horloge, ni base. Rend « attends encore trois secondes », jamais un refus |
 | `lib/tableau/depot.ts` | l'accès au tableau d'une maison. **Seul endroit qui compose une requête** sur `mots_du_tableau` — et le seul qui sache qu'un mot retiré ne s'affiche plus. Ne décide d'aucun droit : il les reçoit |
@@ -1543,6 +1544,85 @@ maison de six, c'est presque le classement de tout le monde ; c'est assumé, et
 
 ---
 
+## Le Registre
+
+Posé le 28 août 2026. **L'annuaire des membres**, sous « Mon personnage », et
+la fiche publique de chaque personnage.
+
+⚠️ **Deux registres coexistent, et il ne faut pas les confondre.** Celui-ci —
+l'annuaire — et **le registre des visages** de l'article 6.3, qui recense les
+acteurs déjà pris et vit dans le formulaire d'inscription. Le joueur a choisi
+le nom en connaissance de la collision, le 28 août 2026 ; aucun libellé de
+l'un ne doit reprendre celui de l'autre, et l'on écrit toujours « le registre
+des visages » en toutes lettres.
+
+Le nom « Registre magique » de mes anciennes notes **ne vient d'aucun de ses
+documents** : ni la bible ni le règlement ne le portent.
+
+### Aucune sanction ne s'y voit — art. 8.2
+
+« Les décisions de modération sont expliquées à la personne concernée en
+privé, **jamais exposées publiquement pour l'humilier**. » Un membre suspendu
+figure donc au Registre exactement comme les autres : pas de pastille, pas de
+mention, pas de tri à part.
+
+⚠️ **`lib/registre/depot.ts` ne lit pas `statutAcces`**, et il ne faut pas l'y
+ajouter — fût-ce « pour information ». C'est une règle du joueur, pas un
+oubli.
+
+### Toute la fiche de jeu est publique
+
+Décision du joueur : portrait, nom, âge du personnage, genre, origine, maison,
+année ou titre, baguette, points, biographie, trois qualités, trois défauts,
+plus grande peur — et les **avertissements de contenu**, que l'article 15.4
+rend publics en toutes lettres.
+
+**La politique de confidentialité le dit maintenant**, section « Qui y a
+accès ». Une fiche visible de tous les membres est un fait nouveau ; le
+laisser hors de la page en aurait fait une promesse fausse par omission.
+
+Ce qui n'y est **pas** : la partie hors RP du dossier, l'adresse de courriel,
+et tout ce qui touche au compte.
+
+### Les trois groupes se lisent sur l'ÉTAT, jamais sur la colonne
+
+Les quatre maisons, puis « Le château » — ceux que le Miroir ne concerne pas —,
+puis « En attente du Miroir ». ⚠️ **Une case `maison` vide ne dit rien** : la
+directrice garde la sienne au chaud sous `SANS_OBJET`, et un élève accepté qui
+attend le Miroir a exactement la même case vide. C'est `etatMaison` qui
+tranche, et lui seul — le piège que `EtatEtape` a été inventé pour éviter.
+
+Dans une maison : par année croissante, puis par nom. Au château : par nom
+seul — leur titre est leur identité, une année n'y voudrait rien dire.
+
+### Bloquer depuis sa fiche
+
+C'est ce que le Registre devait porter, et la raison pour laquelle le lot de la
+Tour ne posait le blocage que depuis la conversation. La route est celle de la
+Tour, inchangée — `/api/corbeaux/blocages` —, et **l'écran dit ce que le geste
+fait au moment du geste** : la personne bloquée ne le saura pas, ses corbeaux
+partiront et n'arriveront pas.
+
+**« Ai-je bloqué cette personne ? » se lit dans un seul sens.** `listerBlocages`
+ne va que de `bloqueurId` vers `bloqueId` ; il n'existe aucune fonction qui
+réponde à « qui m'a bloqué ? », et il ne faut jamais en écrire une.
+
+### Deux précautions d'affichage
+
+⚠️ **`portraitUrl` ne sort JAMAIS d'une requête de liste.** Le portrait pèse
+deux cents kilo-octets en base ; on demande donc **quelles fiches en ont un**,
+par une requête qui ne rend que des identifiants, et l'image passe par
+`/api/portraits/[id]`, qui se met en cache. Piège déjà payé sur la carte de
+l'auteur d'un post. Et c'est un `<img>` ordinaire, jamais `next/image` :
+l'optimiseur va chercher la source sans les cookies du lecteur.
+
+⚠️ **`break-words` sur tout ce qu'un joueur écrit.** Une biographie de sept
+cents signes sans une espace — une adresse collée — poussait la page à **cinq
+mille pixels de large**, tout le reste avec. Constaté à l'écran. Même
+précaution que sur un mot du tableau et un message de salon.
+
+---
+
 ## Entrer dans une maison qui n'est pas la sienne
 
 Posé le 28 août 2026, **parce que le joueur s'en est aperçu** : sa directrice
@@ -2058,7 +2138,8 @@ affiché.
 **Aucun texte en dur dans un composant.** Les libellés vivent dans :
 `lib/dossier/constantes.ts`, `lib/dossier/etats.ts`, `lib/connexion/constantes.ts`,
 `lib/ecole/constantes.ts`, `lib/ceremonie/constantes.ts`,
-`lib/annonces/constantes.ts`, `lib/content.ts` (site vitrine).
+`lib/annonces/constantes.ts`, `lib/registre/constantes.ts`, `lib/content.ts`
+(site vitrine).
 
 Le barème de la cérémonie fait exception : il vit dans
 `lib/ceremonie/questionnaire.ts`, avec les énoncés, **et ce fichier est
@@ -2591,8 +2672,9 @@ archives » a pris son nom. Voir « Le Grand Hall ».
 quatre tubes, le top du mois, et **le salon**. Voir « Le tableau d'affichage
 d'une maison » et « Le salon d'une maison ».
 
-**Pas encore** : les cours et leurs QCM, les examens, le calendrier, le
-Registre magique, et le contenu des espaces de forum `non-mages` et `maison`.
+**Pas encore** : les cours et leurs QCM, les examens, le calendrier, et le
+contenu des espaces de forum `non-mages` et `maison`. **Les cours viendront en
+dernier** — décision du joueur, 28 août 2026.
 Le point d'accroche des cours est posé : `SourcePoint.QCM` et
 `SourcePoint.EXAMEN` existent dans l'enum et n'attendent que d'être écrits.
 
@@ -2627,9 +2709,9 @@ plus par manque d'écran : la question qui reste est de savoir s'il le veut sous
 les tubes, sous le top, ou pas du tout. **C'est une décision qui lui
 appartient**, et elle est toujours en attente.
 
-Le **Registre magique** — l'annuaire des membres, trié par maison et par
-fonction — n'existe pas : c'est lui qui portera « bloquer depuis sa fiche »,
-et c'est pourquoi ce lot-ci ne pose le blocage que depuis la conversation. Les panneaux du bureau lisent `lib/bureau/donnees.ts` — **une fonction par
+**Le Registre est ouvert** — l'annuaire des membres, groupé par maison, et la
+fiche publique de chaque personnage. C'est lui qui porte « bloquer depuis sa
+fiche », comme le lot de la Tour l'avait annoncé. Voir « Le Registre ». Les panneaux du bureau lisent `lib/bureau/donnees.ts` — **une fonction par
 panneau, et chaque lot en remplace une seule**, sans toucher aux panneaux. Le
 plan a tenu **cinq fois** : le courrier avec la Tour aux Corbeaux, les scènes
 avec le forum, la progression et le tournoi avec les points, les annonces avec

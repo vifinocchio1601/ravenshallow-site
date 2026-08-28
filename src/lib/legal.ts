@@ -115,6 +115,7 @@ export const CONFIDENTIALITE: DocumentLegal = {
       titre: "Qui y a accès",
       paragraphes: [
         "L’administration du site, pour ce qui touche à votre dossier, à votre compte et à ce que vous publiez sur le forum.",
+        "Les autres membres, pour votre fiche de personnage. Elle est consultable dans le Registre par toute personne connectée et acceptée : nom, portrait, âge du personnage, maison, année, baguette, biographie, qualités, défauts, plus grande peur, et les thèmes que vous préférez éviter. C’est l’usage d’un forum de jeu de rôle — on lit la fiche d’un autre avant de lui écrire une scène. Ce que vous avez écrit dans la partie « hors RP » de votre dossier, en revanche, ne s’y trouve pas.",
         "Pas vos conversations privées. Aucun membre du staff ne peut ouvrir la Tour aux Corbeaux de quelqu’un d’autre : il n’existe aucun écran pour le faire, et le site est construit pour que ce chemin n’existe pas. Le seul cas où un message privé parvient à l’administration est celui où vous le lui transmettez vous-même par un signalement, et elle ne reçoit alors que la copie que vous lui envoyez.",
         "Les sociétés qui font tourner le site, et rien de plus : Vercel, qui l’héberge aux États-Unis ; Neon, qui garde la base en Allemagne ; Google, qui achemine les courriels. Aucune donnée n’est vendue, échangée ni transmise à un tiers.",
         "L’hébergement du site et l’envoi des courriels passent par des sociétés établies aux États-Unis. Vos données peuvent donc y transiter.",
