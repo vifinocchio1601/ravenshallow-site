@@ -2222,14 +2222,20 @@ besoin, c'est garantir que quelqu'un s'interrogera dessus dans six mois.
 
 ## La sauvegarde
 
-**Le filet de Neon fait six heures.** Formule gratuite, curseur « History
-window » déjà au maximum — constaté dans la console le 27 août 2026. Passé ce
-délai, une donnée perdue l'est pour de bon ; Neon ne va au-delà (30 jours) que
-sur une formule payante.
+**Le filet de Neon fait SEPT JOURS**, depuis le passage en formule Launch le
+27 août 2026 — et non plus six heures. ⚠️ **Ce paragraphe a dit le contraire
+pendant une journée**, en contredisant la section d'à côté : la formule avait
+changé, cette page ne l'avait pas suivi. Le vérifier dans la console plutôt
+que de le réciter.
 
-`npm run base:sauvegarder` est la réponse gratuite : il recopie **toute** la
-base dans un fichier daté, rangé dans `Perso/Ravenshallow/Sauvegardes/` — hors
-du dépôt, et que Dropbox versionne à son tour. 0,35 Mo au 27 août 2026.
+Sept jours couvrent la faute qu'on remarque le lendemain. Ils ne couvrent pas
+tout : une donnée perdue et découverte trois semaines après, un projet Neon
+fermé par erreur, une facture impayée. D'où la copie locale, qui reste utile
+sans être urgente.
+
+`npm run base:sauvegarder` recopie **toute** la base dans un fichier daté,
+rangé dans `Perso/Ravenshallow/Sauvegardes/` — hors du dépôt, et que Dropbox
+versionne à son tour. 0,50 Mo au 28 août 2026.
 
 Trois décisions y sont inscrites, et aucune ne se devine :
 
@@ -2246,12 +2252,13 @@ L'état des migrations voyage avec les données : sans lui, on ne saurait pas
 sur quel schéma les réinjecter.
 
 ⚠️ **Elle ne se lance pas toute seule.** La lancer avant toute opération
-risquée en base, et reposer la question de payer Neon le jour où des joueurs
-auront écrit des choses irremplaçables.
+risquée en base — une migration qui touche à des données, un script de ménage,
+un essai en base sur un domaine neuf.
 
-**Scale to zero : 5 minutes, non modifiable en formule gratuite.** C'est ce
-qui rend le `connect_timeout` obligatoire plutôt que confortable : on ne peut
-pas empêcher la base de s'endormir.
+**L'endormissement est désactivé** depuis la formule Launch : la base ne
+s'arrête plus au bout de cinq minutes. Le `connect_timeout` reste posé pour
+autant — il couvre un redémarrage venu d'ailleurs, une mise à jour de Neon, un
+incident. Voir « La base ne s'endort plus ».
 
 ---
 
@@ -2861,11 +2868,13 @@ entre-temps. Le signe qui ne trompe pas : `rm -rf .next` répond
 l'effacement. **Ce n'est pas une erreur de code** : effacer `.next`, laisser
 quelques secondes, recommencer. Deuxième ou troisième essai, ça passe.
 
-**La base Neon se met en veille.** Après quelques minutes sans requête, la
-formule gratuite suspend le calcul. La visite suivante doit le réveiller, et si
-le réveil dépasse le délai d'attente de Prisma (5 s par défaut), la page tombe
-sur `Can't reach database server at ep-….neon.tech:5432`. Ce n'est pas une
-panne — mais c'est arrivé assez souvent pour être corrigé.
+**La base Neon se mettait en veille**, et c'est réglé depuis le 27 août 2026 —
+l'endormissement est désactivé en formule Launch. Le défaut, tant qu'il a
+duré : après quelques minutes sans requête le calcul était suspendu, la visite
+suivante devait le réveiller, et si le réveil dépassait le délai d'attente de
+Prisma (5 s par défaut) la page tombait sur `Can't reach database server at
+ep-….neon.tech:5432`. Ce qui suit reste posé, et ne se retire pas : une base
+peut redémarrer pour une autre raison.
 
 **`connect_timeout=15` est maintenant posé par le code**, dans
 `lib/base/adresse.ts`, appelé par `lib/prisma.ts` — le seul endroit qui ouvre
