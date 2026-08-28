@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 import Revelation from "@/components/ceremonie/Revelation";
 import { TEXTES_CEREMONIE } from "@/lib/ceremonie/constantes";
 import type { QuestionAffichee } from "@/lib/ceremonie/questionnaire";
@@ -15,10 +15,20 @@ import type { Maison } from "@/lib/dossier/etats";
  * aurait préféré lui dire.
  *
  * Sous la mise en scène, ce sont de vrais groupes de boutons radio dans des
- * `fieldset` : la navigation aux flèches fonctionne, le focus se voit, et la
- * question suivante le reçoit dès qu’elle paraît. Le verrouillage est annoncé
- * dans une zone `aria-live`, sans quoi il se ferait en silence pour qui n’a
- * pas l’écran.
+ * `fieldset` : le focus se voit, et la question suivante le reçoit dès qu’elle
+ * paraît. Le verrouillage est annoncé dans une zone `aria-live`, sans quoi il
+ * se ferait en silence pour qui n’a pas l’écran.
+ *
+ * **Les flèches déplacent le focus sans répondre.** Dans un groupe de boutons
+ * radio ordinaire, une flèche sélectionne en même temps qu’elle déplace — et
+ * ici une réponse ne se reprend pas : un joueur au clavier verrouillerait sa
+ * première question à la première touche, sans avoir lu les autres réponses,
+ * et le Miroir lirait un choix qu’il n’a pas fait. On sépare donc les deux
+ * gestes — les flèches parcourent, Espace ou Entrée décide. C’est la
+ * « sélection manuelle » des pratiques ARIA, et c’est déjà ce que fait la
+ * boutique Bjornstav, dont le choix est définitif pour la même raison.
+ *
+ * À la souris, rien ne change : un clic répond, comme partout.
  *
  * **Ce composant ne sait pas calculer une maison.** Il ne connaît que des
  * libellés et des identifiants ; il envoie les cinq identifiants au serveur
@@ -49,7 +59,12 @@ export default function Ceremonie({
   const [maison, setMaison] = useState<Maison | null>(null);
   const [annonce, setAnnonce] = useState("");
 
-  const champs = useRef<(HTMLInputElement | null)[]>([]);
+  /**
+   * Les boutons de chaque question, **tous** et dans l’ordre : les flèches ont
+   * besoin de connaître le voisin pour lui donner le focus. On n’en gardait
+   * que le premier, du temps où le navigateur menait seul la navigation.
+   */
+  const champs = useRef<(HTMLInputElement | null)[][]>([]);
   const groupes = useRef<(HTMLFieldSetElement | null)[]>([]);
 
   const mouvementReduit = () =>
@@ -140,11 +155,68 @@ export default function Ceremonie({
             block: "center",
             behavior: reduit ? "auto" : "smooth",
           });
-          champs.current[index + 1]?.focus({ preventScroll: true });
+          champs.current[index + 1]?.[0]?.focus({ preventScroll: true });
         }, 30);
       },
       reduit ? 0 : ATTENTE_QUESTION_SUIVANTE,
     );
+  }
+
+  /**
+   * Les flèches parcourent, Espace ou Entrée décide.
+   *
+   * Le gestionnaire est posé sur le `fieldset` : les boutons d’une question
+   * sont ses seuls descendants focalisables, et une touche partie d’ailleurs
+   * ressort par le `-1` de la recherche.
+   */
+  function auClavier(
+    evenement: KeyboardEvent<HTMLFieldSetElement>,
+    index: number,
+  ) {
+    // Une question répondue ne se reprend pas, au clavier comme à la souris.
+    if (reponses[index] !== null) return;
+
+    const boutons = champs.current[index] ?? [];
+    const rang = boutons.indexOf(evenement.target as HTMLInputElement);
+    if (rang === -1) return;
+
+    const dernier = questions[index].reponses.length - 1;
+    let vise: number | null = null;
+
+    switch (evenement.key) {
+      case "ArrowDown":
+      case "ArrowRight":
+        vise = rang === dernier ? 0 : rang + 1;
+        break;
+      case "ArrowUp":
+      case "ArrowLeft":
+        vise = rang === 0 ? dernier : rang - 1;
+        break;
+      case "Home":
+        vise = 0;
+        break;
+      case "End":
+        vise = dernier;
+        break;
+      case " ":
+      case "Enter":
+        /**
+         * Les deux touches qui décident, et elles passent toutes les deux par
+         * ici plutôt que par le navigateur. Entrée n’a aucun effet natif sur
+         * un bouton radio hors formulaire ; Espace en a un — il coche — mais
+         * il fait aussi défiler la page quand rien ne l’intercepte. Sur une
+         * réponse définitive, mieux vaut le même chemin que le clic.
+         */
+        evenement.preventDefault();
+        choisir(index, questions[index].reponses[rang].id);
+        return;
+      default:
+        return;
+    }
+
+    // Sans cela, le navigateur cocherait la réponse en même temps qu’il y va.
+    evenement.preventDefault();
+    boutons[vise]?.focus();
   }
 
   function reessayer() {
@@ -162,8 +234,6 @@ export default function Ceremonie({
 
       {questions.map((question, index) => {
         const choisie = reponses[index];
-        const premierDeSonGroupe = index === 0 || reponses[index - 1] !== null;
-
         return (
           <fieldset
             key={question.id}
@@ -174,6 +244,7 @@ export default function Ceremonie({
             hidden={index >= affichees}
             data-visible={index < apparues}
             data-verrouillee={choisie !== null}
+            onKeyDown={(evenement) => auClavier(evenement, index)}
           >
             <legend className="p-0">
               <span className="font-display text-[0.72rem] uppercase tracking-[0.34em] text-ember/80">
@@ -203,9 +274,8 @@ export default function Ceremonie({
                       disabled={choisie !== null && choisie !== reponse.id}
                       onChange={() => choisir(index, reponse.id)}
                       ref={(element) => {
-                        if (rang === 0 && premierDeSonGroupe) {
-                          champs.current[index] = element;
-                        }
+                        champs.current[index] ??= [];
+                        champs.current[index][rang] = element;
                       }}
                     />
                     <label htmlFor={identifiant} className="font-body">

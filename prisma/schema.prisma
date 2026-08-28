@@ -239,7 +239,14 @@ model Eleve {
   portraitType PortraitType
   /// Renseigné uniquement si portraitType = ACTEUR.
   acteurNom    String?
-  /// Image déjà recadrée en 9:16 côté client, stockée sur Vercel Blob.
+  /// Image déjà recadrée en 9:16 côté client, **stockée ici même**, en
+  /// texte encodé (`data:image/…;base64,…`) — celui de la directrice pèse
+  /// 207 Ko. Le nom de la colonne dit « url » et le schéma a longtemps
+  /// annoncé Vercel Blob : ni l'un ni l'autre n'a jamais été vrai.
+  ///
+  /// Elle ne se lit donc **jamais dans une requête de liste** : la route
+  /// `/api/portraits/[id]` la sert comme une vraie image, et l'écran ne
+  /// transporte qu'une adresse composée par `lib/ecole/portrait.ts`.
   portraitUrl  String?
 
   /// Minimum 700 signes — contrainte portée par le schéma Zod partagé,

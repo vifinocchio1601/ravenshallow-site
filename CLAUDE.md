@@ -837,9 +837,14 @@ requête des posts : elle porte l'image entière, deux cents kilo-octets par
 auteur, tirés de la base à chaque affichage de scène.
 
 ⚠️ **Les portraits sont stockés en base, en texte encodé** — celui de la
-directrice pèse 207 Ko. Le schéma prétend le contraire (« stockée sur Vercel
-Blob ») : **c'est faux**, et ça ne l'a jamais été. Tant qu'un portrait ne
-s'affichait que sur sa propre fiche, cela ne se voyait pas.
+directrice pèse 207 Ko. Tant qu'un portrait ne s'affichait que sur sa propre
+fiche, cela ne se voyait pas.
+
+Le nom de la colonne — `portraitUrl` — dit le contraire, et le schéma
+l'annonçait « stockée sur Vercel Blob » : **c'était faux, et ça ne l'a jamais
+été**. Le commentaire est corrigé depuis le 28 août 2026 ; le nom de la
+colonne, lui, ne se renomme pas pour si peu. Un commentaire qui ment coûte
+plus cher qu'un nom mal choisi : on ne vérifie pas ce qu'on vient de lire.
 
 Dans une scène, cela devenait un demi-méga recopié **dans chaque page, à
 chaque chargement**, sans que le navigateur puisse rien garder. D'où
@@ -1642,9 +1647,22 @@ pas les refaire. Un état ne se signale jamais par la seule couleur.
 **Sur un choix définitif, les flèches ne choisissent pas.** Dans un groupe de
 boutons radio ordinaire, une flèche sélectionne en même temps qu'elle déplace :
 un joueur au clavier verrouillerait son bois à la première touche, sans avoir
-lu les autres cartes. `bjornstav/EtapeChoix.tsx` sépare les deux gestes — les
-flèches parcourent, Espace ou Entrée décide. **La Cérémonie du Miroir n'a pas
-encore ce traitement**, et c'est le seul écart connu entre les deux scènes.
+lu les autres cartes. Les deux scènes définitives séparent donc les gestes —
+les flèches parcourent, Espace ou Entrée décide : `bjornstav/EtapeChoix.tsx`
+depuis l'ouverture de la boutique, et `ceremonie/Ceremonie.tsx` depuis le
+28 août 2026. C'est la « sélection manuelle » des pratiques ARIA.
+
+Le second cas était le plus grave des deux, et c'est ce qui l'a fait corriger :
+au Miroir, **une réponse ne se reprend pas et la question suivante paraît
+aussitôt**. Une flèche ne verrouillait donc pas un choix, elle en verrouillait
+un et ouvrait le suivant — la cérémonie entière pouvait se jouer en cinq
+touches, sans qu'aucune réponse ait été lue. Vérifié à l'écran, clavier seul :
+les flèches déplacent le focus sans rien cocher, Entrée répond.
+
+⚠️ **Le clavier ne se vérifie pas en dispatchant un `KeyboardEvent`.** Une
+touche injectée par le navigateur intégré arrive parfois avec `key` vide —
+« Return » et « space » n'ont produit aucun effet là où « Enter » et
+« ArrowDown » ont bien fonctionné. Un essai naïf conclurait à une régression.
 
 **Composants réutilisables** : `dossier/Champ.tsx` (libellé lié, message en
 `role="alert"`, hauteur réservée), `dossier/ReglesMotDePasse.tsx`,
