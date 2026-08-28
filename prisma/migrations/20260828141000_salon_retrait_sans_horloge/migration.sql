@@ -1,0 +1,42 @@
+-- Le retrait d'un message de salon ne se compare plus à sa date d'écriture.
+--
+-- ── Ce qui n'allait pas ──
+--
+-- `20260828140000_salon_de_maison` posait, quelques minutes plus tôt, une
+-- contrainte de bon sens :
+--
+--     "retireLe" IS NULL OR "retireLe" >= "ecritLe"
+--
+-- Elle a été prise en défaut par ses propres essais, sur la vraie base : un
+-- retrait parfaitement légitime était refusé.
+--
+-- ── Pourquoi ──
+--
+-- **Les deux dates ne viennent pas de la même horloge.** `ecritLe` a pour
+-- défaut `CURRENT_TIMESTAMP`, donc l'horloge de Postgres — à Francfort.
+-- `retireLe`, lui, est calculé par `new Date()` côté application — sur Vercel,
+-- ou sur le poste de développement. Quelques millisecondes d'écart entre les
+-- deux suffisent à faire échouer un `INSERT` qui pose les deux à la fois, et
+-- rien ne garantit que les deux machines soient à la milliseconde.
+--
+-- Le cas ne se produit pas dans le geste ordinaire — on retire un message
+-- écrit une minute plus tôt —, mais le mode d'échec est mauvais : une **erreur
+-- 500 sur un clic normal**, pour une raison d'horloge, impossible à
+-- comprendre depuis l'écran.
+--
+-- ── Pourquoi la retirer plutôt que la sauver ──
+--
+-- On aurait pu écrire `retireLe` avec `NOW()` en SQL brut, et l'invariant
+-- aurait tenu. Mais il ne protège de rien : un retrait daté d'une seconde
+-- avant l'écriture ne casse aucun affichage, ne fausse aucun total, et ne rend
+-- aucune ligne illisible. La base de ce projet n'arrête que ce qui casserait
+-- quelque chose — le travail fin vit dans les schémas.
+--
+-- Et `mots_du_tableau`, posé le même jour, n'a jamais eu cette contrainte :
+-- les deux tables se ressemblent maintenant, ce qui vaut mieux que deux règles
+-- voisines dont une seule s'applique.
+--
+-- Les cinq autres garanties de la table restent en place.
+
+ALTER TABLE "messages_salon"
+  DROP CONSTRAINT "messages_salon_retrait_apres_ecriture";

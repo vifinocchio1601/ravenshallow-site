@@ -2163,3 +2163,131 @@
   opacity: 0.5;
   cursor: not-allowed;
 }
+
+/* ————————————————————————————————
+   Le salon d'une maison
+   Une pièce où l'on parle : le fil défile, la saisie reste en bas.
+   ———————————————————————————————— */
+
+.salon {
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  gap: 1rem;
+  /* Une hauteur FIXE, et c'est le principe d'un salon : le fil défile
+     dedans, la saisie ne bouge jamais. Sans elle, la page s'allongerait à
+     chaque message et le champ descendrait hors de l'écran. */
+  height: min(70svh, 34rem);
+}
+
+.salon__fil {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  list-style: none;
+  margin: 0;
+  padding: 0.75rem;
+  display: grid;
+  /* `minmax(0, …)` : un mot sans espace — une adresse collée — élargirait
+     sinon la colonne au-delà du cadre. */
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0.85rem;
+  align-content: start;
+  border: 1px solid rgb(190 190 200 / 0.12);
+  border-radius: 3px;
+  background: rgb(11 13 18 / 0.5);
+}
+
+.salon__vide {
+  color: var(--parchment-dim);
+  font-family: var(--font-body), "EB Garamond", Georgia, serif;
+  font-style: italic;
+  text-align: center;
+  padding: 2rem 0.5rem;
+}
+
+.salon__message {
+  min-width: 0;
+}
+
+.salon__entete {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 0.55rem;
+  margin: 0 0 0.15rem;
+  font-size: 0.72rem;
+}
+
+.salon__nom {
+  font-family: var(--font-display), Cinzel, Georgia, serif;
+  letter-spacing: 0.06em;
+  color: var(--parchment);
+}
+
+.salon__place,
+.salon__heure {
+  font-family: var(--font-body), "EB Garamond", Georgia, serif;
+  font-style: italic;
+  color: var(--silver);
+}
+
+/* Discret, franc au survol et au focus : retirer n'est pas le geste
+   principal d'une conversation. */
+.salon__retirer {
+  font-family: var(--font-display), Cinzel, Georgia, serif;
+  font-size: 0.6rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgb(190 190 200 / 0.5);
+  transition: color 0.3s ease;
+}
+
+.salon__retirer:hover,
+.salon__retirer:focus-visible {
+  color: var(--ember);
+}
+
+.salon__corps {
+  margin: 0;
+  font-family: var(--font-body), "EB Garamond", Georgia, serif;
+  line-height: 1.7;
+  color: var(--parchment-dim);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.salon__champ {
+  width: 100%;
+  border: 1px solid rgb(190 190 200 / 0.25);
+  border-radius: 2px;
+  background: rgb(24 27 34 / 0.6);
+  padding: 0.5rem 0.75rem;
+  font-family: var(--font-body), "EB Garamond", Georgia, serif;
+  font-size: 1rem;
+  line-height: 1.6;
+  color: var(--parchment);
+  resize: none;
+  transition: border-color 0.3s ease;
+}
+
+.salon__champ:hover {
+  border-color: rgb(190 190 200 / 0.4);
+}
+
+.salon__champ:focus {
+  border-color: rgb(63 217 199 / 0.7);
+}
+
+.salon__aide {
+  margin: 0.25rem 0 0;
+  font-family: var(--font-body), "EB Garamond", Georgia, serif;
+  font-size: 0.75rem;
+  font-style: italic;
+  color: var(--silver);
+}
+
+.salon__erreur {
+  margin: 0.4rem 0 0;
+  font-family: var(--font-body), "EB Garamond", Georgia, serif;
+  font-size: 0.85rem;
+  color: var(--ember);
+}

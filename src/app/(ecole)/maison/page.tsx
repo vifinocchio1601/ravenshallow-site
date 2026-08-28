@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Image from "next/image";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import ChampMot from "@/components/maison/ChampMot";
 import TableauDAffichage from "@/components/maison/TableauDAffichage";
@@ -13,6 +14,7 @@ import { pouvoirsDe } from "@/lib/forum/depot-pouvoirs";
 import { peutEcrireLesAnnoncesDe } from "@/lib/forum/pouvoirs";
 import { lireLeTournoi, topDuMois } from "@/lib/points/depot";
 import { TEXTES_POINTS } from "@/lib/points/constantes";
+import { TEXTES_SALON } from "@/lib/salon/constantes";
 import { TEXTES_TABLEAU } from "@/lib/tableau/constantes";
 import { lireLeTableau } from "@/lib/tableau/depot";
 import { exigerAcces } from "@/lib/session/garde";
@@ -102,6 +104,18 @@ export default async function Page() {
             serveur qui protège : elle refait la question en entier. */}
         {peutEpingler ? <ChampMot /> : null}
       </section>
+
+      {/* ── Le salon, dans sa propre pièce ──
+          Un salon se tient, une page se parcourt : il a son adresse, et cette
+          page n'en porte que la porte. */}
+      <p className="mt-8">
+        <Link href={`${ROUTES.maison}/salon`} className="btn btn-ghost">
+          {TEXTES_SALON.lien}
+        </Link>
+        <span className="ml-4 font-body text-sm italic text-silver">
+          {TEXTES_SALON.lienAide}
+        </span>
+      </p>
 
       {/* ── Le rappel des quatre tubes ── */}
       {tournoi ? (

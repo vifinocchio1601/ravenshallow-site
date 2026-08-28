@@ -123,6 +123,8 @@ logique ailleurs, l'y ajouter.
 | `lib/forum/suppression.ts` | **qui peut retirer quoi** — une scène, son post — et ce qu'il en reste. Pur, sans base : l'écran et la route posent la même question |
 | `lib/forum/depot.ts` | l'accès au forum. Filtre en **appelant** `peutLireLeLieu`, jamais en recopiant sa condition dans un `where` |
 | `lib/forum/schema.ts` | ce qu'un titre, un post et un avertissement ont le droit d'être — **partagé mot pour mot** entre le champ et la route |
+| `lib/salon/depot.ts` | l'accès au salon d'une maison. **Seul endroit qui compose une requête** sur `messages_salon` — interrogée toutes les quatre secondes depuis chaque onglet ouvert |
+| `lib/salon/regles.ts` | **le frein anti-noyade**. Pur : ni horloge, ni base. Rend « attends encore trois secondes », jamais un refus |
 | `lib/tableau/depot.ts` | l'accès au tableau d'une maison. **Seul endroit qui compose une requête** sur `mots_du_tableau` — et le seul qui sache qu'un mot retiré ne s'affiche plus. Ne décide d'aucun droit : il les reçoit |
 | `lib/tableau/schema.ts` | ce qu'un mot a le droit d'être — **partagé mot pour mot** entre le champ et l'action serveur. Le seul schéma des trois qui ne soit **pas** `server-only` : pas de balisage, donc rien à cacher |
 | `lib/annonces/depot.ts` | l'accès aux annonces. **Seul endroit qui compose une requête** sur `annonces` — et le seul qui sache qu'une annonce retirée ne s'affiche plus |
@@ -1540,6 +1542,102 @@ maison de six, c'est presque le classement de tout le monde ; c'est assumé, et
 
 ---
 
+## Le salon d'une maison
+
+Posé le 28 août 2026. **La salle commune, en direct** — `/maison/salon`, une
+pièce par maison.
+
+⚠️ **Une PIÈCE, et non une correspondance. C'est la phrase à ne pas perdre.**
+« Le staff ne lit pas les conversations privées » est une règle dure de ce
+site, tenue par `etancheite.test.ts` — et **elle ne s'applique pas au salon**.
+Un salon se lit comme un professeur traverse la salle commune. Sans cette
+distinction écrite, la règle se déforme dans un sens ou dans l'autre : soit on
+interdit au staff une pièce publique, soit on lui ouvre les corbeaux par
+ricochet.
+
+Hors RP, comme la Tour : aucun minimum de lignes, aucun avertissement de
+contenu, **aucun point**. Texte brut, mille signes.
+
+### Le direct n'existe pas ici, et c'est assumé
+
+Vercel exécute des fonctions courtes, pas des connexions ouvertes : **pas de
+WebSocket**. Le salon interroge toutes les quatre secondes, par
+`useRafraichissement` — celui de la Tour, qui s'arrête quand l'onglet est
+caché, rattrape au retour, et n'appelle jamais deux fois en même temps. Le jour
+où une connexion permanente arriverait, c'est ce fichier-là qui changerait, et
+lui seul.
+
+⚠️ **Le rafraîchissement rapporte les messages ET les retraits.** C'est la
+partie qu'on oublie : sans les seconds, un message décroché par un préfet
+resterait à l'écran de tous les autres jusqu'au prochain chargement, et la
+pièce dirait deux choses selon qui regarde. D'où le second index, partiel, sur
+`retireLe`.
+
+⚠️ **On ne descend qu'à qui était déjà en bas.** Quelqu'un qui remonte relire
+un échange ne doit pas se faire arracher sa lecture par l'arrivée d'un
+message. C'est la règle de tous les salons, et son absence les rend
+insupportables.
+
+### Le frein n'est pas un refus
+
+Cinq messages par quinze secondes, par auteur et par pièce — `config/salon.json`.
+Il existe pour qu'un seul bavard ne pousse pas la conversation des autres hors
+de l'écran, pas pour empêcher qui que ce soit de parler.
+
+⚠️ **429, jamais 403**, et le délai en clair. Un message refusé ne partira
+jamais ; celui-là partira dans trois secondes. C'est exactement la leçon
+d'`ATTENDRE` dans la Tour aux Corbeaux, et la confondre avec un refus ferait
+lire « vous n'avez pas le droit » à quelqu'un qui a seulement parlé trop vite.
+
+**Les messages retirés comptent dans le frein** : quelqu'un qui noie la pièce
+puis efface ses traces ne récupère pas son quota.
+
+Le calcul est **pur** — il reçoit les instants, ne lit ni horloge ni base — et
+s'éprouve donc sur une conversation entière sans attendre. Deux envois
+simultanés peuvent passer tous les deux : assumé, comme pour la Tour.
+
+### Qui lit, qui parle, qui décroche
+
+| | |
+| --- | --- |
+| lire et parler | les membres de la maison. `/maison/salon` hérite de l'`exigeUneMaison` de sa page — `routeAutorisee` reconnaît tout ce qui commence par `/maison/` |
+| retirer | **son auteur**, toujours ; les **préfets** et le staff pour le ménage. Le partage du tableau d'affichage |
+| le staff, hors de sa maison | `/admin/salons`, les quatre pièces **en lecture** |
+
+**`/admin/salons` n'est pas une commodité, c'est ce qui rend le pouvoir de
+retrait réel.** La page `/maison` exige d'avoir une maison ; une directrice
+n'en a pas et n'atteindrait donc aucun salon. Sans cet écran, « le staff peut
+retirer un message » serait une phrase sans chemin.
+
+**On y lit, on n'y parle pas.** La zone d'administration n'a pas de comptes
+distincts, et un message sans auteur dans un salon ne voudrait rien dire — ce
+sens-là est déjà pris par les réponses du château dans la Tour.
+
+⚠️ **La maison ne vient jamais de la requête.** Elle est relue sur la fiche du
+compte : la recevoir en paramètre laisserait lire et écrire dans le salon d'une
+autre maison en changeant une valeur.
+
+### Deux pièges payés, et il ne faut pas les repayer
+
+⚠️ **Une contrainte qui compare deux horloges finit par refuser un geste
+légitime.** `20260828140000_salon_de_maison` posait
+`"retireLe" >= "ecritLe"` — de bon sens. Mais `ecritLe` vient de l'horloge de
+Postgres (Francfort) et `retireLe` de celle de l'application (Vercel) : quelques
+millisecondes d'écart, et un retrait tombe en **erreur 500 sur un clic normal**,
+pour une raison invisible depuis l'écran. Elle a été retirée le jour même par
+`20260828141000_salon_retrait_sans_horloge`, après avoir été prise en défaut
+par ses propres essais sur la vraie base. Elle ne protégeait de rien : un
+retrait antidaté ne casse aucun affichage.
+
+⚠️ **Un `<form>` ne se met pas dans un `<p>`.** Le navigateur referme le
+paragraphe avant le formulaire, l'arbre rendu cesse de ressembler à celui du
+serveur, et React échoue à l'hydratation — **sans jamais nommer la balise
+fautive**. Rencontré sur `/admin/salons`, où le bouton « Retirer » vit dans un
+formulaire. Un `<button>` seul, lui, est du contenu de phrase et passe très
+bien : c'est ce qui rend l'erreur difficile à voir.
+
+---
+
 ## Les transactions
 
 **Toute transaction interactive passe par `transaction()`**, dans
@@ -2412,31 +2510,20 @@ bandeau, et le journal du bureau qui cesse d'être vide. Le groupe « Les
 archives » a pris son nom. Voir « Le Grand Hall ».
 
 **La page de maison est ouverte** : le tableau d'affichage, le rappel des
-quatre tubes, et le top du mois. Voir « Le tableau d'affichage d'une maison ».
+quatre tubes, le top du mois, et **le salon**. Voir « Le tableau d'affichage
+d'une maison » et « Le salon d'une maison ».
 
 **Pas encore** : les cours et leurs QCM, les examens, le calendrier, le
-Registre magique, **le salon de discussion d'une maison**, et le contenu des
-espaces de forum `non-mages` et `maison`. Le point d'accroche des cours est
-posé : `SourcePoint.QCM` et `SourcePoint.EXAMEN` existent dans l'enum et
-n'attendent que d'être écrits.
+Registre magique, et le contenu des espaces de forum `non-mages` et `maison`.
+Le point d'accroche des cours est posé : `SourcePoint.QCM` et
+`SourcePoint.EXAMEN` existent dans l'enum et n'attendent que d'être écrits.
 
-⚠️ **Le salon en direct est demandé, et il n'est pas fait** — décision du
-joueur du 28 août 2026 : la page d'abord, le salon ensuite. Trois choses à
-trancher avant de l'écrire, et aucune n'est technique : **qui lit**, **ce
-qu'on garde**, et **ce qui se passe quand quelqu'un dérape**. Ce sera le
-premier endroit du site sans relecture — ni dix lignes, ni avertissement de
-contenu, ni trace de modération.
-
-⚠️ **Et il faudra l'écrire noir sur blanc : un salon de maison n'est PAS un
-corbeau.** « Le staff ne lit pas les conversations privées » est une règle dure,
-tenue par `etancheite.test.ts`. Un salon est une **pièce**, pas une
-correspondance : le staff peut y lire. Sans cette phrase, la règle se déforme
-dans un sens ou dans l'autre.
-
-Côté technique, le direct n'existe pas sur cette architecture : Vercel exécute
-des fonctions courtes, pas des connexions ouvertes — **pas de WebSocket**. Ce
-qui se fait est une interrogation de quelques secondes, et le mécanisme existe
-déjà : `useRafraichissement`, qui s'arrête quand l'onglet est caché.
+⚠️ **Le salon est par MAISON, et le risque était connu.** Avec quatre maisons
+et peu de joueurs, ce sont peut-être quatre pièces vides ; le joueur a tranché
+en connaissance de cause le 28 août 2026. Le découpage inverse — un salon
+commun — se poserait par une valeur de plus, jamais par un `null` qui voudrait
+dire « tout le monde ». **Si les pièces restent désertes, c'est la première
+chose à lui reproposer.**
 
 Le Grand Hall, lui, n'a que ses annonces : la bible (§12) y met aussi **le
 calendrier, les résultats et les événements à venir**. Le règlement y est déjà

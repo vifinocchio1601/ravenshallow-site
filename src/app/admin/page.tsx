@@ -5,6 +5,7 @@ import AdminCard from "@/components/AdminCard";
 import AdminEmptyState from "@/components/AdminEmptyState";
 import { TEXTES_ANNONCES } from "@/lib/annonces/constantes";
 import { listerAnnonces } from "@/lib/annonces/depot";
+import { TEXTES_SALON } from "@/lib/salon/constantes";
 import { TEXTES_CORBEAUX } from "@/lib/corbeaux/constantes";
 import { courrierEnAttente } from "@/lib/corbeaux/courrier";
 import { signalementsEnAttente } from "@/lib/corbeaux/moderation";
@@ -158,6 +159,25 @@ export default async function AdminPage() {
             ) : null}
             <Link href="/admin/courrier" className="btn btn-ghost mt-6">
               {TEXTES_CORBEAUX.courrier.lien}
+            </Link>
+          </AdminCard>
+
+          {/* Les salons.
+              Le seul écran du site où le staff lit une conversation — et il
+              est légitime parce qu'un salon est une PIÈCE, pas une
+              correspondance. Sans lui, le pouvoir d'en retirer un message
+              serait théorique : la page /maison exige une maison, qu'une
+              directrice n'a pas. */}
+          <AdminCard
+            rune="ᛊᚨᛚ"
+            eyebrow={TEXTES_SALON.administration.carteEyebrow}
+            title={TEXTES_SALON.administration.carteTitre}
+          >
+            <p className="leading-[1.7] text-parchment-dim">
+              {TEXTES_SALON.administration.carteAccroche}
+            </p>
+            <Link href="/admin/salons" className="btn btn-ghost mt-6">
+              {TEXTES_SALON.administration.carteLien}
             </Link>
           </AdminCard>
 

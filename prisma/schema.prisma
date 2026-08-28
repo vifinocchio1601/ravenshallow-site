@@ -352,6 +352,10 @@ model Eleve {
   /// le lien s'annule, le mot reste au mur.
   motsDuTableau MotDuTableau[]
 
+  /// Ce qu'il a dit au salon de sa maison. Même sort : le lien s'annule, le
+  /// message reste dans la pièce.
+  messagesDeSalon MessageSalon[]
+
   creeLe DateTime @default(now())
   majLe  DateTime @updatedAt
 
@@ -1581,4 +1585,50 @@ model MotDuTableau {
 
   @@index([maison, epingleLe(sort: Desc)])
   @@map("mots_du_tableau")
+}
+
+// ─────────────────────────────────────────────────────────────
+//  Partie VIII — Le salon d'une maison
+// ─────────────────────────────────────────────────────────────
+
+/// Un message du salon d'une maison — la salle commune, en direct.
+///
+/// ⚠️ **Une PIÈCE, et non une correspondance.** « Le staff ne lit pas les
+/// conversations privées » est une règle dure de ce site, tenue par
+/// `etancheite.test.ts`, et **elle ne s'applique pas ici** : un salon se lit
+/// comme un professeur traverse la salle commune. Sans cette distinction
+/// écrite, la règle se déforme dans un sens ou dans l'autre.
+///
+/// Hors RP, comme la Tour aux Corbeaux : aucun minimum de lignes, aucun
+/// avertissement de contenu, **aucun point**.
+///
+/// Le direct n'existe pas sur cette architecture — Vercel n'ouvre pas de
+/// connexions permanentes. Le salon s'interroge toutes les quelques secondes
+/// par `useRafraichissement` ; le jour où un WebSocket arriverait, c'est ce
+/// fichier-là qui changerait, pas cette table.
+model MessageSalon {
+  id String @id @default(cuid())
+
+  /// Une maison, et jamais nulle. Un salon commun se poserait un jour par une
+  /// valeur de plus, jamais par un `null` qui voudrait dire « tout le monde ».
+  maison Maison
+
+  /// Mille signes au plus, texte brut.
+  corps String @db.Text
+
+  /// Signé. Nul quand le compte s'en va : le message reste dans la pièce.
+  auteurId String?
+  auteur   Eleve?  @relation(fields: [auteurId], references: [id], onDelete: SetNull)
+
+  ecritLe DateTime @default(now())
+
+  /// **Retirer n'efface pas** — c'est ce qui permet de retrouver une
+  /// conversation pénible six mois plus tard. ⚠️ `retirePar` est un **nom
+  /// figé**, jamais un lien : voir `MotDuTableau`.
+  retireLe  DateTime?
+  retirePar String?
+
+  @@index([maison, ecritLe(sort: Desc)])
+  @@index([auteurId, ecritLe(sort: Desc)])
+  @@map("messages_salon")
 }

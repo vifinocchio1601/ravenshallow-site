@@ -1,0 +1,10 @@
+{
+  "note": "Les réglages du salon d'une maison — pas ses règles. Voir lib/salon/regles.ts. Ce sont des nombres à ajuster à l'usage : ils ne décident de rien qui appartienne au joueur.",
+  "noteAffiches": "Combien de messages la pièce montre. Tout le reste dort en base — rien n'est jamais effacé.",
+  "messagesAffiches": 100,
+  "noteRafraichissement": "Le pas d'interrogation, en millisecondes. Le direct n'existe pas ici : Vercel n'ouvre pas de connexions permanentes. Quatre secondes est vif pour une conversation et calme pour Neon ; la Tour, elle, est à quinze.",
+  "rafraichissementMs": 4000,
+  "noteFrein": "Le frein anti-noyade : pas plus de N messages par fenêtre de M secondes, PAR AUTEUR ET PAR PIÈCE. Il ralentit un bavard, il ne garde pas une porte — deux envois simultanés peuvent passer tous les deux, comme pour le plafond de la Tour.",
+  "messagesParFenetre": 5,
+  "fenetreSecondes": 15
+}
