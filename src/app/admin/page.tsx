@@ -29,6 +29,18 @@ const VERCEL_ANALYTICS_URL = "https://vercel.com/dashboard";
 
 export const dynamic = "force-dynamic";
 
+/**
+ * Le libellé d'une pastille — « 1 en attente », « 4 en attente ».
+ *
+ * ⚠️ **Un au singulier**, comme zéro : c'est la faute que tout le monde fait,
+ * et elle se voit sur un tableau de bord. Écrite ici une fois plutôt que
+ * recopiée sous chaque carte — quatre copies de la même règle finissent
+ * toujours par diverger.
+ */
+function libellePastille(compte: number, un: string, plusieurs: string): string {
+  return compte === 1 ? un : plusieurs.replace("{n}", String(compte));
+}
+
 export default async function AdminPage() {
   const [
     enAttente,
@@ -108,23 +120,22 @@ export default async function AdminPage() {
             </a>
           </AdminCard>
 
-          {/* La seule carte à porter une pastille, et c'est voulu : un dossier
-              en attente, c'est quelqu'un qui attend derrière, et l'attente se
-              compte en jours. Le reste du tableau de bord annonce ses comptes
-              en toutes lettres, sous le texte. */}
+          {/* ⚠️ **Une pastille ne dit que ce qui ATTEND QUELQU'UN**, jamais un
+              état : les quatre qui en portent une — inscriptions, courrier,
+              signalements, partenariats — comptent des gens qui attendent une
+              réponse. Les annonces affichées et les dates à venir gardent leur
+              ligne de texte : ce sont des faits, pas une file, et une pastille
+              y annoncerait du travail qui n'existe pas. */}
           <AdminCard
             rune="ᛗᛁᚱ"
             eyebrow="Dossiers à lire"
             title="Inscriptions"
             compte={dossiersALire}
-            compteAria={
-              dossiersALire === 1
-                ? TEXTES_ETATS.admin.inscriptions.unALire
-                : TEXTES_ETATS.admin.inscriptions.aLire.replace(
-                    "{n}",
-                    String(dossiersALire),
-                  )
-            }
+            compteAria={libellePastille(
+              dossiersALire,
+              TEXTES_ETATS.admin.inscriptions.unALire,
+              TEXTES_ETATS.admin.inscriptions.aLire,
+            )}
           >
             <p className="leading-[1.7] text-parchment-dim">
               Les dossiers déposés attendent une lecture : accepter, renvoyer
@@ -208,20 +219,16 @@ export default async function AdminPage() {
             rune="ᛒᚱᛖᚡ"
             eyebrow={TEXTES_CORBEAUX.courrier.eyebrow}
             title={TEXTES_CORBEAUX.courrier.titre}
+            compte={lettresEnAttente}
+            compteAria={libellePastille(
+              lettresEnAttente,
+              TEXTES_CORBEAUX.courrier.unEnAttente,
+              TEXTES_CORBEAUX.courrier.enAttente,
+            )}
           >
             <p className="leading-[1.7] text-parchment-dim">
               {TEXTES_CORBEAUX.courrier.accroche}
             </p>
-            {lettresEnAttente > 0 ? (
-              <p className="mt-4 font-display text-[0.68rem] uppercase tracking-[0.18em] text-aurora-teal">
-                {lettresEnAttente === 1
-                  ? TEXTES_CORBEAUX.courrier.unEnAttente
-                  : TEXTES_CORBEAUX.courrier.enAttente.replace(
-                      "{n}",
-                      String(lettresEnAttente),
-                    )}
-              </p>
-            ) : null}
             <Link href="/admin/courrier" className="btn btn-ghost mt-6">
               {TEXTES_CORBEAUX.courrier.lien}
             </Link>
@@ -254,6 +261,12 @@ export default async function AdminPage() {
             rune="ᚱᚨᚡ"
             eyebrow={TEXTES_CORBEAUX.moderation.eyebrow}
             title={TEXTES_CORBEAUX.moderation.titre}
+            compte={enAttente}
+            compteAria={libellePastille(
+              enAttente,
+              TEXTES_CORBEAUX.moderation.unEnAttente,
+              TEXTES_CORBEAUX.moderation.enAttente,
+            )}
           >
             <p className="leading-[1.7] text-parchment-dim">
               {TEXTES_CORBEAUX.moderation.accroche}
@@ -261,16 +274,6 @@ export default async function AdminPage() {
             <p className="mt-3 font-body text-sm italic leading-relaxed text-silver">
               {TEXTES_CORBEAUX.moderation.limite}
             </p>
-            {enAttente > 0 ? (
-              <p className="mt-4 font-display text-[0.68rem] uppercase tracking-[0.18em] text-aurora-teal">
-                {enAttente === 1
-                  ? TEXTES_CORBEAUX.moderation.unEnAttente
-                  : TEXTES_CORBEAUX.moderation.enAttente.replace(
-                      "{n}",
-                      String(enAttente),
-                    )}
-              </p>
-            ) : null}
             <Link href="/admin/signalements" className="btn btn-ghost mt-6">
               {TEXTES_CORBEAUX.moderation.lien}
             </Link>
@@ -352,20 +355,16 @@ export default async function AdminPage() {
             rune={TEXTES_PARTENARIAT.administration.carte.rune}
             eyebrow={TEXTES_PARTENARIAT.administration.carte.eyebrow}
             title={TEXTES_PARTENARIAT.administration.carte.titre}
+            compte={partenariatsEnAttente}
+            compteAria={libellePastille(
+              partenariatsEnAttente,
+              TEXTES_PARTENARIAT.administration.carte.uneEnAttente,
+              TEXTES_PARTENARIAT.administration.carte.enAttente,
+            )}
           >
             <p className="leading-[1.7] text-parchment-dim">
               {TEXTES_PARTENARIAT.administration.carte.accroche}
             </p>
-            {partenariatsEnAttente > 0 ? (
-              <p className="mt-4 font-display text-[0.68rem] uppercase tracking-[0.18em] text-aurora-teal">
-                {partenariatsEnAttente === 1
-                  ? TEXTES_PARTENARIAT.administration.carte.uneEnAttente
-                  : TEXTES_PARTENARIAT.administration.carte.enAttente.replace(
-                      "{n}",
-                      String(partenariatsEnAttente),
-                    )}
-              </p>
-            ) : null}
             <Link href="/admin/partenaires" className="btn btn-ghost mt-6">
               {TEXTES_PARTENARIAT.administration.carte.lien}
             </Link>
