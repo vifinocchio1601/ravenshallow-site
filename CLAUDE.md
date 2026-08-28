@@ -2163,18 +2163,20 @@ neuf matières, sept statuts chacune, trois cycles, et les règles de
 progression. Rien n'y a été inventé ; les commentaires du projet ont été
 ajoutés autour.
 
-⚠️ **Il contredit la bible §9 sur trois points, et c'est lui qui gagne** —
-décision du joueur, prise en connaissance de l'écart :
+Il contredisait la bible §9 sur quatre points — Sortilèges qui n'y figurait
+pas, la Clairvoyance donnée à Sigrid, la Runologie sans héritage, les cycles
+absents — et **c'est lui qui a gagné**, décision du joueur prise en
+connaissance de l'écart.
 
-| | La bible §9 | Le cursus |
-| --- | --- | --- |
-| **Sortilèges** | n'existe pas | matière neuve, obligatoire les **sept** années |
-| **Clairvoyance** | héritage de Sigrid | héritage d'**Einar** |
-| **Runologie** | aucun héritage | héritage de **Sigrid** |
-| **Les cycles** | absents | le Seuil, la Marée, la Veille |
+✅ **La bible a été corrigée le même jour**, à sa demande : sa §9 porte
+maintenant les neuf matières, les trois cycles et les conditions de passage
+chiffrées ; la ligne « Conditions de passage » a quitté ses points ouverts
+(§16), et sa date de mise à jour est passée au 28 août 2026. Une copie de
+l'ancienne version dort dans `Perso/Ravenshallow/Sauvegardes/`.
 
-`Bible_du_LORE.docx` est hors du dépôt et sa correction appartient au joueur.
-**Ne pas se fier à sa §9 pour les matières** tant qu'elle n'a pas suivi.
+⚠️ **Le sens de lecture ne change pas pour autant** : le cursus est la source,
+la bible le raconte. Une valeur modifiée ici sans que la bible suive est un
+document à mettre à jour, pas une faute du code.
 
 ### Ce que les essais figent, et pourquoi
 

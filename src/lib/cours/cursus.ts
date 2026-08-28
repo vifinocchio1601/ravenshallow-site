@@ -25,10 +25,14 @@ import { type Fonction, rangAnnee } from "@/lib/dossier/etats";
  * • **les trois cycles** — le Seuil, la Marée, la Veille — n’étaient nulle
  *   part.
  *
- * ⚠️ **La bible §9 dit encore le contraire sur ces trois points.** C’est
- * `Bible_du_LORE.docx`, hors du dépôt, et sa correction appartient au joueur.
- * En attendant, **c’est ce fichier qui fait autorité** — il est plus récent
- * et c’est lui que le site applique.
+ * ✅ **La bible a été corrigée le 28 août 2026**, à la demande du joueur : sa
+ * §9 porte désormais les neuf matières, les trois cycles et les conditions de
+ * passage chiffrées, et la ligne « Conditions de passage » a quitté ses points
+ * ouverts (§16). Les deux documents disent la même chose.
+ *
+ * ⚠️ **Ce fichier reste la source.** La bible le raconte, le site l’applique :
+ * une valeur qui changerait ici sans que la bible suive n’est pas une faute du
+ * code, c'est un document à mettre à jour. L'inverse n'est pas vrai.
  */
 
 /** L’année, telle que le cursus la compte. Voir `anneeDuCursus`. */
