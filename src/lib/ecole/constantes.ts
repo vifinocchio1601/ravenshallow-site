@@ -174,12 +174,6 @@ export const TEXTES_ECOLE = {
       corps:
         "L’intérieur du château ouvrira bientôt : les Tours centrales, les quatre ailes et leurs dix-neuf pièces y auront chacune leur porte.",
     },
-    cours: {
-      rune: "ᛏ",
-      titre: "Les cours",
-      corps:
-        "Les salles de classe ne sont pas encore ouvertes. Les matières, les emplois du temps et les épreuves viendront avec la rentrée.",
-    },
     nonMages: {
       rune: "ᛜ",
       titre: "Le monde des non-mages",

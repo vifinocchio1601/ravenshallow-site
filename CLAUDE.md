@@ -133,6 +133,8 @@ logique ailleurs, l'y ajouter.
 | `lib/annonces/schema.ts` | ce qu'une annonce a le droit d'être — `server-only`, et **la seule porte** par laquelle elle entre en base |
 | `lib/annonces/extrait.ts` | **les premiers mots d'une annonce**, pour le journal du bureau. Calculé, jamais stocké |
 | `lib/texte.ts` | le ménage sur un texte libre écrit par un joueur, **partagé** par les corbeaux et par les posts |
+| `lib/cours/cursus.ts` | **le cursus des sept années**, écrit par le joueur : les neuf matières, leurs statuts, les trois cycles, les seuils. Toute logique d'inscription le lit, et **rien n'en recopie une valeur** |
+| `lib/francais.ts` | les règles de langue qui se recopient mal — l'élision de « de » devant un nom. Ni les points, ni les dates : celles-là vivent où elles servent |
 | `lib/dates.ts` | **une date écrite en toutes lettres** — le « 1er » compris —, et le jour d'un `<input type="date">` **dans les deux sens**. Une douzaine d'écrans d'administration gardent encore leur propre `jour()` : les rallier au fil des lots |
 | `lib/calendrier/depot.ts` | l'accès au calendrier. **Seul endroit qui compose une requête** sur `evenements`, et le seul qui sache qu'une date retirée ne s'affiche plus |
 | `lib/calendrier/natures.ts` | **les trois natures d'un événement**, et **aucun import** : les textes, le schéma et le dépôt y puisent sans qu'un cycle se forme |
@@ -2148,6 +2150,100 @@ lui aussi.
 
 ---
 
+## Les cours — le cursus, et les deux écrans
+
+Posés le 28 août 2026. `/cours` montre les sept années groupées par cycle ;
+`/cours/<n>` montre le programme de l'une. **Les leçons, les contrôles et les
+examens ne sont pas construits** — c'est le lot d'après, et l'écran le dit.
+
+### Le cursus est du joueur, et il fait autorité
+
+`lib/cours/cursus.ts` est **son fichier**, remis tel quel le 28 août 2026 :
+neuf matières, sept statuts chacune, trois cycles, et les règles de
+progression. Rien n'y a été inventé ; les commentaires du projet ont été
+ajoutés autour.
+
+⚠️ **Il contredit la bible §9 sur trois points, et c'est lui qui gagne** —
+décision du joueur, prise en connaissance de l'écart :
+
+| | La bible §9 | Le cursus |
+| --- | --- | --- |
+| **Sortilèges** | n'existe pas | matière neuve, obligatoire les **sept** années |
+| **Clairvoyance** | héritage de Sigrid | héritage d'**Einar** |
+| **Runologie** | aucun héritage | héritage de **Sigrid** |
+| **Les cycles** | absents | le Seuil, la Marée, la Veille |
+
+`Bible_du_LORE.docx` est hors du dépôt et sa correction appartient au joueur.
+**Ne pas se fier à sa §9 pour les matières** tant qu'elle n'a pas suivi.
+
+### Ce que les essais figent, et pourquoi
+
+`cursus.test.ts` ne juge pas le cursus : il **fige les invariants que le
+joueur a lui-même écrits en commentaire**, et vérifie que la table reste
+cohérente le jour où l'on y touchera.
+
+- la charge de chaque année vaut **6, 7, 8, 6, 6, 5, 5** ;
+- les grandes épreuves de fin de troisième portent sur **huit** matières et
+  non neuf — le Duel n'ouvre qu'en quatrième ;
+- les trois cycles couvrent les sept années **sans trou ni recouvrement** ;
+- **une matière ne s'interrompt pas puis reprend** : elle commence une année
+  et ne se tait plus. Sans cela, « avoir suivi la matière » cesserait de
+  vouloir dire quelque chose, et les prérequis avec.
+
+**Les prérequis ne bloquent personne aujourd'hui** — `alchimie` exige
+`herboristerie`, `duel` exige `magie_defensive`, et les deux sont obligatoires
+en première–troisième. Ils ne mordront que le jour où une matière prérequise
+deviendrait optionnelle plus tôt. Ce n'est pas un défaut : c'est une garantie
+posée d'avance.
+
+### Le pont avec l'année du compte
+
+`Fonction` est un enum de base — `PREMIERE_ANNEE`… —, le cursus compte en
+nombres. **`anneeDuCursus` passe par `rangAnnee`**, seul endroit du site qui
+connaisse l'ordre des sept années : une seconde table de correspondance
+finirait par décaler d'un cran le jour où l'on toucherait à l'enum.
+
+**L'adresse porte le nombre** — `/cours/3` — et non un slug. La conversion est
+dérivée, sans table tenue à la main : une correspondance écrite à la main
+laisserait un jour une année joignable par deux adresses ou par aucune.
+
+### Qui ouvre quelle année — art. 14.4
+
+« Les sorts, les zones du château et les matières accessibles à un personnage
+sont ceux de son année en cours. » On lit donc **jusqu'à la sienne, jamais
+au-delà** : un septième année revoit le programme de première — c'est même la
+demande d'origine du joueur —, un première année n'a rien à faire dans celui
+de septième. Le staff passe partout, comme sur le forum.
+
+`peutOuvrirLAnnee` est **pure** : elle reçoit `staff` en paramètre et ne lit
+ni base ni pouvoirs. Même parti pris que `peutLireLeLieu`.
+
+⚠️ **Une année fermée s'affiche, avec sa raison écrite** — jamais cachée.
+C'est le choix du joueur, et celui que `/maisons` fait déjà. Mais **l'adresse,
+elle, répond 404** : « elle existe, mais pas pour vous » se lit comme une
+confirmation. Les deux ne se contredisent pas — on voit la porte, on ne la
+force pas.
+
+### Trois fautes de français attrapées à l'écran
+
+Aucune ne se voyait en lisant le code, et les trois sont du même genre que
+« Il manque 1 lignes » :
+
+- **« Tout est imposé : 6 matières »** sous le Seuil, qui en compte 6, puis 7,
+  puis 8. La phrase prenait la charge de la **première année du cycle** ;
+  `resumeDuCycle` donne maintenant la plage quand il y en a une ;
+- **« 1 matières imposées »** pour la Veille, qui n'en impose qu'une ;
+- **« Héritage de Alaric »**, « de Einar ». D'où `lib/francais.ts` et
+  `avecDe` : deux des quatre fondateurs commencent par une voyelle. ⚠️ **Le
+  « h » n'y est pas traité**, délibérément — muet il s'élide, aspiré non, et
+  rien dans un nom ne dit lequel.
+
+`lib/francais.ts` n'est **pas un fourre-tout** : il ne porte que ce qui doit
+se décider une fois. « 0 point » au singulier reste dans `points/affichage.ts`,
+« le 1er août » dans `dates.ts`.
+
+---
+
 ## Les transactions
 
 **Toute transaction interactive passe par `transaction()`**, dans
@@ -2849,7 +2945,20 @@ Dropbox cesse de suivre ces deux dossiers. Après quoi la page d'accueil est
 rendue en **30 ms** au lieu de ne jamais répondre.
 
 ⚠️ **L'attribut vit sur le DOSSIER, pas sur son nom.** Effacer `.next` l'emporte
-avec lui, et le suivant repart synchronisé. Le bon geste après un effacement :
+avec lui, et le suivant repart synchronisé. **`next dev` le recrée aussi** — le
+28 août 2026, un serveur lancé sur un `.next` fraîchement marqué s'est retrouvé
+sans attribut, et la première page n'a jamais répondu : `curl` a dépassé deux
+minutes sur `/connexion`. **Vérifier l'attribut juste après avoir lancé le
+serveur**, pas seulement après un effacement.
+
+⚠️ **Et quand le cache est corrompu, TOUTES les pages tombent, pas seulement
+la nouvelle.** Le même jour : `Cannot read properties of null (reading
+'useContext')` dans `next/link` et `next/image`, sur `/bureau` comme sur la
+page qu'on venait d'écrire. On croit à un défaut du code neuf ; c'est le
+cache. Le signe qui ne trompe pas : une page qu'on n'a pas touchée tombe
+aussi. Déplacer `.next`, le recréer marqué, relancer.
+
+Le bon geste après un effacement :
 
 ```bash
 mkdir -p .next && xattr -w com.dropbox.ignored 1 .next
@@ -3036,6 +3145,10 @@ d'une maison » et « Le salon d'une maison ».
 rôle, et porte cinq sections — présentations, liens, rôles, absences,
 suggestions. Voir « Le hors RP ».
 
+**Le cursus est posé, et les cours se parcourent** : les sept années groupées
+par cycle, le programme de chacune, et l'article 14.4 qui décide de ce qu'on
+ouvre. Les leçons et les contrôles restent devant. Voir « Les cours ».
+
 **Le calendrier est ouvert** : une table d'événements datés, l'écran qui les
 pose, la page du Grand Hall, et **le dernier panneau vide du bureau** qui se
 remplit — « Prochaines épreuves » lit vraiment la base. Voir « Le calendrier ».
@@ -3052,8 +3165,16 @@ les points s'y gagnent. Vérifié à l'écran : une scène ouverte sur le chemin
 escarpé accorde bien son point à la maison, et la même scène à neuf lignes est
 refusée. Voir « Les alentours du château ».
 
-**Pas encore** : les cours et leurs QCM, et les examens. **Les cours viendront
-en dernier** — décision du joueur, 28 août 2026.
+**Pas encore** : **les leçons, les contrôles et les examens** — le cursus et sa
+navigation sont posés, ce qui s'y accroche ne l'est pas. C'est le dernier
+chantier, et le plus gros : une leçon par matière et par semaine
+(`delaiEntreLeconsJours`), un contrôle à envoi unique, un examen qui n'ouvre
+qu'une fois tous les contrôles envoyés, deux seuils — 50 % par matière, 60 %
+de moyenne —, et **l'inscription aux options** de la Marée et de la Veille,
+qui demande une table.
+
+⚠️ **Les valeurs de tout cela sont DÉJÀ écrites**, dans `REGLES` de
+`cours/cursus.ts`. Le lot qui viendra les lit ; il ne les redécide pas.
 
 **L'espace de forum `maison` reste vide, et c'est décidé** : le joueur l'a
 gardé tel quel le 28 août 2026. Les dortoirs vivent déjà comme pièces du
