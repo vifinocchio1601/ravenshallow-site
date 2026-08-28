@@ -105,19 +105,21 @@ describe("l’arbre du parchemin", () => {
 
   /**
    * **Le Grand Hall s’allonge sans rien déplacer**, et c’est ce que le lot des
-   * annonces avait promis : les résultats y sont entrés le 28 août 2026, en
-   * une ligne. Restent le calendrier et les événements à venir (bible §12).
+   * annonces avait promis : les résultats et le calendrier y sont entrés le
+   * 28 août 2026, une ligne chacun. Il ne manque plus que les événements à
+   * venir — qui sont le calendrier lui-même, filtré (bible §12).
    *
    * L’ordre compte : les annonces d’abord — c’est ce qu’on vient lire —, les
    * résultats ensuite, et les deux documents de fond à la fin.
    */
-  it("le Grand Hall reste extensible — le calendrier y viendra", () => {
+  it("le Grand Hall porte ses quatre feuilles, dans l’ordre", () => {
     const grandHall = MENU.find(
       (e): e is GroupeMenu => estUnGroupe(e) && e.libelle === TEXTES_ANNONCES.nomBandeau,
     );
     expect(grandHall?.liens.map((l) => l.href)).toEqual([
       ROUTES.annonces,
       ROUTES.resultats,
+      ROUTES.calendrier,
       ROUTES.archivesReglement,
       ROUTES.archivesHistoire,
     ]);

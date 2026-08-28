@@ -53,6 +53,7 @@ npm run corbeaux:essai    # exerce la Tour aux Corbeaux SUR LA VRAIE BASE
 npm run base:sauvegarder  # recopie toute la base dans un fichier, hors du dépôt
 npm run forum:essai       # exerce les pouvoirs ET le forum SUR LA VRAIE BASE
 npm run points:essai      # exerce les points, la clôture et l'archivage SUR LA VRAIE BASE
+npm run calendrier:essai  # exerce le calendrier SUR LA VRAIE BASE
 ```
 
 `base:migrer` existe parce que la CLI Prisma ne lit pas `.env.local` : le
@@ -132,6 +133,9 @@ logique ailleurs, l'y ajouter.
 | `lib/annonces/schema.ts` | ce qu'une annonce a le droit d'être — `server-only`, et **la seule porte** par laquelle elle entre en base |
 | `lib/annonces/extrait.ts` | **les premiers mots d'une annonce**, pour le journal du bureau. Calculé, jamais stocké |
 | `lib/texte.ts` | le ménage sur un texte libre écrit par un joueur, **partagé** par les corbeaux et par les posts |
+| `lib/dates.ts` | **une date écrite en toutes lettres** — le « 1er » compris —, et le jour d'un `<input type="date">` **dans les deux sens**. Une douzaine d'écrans d'administration gardent encore leur propre `jour()` : les rallier au fil des lots |
+| `lib/calendrier/depot.ts` | l'accès au calendrier. **Seul endroit qui compose une requête** sur `evenements`, et le seul qui sache qu'une date retirée ne s'affiche plus |
+| `lib/calendrier/natures.ts` | **les trois natures d'un événement**, et **aucun import** : les textes, le schéma et le dépôt y puisent sans qu'un cycle se forme |
 | `lib/forum/mise-en-forme.ts` | **ce qu'un joueur a le droit de faire à son texte** — les outils, la palette, et les classes qu'ils produisent. Les listes de classes sont **déduites** des outils |
 | `lib/forum/nettoyer-html.ts` | la **liste blanche** du balisage — `server-only`, appelée à l'enregistrement et à l'affichage. Rien d'autre ne protège du HTML d'un joueur |
 
@@ -1502,6 +1506,109 @@ domaine des points s'y sont ralliés (les résultats, `/admin/points`,
 « 1er ». Les rallier **un par un, au fil des lots qui les touchent** : un
 remplacement en masse sur des écrans qu'on ne regarde pas ensuite est le
 meilleur moyen d'en casser un en silence.
+
+---
+
+## Le calendrier — la troisième feuille du Grand Hall
+
+Posé le 28 août 2026. `/calendrier` : la rentrée, les trimestres, les épreuves
+et les temps forts. Le Grand Hall porte désormais **quatre** des cinq choses de
+la bible §12 — et la cinquième, « les événements à venir », **est celle-ci
+filtrée**.
+
+### Une seule table, lue deux fois
+
+Décision du joueur : « calendrier » et « événements à venir » sont la même
+chose vue sous deux angles. Deux tables auraient fini par dire deux choses de
+la même fête, et c'est toujours celle qu'on a oublié de corriger qu'un joueur
+lirait.
+
+⚠️ **Un événement qui DURE reste « à venir » jusqu'à sa fin.** Ce qui décide,
+c'est `finitLe` quand il existe, `debuteLe` sinon : un trimestre ouvert la
+semaine dernière et clos dans deux mois n'a pas à basculer dans « déjà passé »
+le lendemain de la rentrée.
+
+### Les dates sont celles du MONDE RÉEL
+
+Décision du joueur, le même jour. « 12 septembre 2026 », et non une année
+scolaire fictive : c'est ce qu'un joueur note dans son agenda, et la seule
+chose dont « à venir » et le panneau du bureau puissent se servir. **Le titre
+porte le monde** — « Trimestre d'automne » —, la colonne porte le temps.
+
+⚠️ **La date est posée à MIDI**, jamais à minuit : à minuit UTC, la moitié de
+la planète lirait la veille. Même précaution que l'entrée en vigueur d'une
+annonce — et depuis ce lot, **la même fonction** : `jourSaisi`, dans
+`lib/dates.ts`.
+
+⚠️ **Le champ `date` se relit en heure LOCALE** — `enJourSaisissable`, jamais
+`toISOString` : le formulaire de correction afficherait sinon la veille de ce
+qu'on a saisi. Piège déjà payé sur les annonces, désormais tenu à un seul
+endroit.
+
+⚠️ **Pas de `suppressHydrationWarning` sur ces dates-là**, à la différence du
+reste du site — et ce n'est pas un oubli. Ailleurs on affiche un INSTANT, dont
+le jour dépend du fuseau de qui lit ; une date de calendrier est une JOURNÉE,
+posée à midi précisément pour que le jour soit le même partout.
+
+### Trois natures, et elles décident de quelque chose
+
+`EPREUVE`, `FETE`, `SESSION`. **Seule `EPREUVE` remonte au bureau**, sous
+« Prochaines épreuves » — un panneau qui annoncerait la veillée des braises
+sous ce titre se contredirait. C'est la raison d'être de la colonne : une
+colonne qui ne décide de rien finit par décider de quelque chose ; celle-ci
+décide.
+
+`lib/calendrier/natures.ts` est la source, **sans aucun import** — même
+procédé que `corbeaux/constantes.ts`. Une quatrième nature se poserait là
+**et** dans une migration : Postgres ne sait pas ajouter une valeur d'enum
+depuis le code.
+
+### Le dernier panneau vide du bureau
+
+`prochainesEpreuves` a cessé d'être nul, **et le panneau n'a pas eu à bouger**.
+C'est la **sixième fois** que le plan de `lib/bureau/donnees.ts` tient — une
+fonction par panneau, un lot en remplace une seule — et il ne reste plus rien
+à remplir.
+
+⚠️ `donnees.test.ts` remplace maintenant **deux** dépôts, celui des points et
+celui du calendrier : `npm test` ne touche jamais la base, et l'oubli du
+second faisait tomber deux essais sur une variable d'environnement absente.
+
+### Du texte brut, et c'est un choix
+
+Pas d'éditeur : un calendrier porte des repères, pas des articles, et la barre
+inviterait à écrire long. Le détail s'écrit dans **une annonce**, qui a la
+mise en forme. React échappe le texte d'office — aucune liste blanche à tenir
+de ce côté, et `calendrier/schema.ts` n'est donc **pas** `server-only` : le
+champ et l'action serveur partagent le même fichier, comme pour un mot du
+tableau d'affichage.
+
+**La description est obligatoire**, à la différence de l'entrée en vigueur
+d'une annonce : « 12 décembre » sans un mot laisse chacun deviner ce qui se
+passe ce jour-là.
+
+### Ce que la base tient elle-même
+
+Six garanties dans `20260828180000_calendrier`, **éprouvées sur la vraie base
+et gardées** : `npm run calendrier:essai` — treize essais, qui nettoient
+derrière eux.
+
+⚠️ **La contrainte « la fin ne précède pas le début » compare deux dates du
+MÊME formulaire**, et c'est la seule raison pour laquelle elle est sûre. Le
+salon a payé le piège inverse le jour même : `retireLe >= ecritLe` comparait
+l'horloge de Postgres à celle de Vercel, et quelques millisecondes d'écart
+faisaient tomber un clic normal en erreur 500. **Ne jamais poser une
+contrainte entre deux instants venus de deux horloges.**
+
+⚠️ **Le ménage de l'essai vise le préfixe de titre `ESSAI — `**, faute de
+compte auquel rattacher ces lignes. Un effacement plus large emporterait les
+dates du joueur.
+
+### Aucune permission attribuable
+
+Comme les annonces, et pour la même raison : le préambule fait du Grand Hall
+le seul lieu officiel d'annonce. C'est une décision d'administration, pas une
+charge qu'on délègue — ne pas l'ajouter à `Permission`.
 
 ---
 
@@ -2920,6 +3027,10 @@ d'une maison » et « Le salon d'une maison ».
 rôle, et porte cinq sections — présentations, liens, rôles, absences,
 suggestions. Voir « Le hors RP ».
 
+**Le calendrier est ouvert** : une table d'événements datés, l'écran qui les
+pose, la page du Grand Hall, et **le dernier panneau vide du bureau** qui se
+remplit — « Prochaines épreuves » lit vraiment la base. Voir « Le calendrier ».
+
 **Les résultats du Grand Hall sont ouverts** : le tournoi en cours, les
 décisions de l'administration avec leur motif, et le palmarès des années
 closes — qui donne enfin une trace visible à la clôture d'une année. Voir
@@ -2932,9 +3043,13 @@ les points s'y gagnent. Vérifié à l'écran : une scène ouverte sur le chemin
 escarpé accorde bien son point à la maison, et la même scène à neuf lignes est
 refusée. Voir « Les alentours du château ».
 
-**Pas encore** : les cours et leurs QCM, les examens, le calendrier, et le
-contenu de l'espace de forum `maison`. **Les cours viendront en dernier** —
-décision du joueur, 28 août 2026.
+**Pas encore** : les cours et leurs QCM, et les examens. **Les cours viendront
+en dernier** — décision du joueur, 28 août 2026.
+
+**L'espace de forum `maison` reste vide, et c'est décidé** : le joueur l'a
+gardé tel quel le 28 août 2026. Les dortoirs vivent déjà comme pièces du
+château, et la page `/maison` porte le tableau d'affichage, le top du mois et
+le salon. Ne pas le remplir sans le lui redemander.
 Le point d'accroche des cours est posé : `SourcePoint.QCM` et
 `SourcePoint.EXAMEN` existent dans l'enum et n'attendent que d'être écrits.
 
@@ -2945,13 +3060,10 @@ commun — se poserait par une valeur de plus, jamais par un `null` qui voudrait
 dire « tout le monde ». **Si les pièces restent désertes, c'est la première
 chose à lui reproposer.**
 
-Le Grand Hall porte maintenant **trois des cinq** choses que la bible (§12) y
-met : le règlement, les annonces, et **les résultats** depuis le 28 août 2026.
-Restent le calendrier et les événements à venir — et le joueur a tranché que
-ce sera **une seule table** : le calendrier montre tout, « à venir » est le
-filtre de ce qui n'a pas eu lieu. Deux tables finiraient par dire deux choses
-de la même fête. Ce lot remplira au passage `prochainesEpreuves`, **le dernier
-panneau vide du bureau**.
+**Le Grand Hall porte maintenant les cinq choses que la bible (§12) y met** :
+le règlement, les annonces, les résultats, le calendrier — et « les événements
+à venir », qui sont le calendrier lui-même filtré, décision du joueur du
+28 août 2026. Il n'y manque plus rien.
 
 ⚠️ **`totauxParMaison` a disparu**, et il ne faut pas le réécrire. Il sommait
 `Eleve.points` par maison — il supposait « compteur de maison = somme des
@@ -2973,10 +3085,10 @@ au Grand Hall plutôt que sur la page d'une maison — décision du joueur. Voir
 fiche publique de chaque personnage. C'est lui qui porte « bloquer depuis sa
 fiche », comme le lot de la Tour l'avait annoncé. Voir « Le Registre ». Les panneaux du bureau lisent `lib/bureau/donnees.ts` — **une fonction par
 panneau, et chaque lot en remplace une seule**, sans toucher aux panneaux. Le
-plan a tenu **cinq fois** : le courrier avec la Tour aux Corbeaux, les scènes
+plan a tenu **six fois** : le courrier avec la Tour aux Corbeaux, les scènes
 avec le forum, la progression et le tournoi avec les points, les annonces avec
-le Grand Hall. Il ne reste que `prochainesEpreuves`, qui attend le calendrier
-scolaire.
+le Grand Hall, et les épreuves avec le calendrier. **Il ne reste plus rien à
+remplir.**
 
 **Limites connues** — les blasons ne sont plus une limite : passés en WebP et
 munis de leur `sizes`, la ligne de conversation de la Tour en charge 7 Ko au

@@ -5,6 +5,8 @@ import AdminCard from "@/components/AdminCard";
 import AdminEmptyState from "@/components/AdminEmptyState";
 import { TEXTES_ANNONCES } from "@/lib/annonces/constantes";
 import { listerAnnonces } from "@/lib/annonces/depot";
+import { TEXTES_CALENDRIER } from "@/lib/calendrier/constantes";
+import { lireLeCalendrier } from "@/lib/calendrier/depot";
 import { TEXTES_SALON } from "@/lib/salon/constantes";
 import { TEXTES_CORBEAUX } from "@/lib/corbeaux/constantes";
 import { courrierEnAttente } from "@/lib/corbeaux/courrier";
@@ -24,11 +26,18 @@ const VERCEL_ANALYTICS_URL = "https://vercel.com/dashboard";
 export const dynamic = "force-dynamic";
 
 export default async function AdminPage() {
-  const [enAttente, lettresEnAttente, affichees] = await Promise.all([
-    signalementsEnAttente(),
-    courrierEnAttente(),
-    listerAnnonces(),
-  ]);
+  const [enAttente, lettresEnAttente, affichees, calendrier] =
+    await Promise.all([
+      signalementsEnAttente(),
+      courrierEnAttente(),
+      listerAnnonces(),
+      lireLeCalendrier(),
+    ]);
+
+  // Ce que la carte annonce : ce qui vient, jamais le total. Une carte qui
+  // dirait « 14 dates » sur un calendrier entièrement passé serait fausse
+  // sans être inexacte.
+  const datesAVenir = calendrier.aVenir.length;
 
   return (
     <main className="relative min-h-[100svh] bg-void">
@@ -131,6 +140,33 @@ export default async function AdminPage() {
             </p>
             <Link href="/admin/annonces" className="btn btn-ghost mt-6">
               {TEXTES_ANNONCES.administration.carteLien}
+            </Link>
+          </AdminCard>
+
+          {/* Le calendrier.
+              Même lieu, même règle : aucune permission attribuable ne l'ouvre.
+              Il vit à côté des annonces parce qu'on écrit souvent les deux le
+              même jour — la date au calendrier, le détail en annonce. */}
+          <AdminCard
+            rune="ᛃᚨᚱ"
+            eyebrow={TEXTES_CALENDRIER.administration.carteEyebrow}
+            title={TEXTES_CALENDRIER.administration.carteTitre}
+          >
+            <p className="leading-[1.7] text-parchment-dim">
+              {TEXTES_CALENDRIER.administration.carteAccroche}
+            </p>
+            <p className="mt-4 font-display text-[0.68rem] uppercase tracking-[0.18em] text-silver">
+              {datesAVenir === 0
+                ? TEXTES_CALENDRIER.administration.carteAucune
+                : datesAVenir === 1
+                  ? TEXTES_CALENDRIER.administration.carteUneAVenir
+                  : TEXTES_CALENDRIER.administration.carteAVenir.replace(
+                      "{n}",
+                      String(datesAVenir),
+                    )}
+            </p>
+            <Link href="/admin/calendrier" className="btn btn-ghost mt-6">
+              {TEXTES_CALENDRIER.administration.carteLien}
             </Link>
           </AdminCard>
 

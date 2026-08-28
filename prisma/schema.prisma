@@ -1632,3 +1632,66 @@ model MessageSalon {
   @@index([auteurId, ecritLe(sort: Desc)])
   @@map("messages_salon")
 }
+
+/// La nature d'un événement du calendrier.
+///
+/// **Elle décide de quelque chose**, et c'est pourquoi elle existe : seule
+/// `EPREUVE` remonte au bureau, sous « Prochaines épreuves ». Un panneau qui
+/// annoncerait une fête sous ce titre se contredirait.
+enum NatureEvenement {
+  /// Examens, rites de passage, session d'épreuves finales (bible §9).
+  EPREUVE
+
+  /// La veillée des braises, la commémoration d'Einar — les temps forts.
+  FETE
+
+  /// Le rythme scolaire : rentrée, trimestres, clôture d'une année.
+  SESSION
+}
+
+/// Un événement du calendrier — troisième feuille du Grand Hall (bible §12).
+///
+/// **« Calendrier » et « événements à venir » sont la même table** : le
+/// calendrier montre tout, « à venir » est le filtre de ce qui n'a pas eu
+/// lieu. Décision du joueur, 28 août 2026 — deux tables finiraient par dire
+/// deux choses de la même fête.
+model Evenement {
+  id String @id @default(cuid())
+
+  titre String
+
+  /// **Du texte brut**, à la différence d'une annonce : un calendrier porte
+  /// des repères, pas des articles, et l'éditeur inviterait à écrire long. Le
+  /// détail va dans une annonce, qui a la barre complète. React échappe le
+  /// texte d'office : aucune liste blanche à tenir de ce côté.
+  description String @db.Text
+
+  nature NatureEvenement
+
+  /// La date qui classe. **Celle du monde réel** — décision du joueur : c'est
+  /// ce qu'un joueur note dans son agenda, et la seule chose dont « à venir »
+  /// et le panneau du bureau puissent se servir.
+  ///
+  /// ⚠️ Posée à **midi**, jamais à minuit : à minuit UTC, la moitié de la
+  /// planète lirait la veille. Même précaution que `entreeEnVigueurLe`.
+  debuteLe DateTime
+
+  /// **Facultative** : un trimestre dure des mois, une veillée un soir.
+  finitLe DateTime?
+
+  /// « Modifié le », comme sur une annonce et sur un post.
+  modifieLe DateTime?
+
+  /// **Retirer n'efface pas.** Les deux colonnes vont ensemble ou pas du tout.
+  retireLe  DateTime?
+  retirePar String?
+
+  /// « L'Administration » — pas de comptes distincts en zone d'administration.
+  posePar String
+
+  creeLe DateTime @default(now())
+  majLe  DateTime @updatedAt
+
+  @@index([debuteLe])
+  @@map("evenements")
+}

@@ -54,3 +54,63 @@ export function jourEnToutesLettres(date: Date): string {
   const jour = date.getDate();
   return `${jour === 1 ? "1er" : jour} ${MOIS[date.getMonth()]} ${date.getFullYear()}`;
 }
+
+// ─────────────────────────────────────────────────────────────
+//  Un `<input type="date">`, dans les deux sens
+// ─────────────────────────────────────────────────────────────
+
+/**
+ * **Le jour saisi devient un instant, posé à MIDI.**
+ *
+ * Un champ `date` rend « 2026-09-04 » : une journée, pas un instant. On la
+ * fixe à midi et non à minuit — à minuit UTC, la moitié de la planète lit la
+ * veille, et l'écran afficherait un jour de moins que celui qu'on a saisi.
+ *
+ * Rend `null` pour tout ce qui n'est pas un jour lisible, **le 31 février
+ * compris** : `new Date(2026, 1, 31)` se lit sans broncher et devient le
+ * 3 mars. Poser une date que personne n'a saisie est pire que la refuser.
+ *
+ * ⚠️ **Pas de comparaison ici.** « Cette date est-elle permise ? » dépend de
+ * ce qu'on pose — une entrée en vigueur se compare à l'affichage, une fin
+ * d'événement à son début. Cette fonction lit, elle n'arbitre pas.
+ */
+export function jourSaisi(brut: unknown): Date | null {
+  if (typeof brut !== "string") return null;
+
+  const net = brut.trim();
+  if (net.length === 0) return null;
+
+  const lu = /^(\d{4})-(\d{2})-(\d{2})$/.exec(net);
+  if (!lu) return null;
+
+  const [annee, mois, jour] = [Number(lu[1]), Number(lu[2]), Number(lu[3])];
+  const date = new Date(annee, mois - 1, jour, 12, 0, 0, 0);
+  if (Number.isNaN(date.getTime())) return null;
+
+  // Le débordement silencieux : février 31 devient mars 3, et personne ne
+  // s'en aperçoit avant de relire la page.
+  if (
+    date.getFullYear() !== annee ||
+    date.getMonth() !== mois - 1 ||
+    date.getDate() !== jour
+  ) {
+    return null;
+  }
+
+  return date;
+}
+
+/**
+ * L'inverse : l'instant redevient la journée que le champ attend.
+ *
+ * ⚠️ **En heure LOCALE, jamais `toISOString`**, qui rend l'heure UTC : une
+ * date posée à midi le 4 sortirait « 2026-09-03 » pour qui vit à l'ouest, et
+ * le formulaire de correction afficherait la veille de ce qu'on a saisi.
+ */
+export function enJourSaisissable(date: Date | string | null): string {
+  if (!date) return "";
+  const lu = typeof date === "string" ? new Date(date) : date;
+  if (Number.isNaN(lu.getTime())) return "";
+  const deuxChiffres = (n: number) => String(n).padStart(2, "0");
+  return `${lu.getFullYear()}-${deuxChiffres(lu.getMonth() + 1)}-${deuxChiffres(lu.getDate())}`;
+}

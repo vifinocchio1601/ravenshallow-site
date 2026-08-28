@@ -3,6 +3,9 @@ import { listerAnnonces } from "@/lib/annonces/depot";
 import reglages from "@/config/bureau.json";
 import { TEXTES_CORBEAUX } from "@/lib/corbeaux/constantes";
 import { listerConversations } from "@/lib/corbeaux/depot";
+import { TEXTES_CALENDRIER } from "@/lib/calendrier/constantes";
+import { prochaineEpreuve } from "@/lib/calendrier/depot";
+import { jourEnToutesLettres } from "@/lib/dates";
 import { compterScenesOuvertes, listerScenesDe } from "@/lib/forum/depot";
 import { lireLeTournoi, pointsPersonnelsDe } from "@/lib/points/depot";
 import { auDelaDuRepere, reperDeScenes } from "@/lib/forum/scenes";
@@ -31,8 +34,8 @@ import type { CompteConnecte } from "@/lib/session/garde";
  *
  * Il a tenu cinq fois : le courrier avec la Tour aux Corbeaux, les scènes
  * avec le forum, la progression et le tournoi avec les points, les annonces
- * avec le Grand Hall. Il ne reste que `prochainesEpreuves`, qui attend le
- * calendrier scolaire.
+ * avec le Grand Hall, et **les épreuves avec le calendrier** — le 28 août
+ * 2026. Le plan a tenu six fois, et il ne reste plus rien à remplir.
  *
  * Aucune ne lève d’exception. Un bureau qui s’effondre parce qu’une brique
  * n’est pas construite serait le pire des accueils.
@@ -178,20 +181,36 @@ export async function courrierNonLu(
  * ligne de texte, et deux affichages du même nombre finiraient par se
  * contredire.
  *
- * Reste `prochainesEpreuves`, qui attend le calendrier scolaire.
+ * **`prochainesEpreuves` a cessé d’être nul le 28 août 2026**, avec le
+ * calendrier — et le panneau n’a pas eu à bouger. C’est **la sixième fois**
+ * que ce plan tient : une fonction par panneau, et chaque lot en remplace une
+ * seule. Il ne reste plus rien à remplir ici.
+ *
+ * ⚠️ **Seules les ÉPREUVES y montent.** Le panneau porte ce titre depuis le
+ * lot du bureau : y faire monter la veillée des braises le contredirait, et
+ * c’est exactement pour cela que `NatureEvenement` existe.
  */
 export async function progression(compte: CompteConnecte): Promise<Progression> {
+  const [points, epreuve] = await Promise.all([
+    compte.eleveId ? pointsPersonnelsDe(compte.eleveId) : Promise.resolve(0),
+    prochaineEpreuve(),
+  ]);
+
   return {
-    pointsPersonnels: compte.eleveId
-      ? await pointsPersonnelsDe(compte.eleveId)
-      : 0,
+    pointsPersonnels: points,
     etatMaison: compte.etatMaison,
     fonction: compte.fonction,
     roleAffiche: compte.roleAffiche,
     baguette: aUneBaguette(compte)
       ? libelleBaguette(compte.baguetteBois, compte.baguetteCoeur)
       : null,
-    prochainesEpreuves: null,
+    // La date est mise en forme ici plutôt qu’à l’écran : le panneau reçoit
+    // une chaîne ou rien, et n’a jamais eu à connaître autre chose.
+    prochainesEpreuves: epreuve
+      ? TEXTES_CALENDRIER.bureau.ligne
+          .replace("{titre}", epreuve.titre)
+          .replace("{date}", jourEnToutesLettres(new Date(epreuve.debuteLe)))
+      : null,
   };
 }
 

@@ -17,6 +17,7 @@
  */
 
 import { TEXTES_ANNONCES } from "@/lib/annonces/constantes";
+import { TEXTES_CALENDRIER } from "@/lib/calendrier/constantes";
 import { TEXTES_POINTS } from "@/lib/points/constantes";
 import { TEXTES_REGISTRE } from "@/lib/registre/constantes";
 import { NOM_COURT } from "@/lib/corbeaux/constantes";
@@ -85,6 +86,8 @@ export const ROUTES = {
    * répète pas le nom de son groupe.
    */
   resultats: "/resultats",
+  /** Le calendrier — la troisième des cinq choses de la bible §12. */
+  calendrier: "/calendrier",
   archivesReglement: "/archives/reglement",
   archivesHistoire: "/archives/histoire",
 
@@ -277,6 +280,14 @@ export const MENU: readonly EntreeMenu[] = [
         // l'autre. Même lecture que pour le Registre.
         href: ROUTES.resultats,
         libelle: TEXTES_POINTS.resultats.nom,
+      },
+      {
+        // Aucun drapeau, comme les résultats : une date n'est ni une voie de
+        // recours ni une obligation à connaître. Ce qui ouvre les annonces au
+        // suspendu et au nouvel arrivant, c'est le règlement qui change et le
+        // journal de leur bureau — pas le calendrier.
+        href: ROUTES.calendrier,
+        libelle: TEXTES_CALENDRIER.nom,
       },
       { href: ROUTES.archivesReglement, libelle: "Règlement" },
       { href: ROUTES.archivesHistoire, libelle: "Histoire" },

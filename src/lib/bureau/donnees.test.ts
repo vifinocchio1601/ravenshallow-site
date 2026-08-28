@@ -15,6 +15,16 @@ vi.mock("@/lib/points/depot", () => ({
 }));
 
 /**
+ * Même raison pour le calendrier : depuis le 28 août 2026, `progression` va y
+ * chercher la prochaine épreuve. On remplace le dépôt, pas la règle — celle
+ * qui compte ici est « seules les épreuves montent au bureau », et elle vit
+ * dans la requête, qu'un essai en base éprouve pour de bon.
+ */
+vi.mock("@/lib/calendrier/depot", () => ({
+  prochaineEpreuve: async () => null,
+}));
+
+/**
  * La note des premiers pas.
  *
  * Trois règles se vérifient ici, et elles sont du joueur, pas du code :
