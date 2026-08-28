@@ -2,7 +2,11 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useId, useRef, useState } from "react";
-import { TEXTES_FORUM } from "@/lib/forum/constantes";
+import {
+  avecLeMot,
+  TEXTES_FORUM,
+  type MotsDuLieu,
+} from "@/lib/forum/constantes";
 import { mieuxVautClore, peutRetirerLaScene } from "@/lib/forum/suppression";
 
 /**
@@ -30,12 +34,15 @@ export default function BoutonRetirerScene({
   estStaff,
   estLAuteur,
   auteursAutres,
+  mots,
 }: {
   sujetId: string;
   estStaff: boolean;
   estLAuteur: boolean;
   /** Combien d'AUTRES membres ont écrit dans la scène. */
   auteursAutres: number;
+  /** Le vocabulaire de l'espace : « la scène » ou « le sujet ». */
+  mots: MotsDuLieu;
 }) {
   const routeur = useRouter();
   const titreId = useId();
@@ -101,7 +108,7 @@ export default function BoutonRetirerScene({
         }}
         className="rounded-sm border border-ember/30 px-3 py-1.5 font-display text-[0.6rem] uppercase tracking-[0.12em] text-silver transition-colors duration-300 hover:border-ember/60 hover:text-parchment"
       >
-        {t.action}
+        {avecLeMot(t.action, mots)}
       </button>
 
       <dialog
@@ -116,7 +123,7 @@ export default function BoutonRetirerScene({
             id={titreId}
             className="font-display text-xl font-semibold tracking-[0.03em] text-parchment"
           >
-            {t.titre}
+            {avecLeMot(t.titre, mots)}
           </h2>
 
           <p className="mt-4 font-body leading-[1.7] text-parchment-dim">
@@ -180,7 +187,7 @@ export default function BoutonRetirerScene({
                 onClick={() => appeler({ clos: true })}
                 className="btn btn-solid px-5 tracking-[0.12em] disabled:opacity-50"
               >
-                {t.clore}
+                {avecLeMot(t.clore, mots)}
               </button>
             ) : null}
 
@@ -190,7 +197,7 @@ export default function BoutonRetirerScene({
               onClick={() => appeler({ supprime: true, motif })}
               className="btn btn-ghost px-5 tracking-[0.12em] disabled:opacity-50"
             >
-              {t.confirmer}
+              {avecLeMot(t.confirmer, mots)}
             </button>
           </div>
         </div>

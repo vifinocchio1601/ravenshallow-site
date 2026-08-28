@@ -27,12 +27,15 @@ export default function ModifierPost({
   corpsInitial,
   avertissementInitial,
   lignesMinimum,
+  estDuJeuDeRole = true,
 }: {
   postId: string;
   corpsInitial: string;
   avertissementInitial: string | null;
   /** Dix dans le domaine (art. 12.2), nul ailleurs. */
   lignesMinimum: number | null;
+  /** Voir `ChampPost` : hors RP, ni compteur, ni avertissement de contenu. */
+  estDuJeuDeRole?: boolean;
 }) {
   const routeur = useRouter();
   const t = TEXTES_FORUM.modification;
@@ -90,6 +93,7 @@ export default function ModifierPost({
   return (
     <div className="w-full">
       <ChampPost
+        estDuJeuDeRole={estDuJeuDeRole}
         valeur={corps}
         onChange={setCorps}
         lignesMinimum={lignesMinimum}

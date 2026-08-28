@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useId, useState } from "react";
 import ChampPost from "@/components/forum/ChampPost";
-import { TEXTES_FORUM } from "@/lib/forum/constantes";
+import { TEXTES_FORUM, type MotsDuLieu } from "@/lib/forum/constantes";
 import { respecteLeMinimum } from "@/lib/forum/longueur";
 import { TITRE_MAX } from "@/lib/forum/limites";
 
@@ -23,6 +23,8 @@ export default function FormulaireScene({
   lieu,
   sujetId,
   lignesMinimum,
+  mots,
+  racine,
 }: {
   /** Pour ouvrir une scène : la clé de l’espace et l’adresse du lieu. */
   espace?: string;
@@ -30,6 +32,17 @@ export default function FormulaireScene({
   /** Pour répondre : l’identifiant du sujet. Exclusif du couple ci-dessus. */
   sujetId?: string;
   lignesMinimum: number | null;
+  /**
+   * Le vocabulaire de l’espace. « Titre de la scène » n’a pas de sens dans
+   * « Présentations », et l’aide du mode de participation — (LIBRE),
+   * (RÉSERVÉ) — ne parle que du jeu de rôle : elle disparaît hors RP.
+   */
+  mots: MotsDuLieu;
+  /**
+   * L'adresse de l'espace — « /ecole », « /non-mages ». Nulle en réponse : on
+   * y est déjà, et rien ne redirige.
+   */
+  racine?: string;
 }) {
   const router = useRouter();
   const t = TEXTES_FORUM.ecrire;
@@ -81,7 +94,12 @@ export default function FormulaireScene({
       setCorps("");
       setAvertissement("");
       setEnvoi(false);
-      if (lu.sujetId) router.push(`/ecole/${lieu}/${lu.sujetId}`);
+      // ⚠️ **La racine vient de l'espace, jamais écrite en dur.** Elle valait
+      // « /ecole » jusqu'au 28 août 2026 : un sujet ouvert dans « Présentations »
+      // atterrissait donc au château, sous le vocabulaire du jeu de rôle. Le
+      // sujet était bien créé au bon endroit — c'était l'adresse d'arrivée qui
+      // mentait.
+      if (lu.sujetId) router.push(`${racine}/${lieu}/${lu.sujetId}`);
       else router.refresh();
     } catch {
       setErreur(TEXTES_FORUM.erreurs.refuse);
@@ -97,7 +115,7 @@ export default function FormulaireScene({
             htmlFor={idTitre}
             className="font-display text-[0.66rem] uppercase tracking-[0.14em] text-parchment-dim"
           >
-            {t.titre.libelle}
+            {mots.titreLibelle}
           </label>
           <input
             id={idTitre}
@@ -106,18 +124,26 @@ export default function FormulaireScene({
             onChange={(e) => setTitre(e.target.value)}
             maxLength={TITRE_MAX}
             disabled={envoi}
-            placeholder={t.titre.exemple}
+            placeholder={mots.titreExemple}
             aria-describedby={idAideTitre}
             className="mt-2 w-full rounded-sm border border-silver/25 bg-mist/60 px-4 py-2 font-body text-base text-parchment placeholder:italic placeholder:text-silver/50 transition-colors duration-300 hover:border-silver/40 focus:border-aurora-teal/70 disabled:opacity-60"
           />
           {/* Le mode est une convention entre joueurs, et l'aide le dit sans
               l'imposer : un titre sans mention passe. */}
-          <p
-            id={idAideTitre}
-            className="mt-1 max-w-[62ch] font-body text-xs italic leading-relaxed text-silver"
-          >
-            {t.titre.aide}
-          </p>
+          {/* ⚠️ **L'aide du mode de participation ne s'affiche qu'en RP.**
+              « (LIBRE), (SUR INVITATION), (RÉSERVÉ) » est une convention entre
+              joueurs pour les scènes ; dans « Présentations », elle donnerait
+              une consigne qui ne s'applique à rien. Le hors RP se reconnaît à
+              son absence de minimum de lignes — c'est l'espace qui le dit,
+              jamais le nom du lieu. */}
+          {lignesMinimum !== null ? (
+            <p
+              id={idAideTitre}
+              className="mt-1 max-w-[62ch] font-body text-xs italic leading-relaxed text-silver"
+            >
+              {t.titre.aide}
+            </p>
+          ) : null}
         </div>
       )}
 
@@ -125,6 +151,8 @@ export default function FormulaireScene({
         valeur={corps}
         onChange={setCorps}
         lignesMinimum={lignesMinimum}
+        libelleCorps={mots.corpsLibelle}
+        estDuJeuDeRole={mots.estDuJeuDeRole}
         avertissement={avertissement}
         onAvertissement={setAvertissement}
         reponse={estUneReponse}
@@ -144,7 +172,7 @@ export default function FormulaireScene({
 
       <div>
         <button type="submit" disabled={!pret || envoi} className="btn btn-ghost">
-          {envoi ? t.envoi : estUneReponse ? t.repondre : t.ouvrir}
+          {envoi ? t.envoi : estUneReponse ? t.repondre : mots.ouvrir}
         </button>
       </div>
     </form>

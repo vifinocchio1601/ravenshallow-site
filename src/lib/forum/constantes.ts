@@ -123,6 +123,20 @@ export const TEXTES_POUVOIRS = {
  * code, et c’est le joueur qui l’écrit.
  */
 export const TEXTES_FORUM = {
+  /**
+   * **L'espace hors RP.** Son nom est resté « Le monde des non-mages » —
+   * décision du joueur, 28 août 2026 : c'est le monde d'où l'on parle quand on
+   * n'est pas son personnage. Sa description en base disait du jeu de rôle
+   * jusqu'à ce jour-là, et c'était une erreur de ma part, jamais tranchée par
+   * lui.
+   */
+  nonMages: {
+    eyebrow: "Hors du jeu",
+    titre: "Le monde des non-mages",
+    accroche:
+      "Ici on écrit en son nom, pas en celui de son élève. Aucune longueur minimale, aucun point — et l’on peut y poser une question sans la mettre en scène.",
+  },
+
   ecole: {
     eyebrow: "Le domaine",
     titre: "L’école",
@@ -185,6 +199,46 @@ export const TEXTES_FORUM = {
   },
 
   /** Ouvrir une scène, et y répondre. */
+  /**
+   * **Les mots changent d'un espace à l'autre, l'écran non.**
+   *
+   * `/ecole` et `/non-mages` partagent `PageDuLieu` et `PageDuSujet` — deux
+   * copies finiraient par diverger. Mais on n'« ouvre pas une scène » dans
+   * « Présentations », et « Rien ne s'y joue » ne veut rien dire d'une section
+   * hors RP. Le vocabulaire voyage donc en paramètre, choisi par la page.
+   *
+   * ⚠️ **`titreAide` et `corpsAide` peuvent être nuls**, et c'est le point :
+   * l'aide du mode de participation (LIBRE, RÉSERVÉ…) et celle des balises
+   * `[HRP]` ne parlent que du jeu de rôle. Les afficher hors RP donnerait des
+   * consignes qui ne s'appliquent à rien.
+   */
+  motsRp: {
+    estDuJeuDeRole: true,
+    /** Le mot qui varie d'un espace à l'autre — l'article voyage avec lui. */
+    laScene: "la scène",
+    cetteScene: "cette scène",
+    sceneClose: "Scène close",
+    retour: "Retour à l’école",
+    aucunSujet: "Rien ne s’y joue pour l’instant.",
+    ouvrir: "Ouvrir une scène",
+    titreLibelle: "Titre de la scène",
+    titreExemple: "Le vent sur la galerie (RÉSERVÉ Sigrid)",
+    corpsLibelle: "Ton post",
+  },
+
+  motsHorsRp: {
+    estDuJeuDeRole: false,
+    laScene: "le sujet",
+    cetteScene: "ce sujet",
+    sceneClose: "Sujet clos",
+    retour: "Retour au monde des non-mages",
+    aucunSujet: "Personne n’a encore ouvert de sujet ici.",
+    ouvrir: "Ouvrir un sujet",
+    titreLibelle: "Titre du sujet",
+    titreExemple: "Bonjour, moi c’est…",
+    corpsLibelle: "Ton message",
+  },
+
   ecrire: {
     ouvrir: "Ouvrir une scène",
     repondre: "Répondre",
@@ -254,22 +308,22 @@ export const TEXTES_FORUM = {
    */
   suppression: {
     scene: {
-      action: "Supprimer la scène",
-      titre: "Supprimer cette scène ?",
+      action: "Supprimer {laScene}",
+      titre: "Supprimer {cetteScene} ?",
       /** Quand on est seul à y avoir écrit : rien à ménager. */
       avertissementSeul:
-        "Elle disparaîtra du forum. Personne d’autre n’y a écrit.",
+        "Ce sera retiré du forum. Personne d’autre n’y a écrit.",
       /** Pour le staff : ce qui part appartient à plusieurs. */
       avertissementStaff:
-        "Elle disparaîtra du forum pour tout le monde. Ceux qui y ont écrit seront prévenus par un corbeau du château, avec le motif que tu donnes ici.",
+        "Ce sera retiré du forum pour tout le monde. Ceux qui y ont écrit seront prévenus par un corbeau du château, avec le motif que tu donnes ici.",
       motif: "Motif de la suppression",
       motifAide:
         "Il figurera au journal, et dans le corbeau envoyé à ceux qui y ont écrit.",
       /** Proposé avant la suppression dès qu’un autre a écrit. */
       plutotClore:
-        "Quelqu’un d’autre a écrit dans cette scène. La clore la ferme sans rien retirer à personne.",
-      clore: "Clore la scène",
-      confirmer: "Supprimer la scène",
+        "Quelqu’un d’autre a écrit ici. Clore ferme sans rien retirer à personne.",
+      clore: "Clore {laScene}",
+      confirmer: "Supprimer {laScene}",
       annuler: "Annuler",
     },
 
@@ -277,7 +331,7 @@ export const TEXTES_FORUM = {
       action: "Retirer mon post",
       titre: "Retirer ce post ?",
       /** Il fermait la scène : il s’en va sans laisser de vide à expliquer. */
-      avertissementSeul: "Il disparaîtra de la scène.",
+      avertissementSeul: "Il disparaîtra du fil.",
       /** On a répondu après : le retirer troue la suite. */
       avertissementSuivi:
         "Quelqu’un a répondu après lui. Sa place restera, avec la mention qu’un post a été retiré — sans quoi la suite de la scène ne se comprendrait plus.",
@@ -304,11 +358,11 @@ export const TEXTES_FORUM = {
 
   /** Ce que le staff peut faire sur un sujet, et ce que ça dit. */
   moderation: {
-    clore: "Clore la scène",
-    rouvrir: "Rouvrir la scène",
+    clore: "Clore {laScene}",
+    rouvrir: "Rouvrir {laScene}",
     epingler: "Épingler",
     desepingler: "Retirer l’épingle",
-    close: "Scène close",
+    close: "{sceneClose}",
     closeDetail: "Close le {date} par {auteur}. Les points acquis restent acquis.",
     epinglee: "Épinglé",
   },
@@ -355,3 +409,55 @@ export const TEXTES_FORUM = {
       "Au-delà du rythme conseillé ({repere} scènes). Rien ne t’en empêche — mais tes partenaires t’attendent.",
   },
 } as const;
+
+/**
+ * **Le vocabulaire d'un espace**, choisi par la page et passé aux écrans
+ * partagés. Voir `TEXTES_FORUM.motsRp` et `TEXTES_FORUM.motsHorsRp`.
+ */
+export type MotsDuLieu = {
+  /**
+   * ⚠️ **Explicite, et jamais déduit de l'absence de minimum de lignes.**
+   * L'espace `maison` n'en a pas non plus et reste du jeu de rôle : le
+   * raccourci « pas de minimum donc hors RP » serait faux le jour où l'on
+   * meublera les dortoirs.
+   *
+   * Il commande trois choses qui ne parlent que du jeu de rôle : l'aide du
+   * mode de participation — (LIBRE), (RÉSERVÉ) —, celle des balises `[HRP]`,
+   * et l'avertissement de contenu de l'article 16.3. Hors RP, elles
+   * donneraient des consignes qui ne s'appliquent à rien : l'article 4 y
+   * traite les sujets sensibles autrement, en les interdisant plutôt qu'en
+   * les annonçant.
+   */
+  estDuJeuDeRole: boolean;
+  /**
+   * **Le mot varie, la phrase non.** « Clore la scène » n'a pas de sens sur un
+   * fil de présentation — mais dupliquer une vingtaine de phrases pour un seul
+   * mot les ferait diverger. Elles sont donc écrites avec `{laScene}`, et
+   * l'article voyage avec le mot : « la scène » est féminin, « le sujet » ne
+   * l'est pas.
+   */
+  laScene: string;
+  cetteScene: string;
+  sceneClose: string;
+  retour: string;
+  aucunSujet: string;
+  ouvrir: string;
+  titreLibelle: string;
+  titreExemple: string;
+  corpsLibelle: string;
+};
+
+/**
+ * **Le mot de l'espace, posé dans une phrase.**
+ *
+ * `« Clore {laScene} »` devient « Clore la scène » au château et « Clore le
+ * sujet » hors RP. Une seule fonction, appelée partout : trois `replace`
+ * recopiés dans trois composants finiraient par en oublier un, et c'est celui
+ * qu'on lirait avec une accolade à l'écran.
+ */
+export function avecLeMot(gabarit: string, mots: MotsDuLieu): string {
+  return gabarit
+    .replace("{laScene}", mots.laScene)
+    .replace("{cetteScene}", mots.cetteScene)
+    .replace("{sceneClose}", mots.sceneClose);
+}

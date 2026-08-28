@@ -40,6 +40,8 @@ export default function ChampPost({
   onAvertissement,
   reponse = false,
   desactive = false,
+  libelleCorps,
+  estDuJeuDeRole = true,
 }: {
   valeur: string;
   onChange: (v: string) => void;
@@ -49,6 +51,14 @@ export default function ChampPost({
   onAvertissement: (v: string) => void;
   /** Change le libellé : « Ton post » ou « Ta réponse ». */
   reponse?: boolean;
+  /** Le mot de l'espace : « Ton post » en RP, « Ton message » hors RP. */
+  libelleCorps?: string;
+  /**
+   * Hors RP, trois choses disparaissent : le compteur de lignes — il n'y a pas
+   * de minimum —, l'aide des balises `[HRP]`, et l'avertissement de contenu de
+   * l'article 16.3. Explicite, jamais déduit du minimum.
+   */
+  estDuJeuDeRole?: boolean;
   desactive?: boolean;
 }) {
   const t = TEXTES_FORUM.ecrire;
@@ -92,7 +102,7 @@ export default function ChampPost({
           id={idCorps}
           className="block font-display text-[0.66rem] uppercase tracking-[0.14em] text-parchment-dim"
         >
-          {reponse ? t.corps.libelleReponse : t.corps.libelle}
+          {reponse ? t.corps.libelleReponse : (libelleCorps ?? t.corps.libelle)}
         </span>
 
         <EditeurPost
@@ -106,7 +116,12 @@ export default function ChampPost({
 
         {/* Le compteur. `role="status"` le rend poli : il ne coupe jamais la
             frappe, et il n'est relu que lorsque la phrase change — donc à
-            chaque ligne, pas à chaque lettre. */}
+            chaque ligne, pas à chaque lettre.
+
+            ⚠️ **Hors RP, il ne s'affiche pas.** « 0 ligne » sous un message de
+            présentation ne mesure rien : il n'y a pas de minimum à atteindre,
+            et un compteur qui ne compte vers rien inquiète pour rien. */}
+        {estDuJeuDeRole ? (
         <p
           id={idCompteur}
           role="status"
@@ -117,6 +132,7 @@ export default function ChampPost({
           <span className="sr-only">{t.compteur.aria} : </span>
           {phrase}
         </p>
+        ) : null}
 
         {lignesMinimum === null ? null : (
           <div
@@ -132,12 +148,24 @@ export default function ChampPost({
           </div>
         )}
 
-        <p id={idAide} className="mt-1 font-body text-xs italic text-silver">
-          {t.corps.aideHrp}
-        </p>
+        {/* ⚠️ **L'aide des balises [HRP] ne vaut qu'en RP.** Elle explique que
+            le hors-RP ne compte pas dans le minimum de lignes (art. 12.3) —
+            hors RP, il n'y a pas de minimum, et tout le message est du hors
+            RP. La consigne ne s'appliquerait à rien. */}
+        {estDuJeuDeRole ? (
+          <p id={idAide} className="mt-1 font-body text-xs italic text-silver">
+            {t.corps.aideHrp}
+          </p>
+        ) : null}
       </div>
 
-      {/* Art. 16.3 — proposé au moment de publier, jamais réclamé. */}
+      {/* Art. 16.3 — proposé au moment de publier, jamais réclamé.
+
+          ⚠️ **Hors RP, il ne s'affiche pas.** L'avertissement annonce ce qu'une
+          SCÈNE contient ; l'article 4, qui traite des sujets sensibles hors RP,
+          les interdit plutôt que de demander de les annoncer. Le proposer dans
+          « Présentations » donnerait une consigne qui ne s'applique à rien. */}
+      {estDuJeuDeRole ? (
       <div>
         <label
           htmlFor={idAvertissement}
@@ -162,6 +190,7 @@ export default function ChampPost({
           {t.avertissement.aide}
         </p>
       </div>
+      ) : null}
     </div>
   );
 }

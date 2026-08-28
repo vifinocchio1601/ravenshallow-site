@@ -564,6 +564,7 @@ meilleur moyen d'en avoir trois qui divergent.
 
 | | `domaine` | `non-mages` | `maison` |
 | --- | --- | --- | --- |
+| ce qu'on y écrit | du jeu de rôle | **hors RP** | du jeu de rôle |
 | lignes minimum | **10** (art. 12.2) | aucune | aucune |
 | qui ouvre un sujet | tout membre | tout membre | préfets et permission |
 | qui répond | tout membre | tout membre | membres de la maison |
@@ -1796,6 +1797,84 @@ bien : c'est ce qui rend l'erreur difficile à voir.
 
 ---
 
+## Le hors RP — « Le monde des non-mages »
+
+Posé le 28 août 2026. **L'espace des joueurs**, pas des personnages :
+présentations, recherche de liens, demandes de rôles, absences, suggestions.
+
+⚠️ **Ce n'était pas ça jusqu'à ce jour-là.** L'espace `non-mages` décrivait
+« ce qui se joue loin des falaises, chez ceux qui ne savent rien de la
+magie » — du **jeu de rôle** hors du château. Ce texte venait de la migration
+du forum ; il n'est ni dans la bible ni dans le règlement, et le joueur ne
+l'avait jamais tranché. Il l'a fait le 28 août : c'est le hors RP.
+
+Le **nom** ne bouge pas : « le monde des non-mages » est celui d'où l'on parle
+quand on n'est pas son personnage. Seule la description a changé.
+
+**Aucun paramètre de l'espace n'a eu à bouger** : ni ligne minimum, ni points,
+ni décompte de scènes, ouvert à tout membre. Il était déjà réglé pour ça.
+
+**Deux textes du joueur le supposaient sans qu'il existe** : l'article 12.3 —
+les échanges hors RP nourris « se poursuivent en messagerie **ou sur le
+forum** » — et la bible, qui rend une absence à signaler obligatoire au-delà
+de deux semaines sans dire où.
+
+### Un seul étage de sections
+
+Cinq sections, pas de sous-sections. Une aile du château contient des pièces
+qui contiennent des scènes ; « Présentations » et « Absences » sont des choses
+de même niveau, et un étage de plus n'ajouterait que des clics.
+
+⚠️ **Un sujet appartient toujours à une section en base.** « Juste des
+topics » sans rien au-dessus demanderait une section fantôme que l'écran
+cacherait — un cas particulier à porter pour toujours.
+
+⚠️ **Les partenariats n'ont pas de section**, et ce n'est pas un oubli : tout
+le site est derrière la connexion, et une section que les forums démarcheurs
+ne peuvent pas atteindre ne sert à personne. La bible en fait pourtant une
+priorité de recrutement — cela demande une page publique sur la vitrine.
+
+### Les écrans sont partagés, les mots ne le sont pas
+
+`PageDuLieu` et `PageDuSujet` servent **les deux espaces** : deux copies
+finiraient par diverger, et c'est la copie oubliée qui laisserait un jour
+écrire là où le lieu se refuse. Mais on n'« ouvre pas une scène » dans
+« Présentations ».
+
+Le vocabulaire voyage donc en paramètre — `MotsDuLieu`, choisi par la page
+entre `TEXTES_FORUM.motsRp` et `motsHorsRp`.
+
+**`estDuJeuDeRole` commande trois disparitions**, et il est **explicite,
+jamais déduit de l'absence de minimum de lignes** : l'espace `maison` n'en a
+pas non plus et reste du jeu de rôle.
+
+| Ce qui disparaît hors RP | Pourquoi |
+| --- | --- |
+| le compteur de lignes | il n'y a pas de minimum : il compterait vers rien |
+| l'aide des balises `[HRP]` | tout le message est du hors RP |
+| l'aide du mode de participation | (LIBRE), (RÉSERVÉ) ne valent que pour une scène |
+| l'avertissement de contenu | art. 16.3 annonce ce qu'une **scène** contient ; l'article 4 traite les sujets sensibles hors RP en les **interdisant**, pas en les annonçant |
+
+**Le mot varie, la phrase non.** « Clore la scène » / « Clore le sujet » : les
+phrases sont écrites avec `{laScene}`, et `avecLeMot` pose le mot — l'article
+voyage avec lui, « la scène » étant féminin et « le sujet » non. Dupliquer
+vingt phrases pour un seul mot les aurait fait diverger.
+
+⚠️ **Un appel oublié affiche l'accolade à l'écran**, et c'est arrivé le jour
+même sur le bouton « Clore ». `mots.test.ts` relit le code source des
+composants du forum et refuse tout `{t.clé}` nu sur une clé à gabarit — **en
+suivant l'objet auquel `t` est lié**, jamais le seul nom de la clé :
+`suppression.scene.action` porte un gabarit, `suppression.post.action` non.
+Éprouvé en réintroduisant la faute : il tombe et nomme le fichier.
+
+⚠️ **La racine de l'espace ne s'écrit pas en dur.** `FormulaireScene`
+redirigeait vers `/ecole/…` après création : un sujet ouvert dans
+« Présentations » atterrissait au château, sous le vocabulaire du jeu de rôle.
+Le sujet était pourtant créé au bon endroit — c'était l'adresse d'arrivée qui
+mentait.
+
+---
+
 ## Les transactions
 
 **Toute transaction interactive passe par `transaction()`**, dans
@@ -2672,9 +2751,13 @@ archives » a pris son nom. Voir « Le Grand Hall ».
 quatre tubes, le top du mois, et **le salon**. Voir « Le tableau d'affichage
 d'une maison » et « Le salon d'une maison ».
 
+**Le hors RP est ouvert** : « Le monde des non-mages » a cessé d'être du jeu de
+rôle, et porte cinq sections — présentations, liens, rôles, absences,
+suggestions. Voir « Le hors RP ».
+
 **Pas encore** : les cours et leurs QCM, les examens, le calendrier, et le
-contenu des espaces de forum `non-mages` et `maison`. **Les cours viendront en
-dernier** — décision du joueur, 28 août 2026.
+contenu de l'espace de forum `maison`. **Les cours viendront en dernier** —
+décision du joueur, 28 août 2026.
 Le point d'accroche des cours est posé : `SourcePoint.QCM` et
 `SourcePoint.EXAMEN` existent dans l'enum et n'attendent que d'être écrits.
 

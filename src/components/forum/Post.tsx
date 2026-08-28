@@ -47,6 +47,7 @@ export default function Post({
   estStaff,
   aDesPostsApres = false,
   lignesMinimum = null,
+  estDuJeuDeRole = true,
 }: {
   post: PostAffiche;
   estLAuteur: boolean;
@@ -55,6 +56,9 @@ export default function Post({
   aDesPostsApres?: boolean;
   /** Le minimum du lieu, pour que le champ de reprise compte comme la route. */
   lignesMinimum?: number | null;
+  /** Voir `ChampPost` : hors RP, la reprise n'affiche ni compteur ni
+   * avertissement. */
+  estDuJeuDeRole?: boolean;
 }) {
   const t = TEXTES_FORUM;
   const peutLireLeTexte = !post.retire && (!post.masque || estLAuteur || estStaff);
@@ -178,6 +182,7 @@ export default function Post({
                     corpsInitial={post.corps}
                     avertissementInitial={post.avertissementContenu}
                     lignesMinimum={lignesMinimum}
+                    estDuJeuDeRole={estDuJeuDeRole}
                   />
                   <BoutonRetirerPost
                     postId={post.id}

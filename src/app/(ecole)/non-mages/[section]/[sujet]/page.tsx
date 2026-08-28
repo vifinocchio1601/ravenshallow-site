@@ -5,31 +5,26 @@ import { TEXTES_FORUM } from "@/lib/forum/constantes";
 import { exigerAcces } from "@/lib/session/garde";
 
 export const metadata: Metadata = {
-  title: `${TEXTES_FORUM.ecole.titre} — Ravenshallow`,
+  title: `${TEXTES_FORUM.nonMages.titre} — Ravenshallow`,
   robots: { index: false, follow: false },
 };
 
 export const dynamic = "force-dynamic";
 
-/**
- * Une scène du château.
- *
- * L'écran est partagé avec les fils hors RP — `PageDuSujet` —, et cette page
- * ne porte que la route à garder.
- */
+/** Un fil hors RP — le même écran qu'une scène du château. */
 export default async function Page({
   params,
 }: {
-  params: { piece: string; sujet: string };
+  params: { section: string; sujet: string };
 }) {
-  const compte = await exigerAcces(ROUTES.ecole);
+  const compte = await exigerAcces(ROUTES.nonMages);
   return (
     <PageDuSujet
       compte={compte}
-      slug={params.piece}
+      slug={params.section}
       sujetId={params.sujet}
-      mots={TEXTES_FORUM.motsRp}
-      racine={ROUTES.ecole}
+      mots={TEXTES_FORUM.motsHorsRp}
+      racine={ROUTES.nonMages}
     />
   );
 }

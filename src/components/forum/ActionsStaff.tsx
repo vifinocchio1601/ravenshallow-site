@@ -2,7 +2,11 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { TEXTES_FORUM } from "@/lib/forum/constantes";
+import {
+  avecLeMot,
+  TEXTES_FORUM,
+  type MotsDuLieu,
+} from "@/lib/forum/constantes";
 
 /**
  * Ce que le staff peut faire sur une scène et sur un post.
@@ -57,12 +61,15 @@ export function ActionsSujet({
   epingle,
   peutClore,
   peutEpingler,
+  mots,
 }: {
   sujetId: string;
   clos: boolean;
   epingle: boolean;
   peutClore: boolean;
   peutEpingler: boolean;
+  /** Le vocabulaire de l'espace : « Clore la scène » ou « Clore le sujet ». */
+  mots: MotsDuLieu;
 }) {
   const { appeler, enCours, erreur } = useAction();
   const t = TEXTES_FORUM.moderation;
@@ -77,7 +84,7 @@ export function ActionsSujet({
           onClick={() => appeler(`/api/forum/sujets/${sujetId}`, { clos: !clos })}
           className={BOUTON}
         >
-          {clos ? t.rouvrir : t.clore}
+          {avecLeMot(clos ? t.rouvrir : t.clore, mots)}
         </button>
       ) : null}
 
