@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import EnTeteAdmin from "@/components/admin/EnTeteAdmin";
 import FormulaireCloture from "@/components/admin/FormulaireCloture";
+import { jourEnToutesLettres as jour } from "@/lib/dates";
 import { NOMS_MAISON } from "@/lib/ecole/blasons";
 import { detailDUneMaison, moyenneAffichee } from "@/lib/points/affichage";
 import { TEXTES_POINTS } from "@/lib/points/constantes";
@@ -144,12 +145,4 @@ export default async function CloturePage() {
       </div>
     </main>
   );
-}
-
-function jour(date: Date): string {
-  return date.toLocaleDateString("fr-FR", {
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  });
 }

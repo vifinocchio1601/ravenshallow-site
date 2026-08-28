@@ -783,3 +783,95 @@ export async function effectifs(): Promise<Record<Maison, number>> {
   });
   return effectifsParMaison(membres);
 }
+
+// ─────────────────────────────────────────────────────────────
+//  Lire — les années passées
+// ─────────────────────────────────────────────────────────────
+
+/** Une année close, telle qu’elle a été figée le soir de sa clôture. */
+export type AnneeArchivee = {
+  saison: Saison & { ouverteLe: Date; closeLe: Date };
+  /** Les quatre maisons, **dans l’ordre de `MAISONS`** — jamais triées. */
+  lignes: {
+    maison: Maison;
+    points: number;
+    effectif: number;
+    moyenne: number;
+    rang: number;
+  }[];
+  /** La maison de rang 1, ou `null` si les quatre étaient à zéro. */
+  gagnante: Maison | null;
+};
+
+/**
+ * **Le palmarès : ce que chaque année close a donné.**
+ *
+ * `ClassementArchive` était écrit à chaque clôture depuis le 27 août 2026 et
+ * **n’était lu nulle part** — un déclencheur le protège de toute réécriture,
+ * pour une table que personne ne voyait. C’est cette page qui lui donne sa
+ * raison d’être : sans elle, clore une année ne laissait aucune trace visible
+ * d’un joueur.
+ *
+ * ⚠️ **Rien n’est recalculé ici, et il ne faut pas le faire.** Les chiffres
+ * sortent de l’archive telle quelle : les effectifs ont bougé depuis, des
+ * comptes sont partis, et une moyenne refaite aujourd’hui donnerait un autre
+ * classement que celui qu’on a annoncé le soir de la clôture. C’est le même
+ * principe que `placeConservee` et que l’année figée d’un sujet.
+ *
+ * L’ordre des quatre lignes est celui de `MAISONS`, comme partout : le rang
+ * voyage sur la ligne, et un tableau dont les lignes changent de place entre
+ * deux visites est illisible.
+ */
+export async function palmares(): Promise<AnneeArchivee[]> {
+  const saisons = await prisma.saisonScolaire.findMany({
+    where: { NOT: { closeLe: null } },
+    orderBy: { closeLe: "desc" },
+    select: {
+      id: true,
+      nom: true,
+      ouverteLe: true,
+      closeLe: true,
+      classement: {
+        select: {
+          maison: true,
+          points: true,
+          effectif: true,
+          moyenne: true,
+          rang: true,
+        },
+      },
+    },
+  });
+
+  return saisons.map((saison) => {
+    const parMaison = new Map(saison.classement.map((l) => [l.maison, l]));
+    const lignes = MAISONS.map((maison) => {
+      const ligne = parMaison.get(maison);
+      // Une maison absente de l'archive n'est pas censée exister — la clôture
+      // pose les quatre ensemble. On la montre à zéro plutôt que de la faire
+      // disparaître du tableau : un trou se lirait comme un défaut d'écran.
+      return {
+        maison,
+        points: ligne?.points ?? 0,
+        effectif: ligne?.effectif ?? 0,
+        moyenne: ligne?.moyenne ?? 0,
+        rang: ligne?.rang ?? 1,
+      };
+    });
+
+    return {
+      saison: {
+        id: saison.id,
+        nom: saison.nom,
+        ouverteLe: saison.ouverteLe,
+        closeLe: saison.closeLe as Date,
+      },
+      lignes,
+      // **Pas de colonne « gagnante »** : c'est la maison de rang 1, et
+      // encore faut-il qu'elle ait marqué. Quatre maisons à zéro n'ont pas de
+      // vainqueur, et en désigner un par le seul ordre alphabétique serait
+      // faux. Même lecture qu'à la clôture.
+      gagnante: lignes.find((l) => l.rang === 1 && l.points > 0)?.maison ?? null,
+    };
+  });
+}

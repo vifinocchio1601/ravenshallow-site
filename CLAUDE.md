@@ -1433,6 +1433,78 @@ une charge qu'on délègue.
 
 ---
 
+## Les résultats — la deuxième feuille du Grand Hall
+
+Posés le 28 août 2026. `/resultats` : le tournoi en cours, **les décisions de
+l'administration**, et le palmarès des années closes. Bible §12 : le Grand Hall
+porte « règlement, annonces, calendrier, résultats, événements à venir » — il
+en tient maintenant trois sur cinq.
+
+**Rien en base.** Tout existait : `lireLeTournoi` sert déjà les tubes du
+bureau et l'écran d'administration, `historiqueDesAjustements` était écrit
+pour `/admin/points`, et `ClassementArchive` **était rempli à chaque clôture
+sans être lu nulle part** — une table protégée par un déclencheur, pour
+personne. `palmares()` lui donne sa raison d'être : sans cette page, clore une
+année ne laissait aucune trace visible d'un joueur.
+
+⚠️ **Rien n'y est recalculé, et il ne faut pas s'y mettre.** Les chiffres d'une
+année close sortent de l'archive telle quelle : les effectifs ont bougé depuis,
+des comptes sont partis, et une moyenne refaite aujourd'hui donnerait un autre
+classement que celui annoncé le dernier soir. Même principe que
+`placeConservee` et que l'année figée d'un sujet.
+
+**Le chiffre public est `pointsAuTournoi`**, avec son plancher à zéro — jamais
+`points`, qui peut être négatif. L'administration voit le vrai, et une ligne
+le lui dit là-bas ; ici, un « −15 » sous un tube vide n'apprendrait rien à
+personne.
+
+### L'historique des ajustements a trouvé sa place
+
+C'était la question en attente depuis le 27 août 2026, et le joueur a tranché
+le 28 : **au Grand Hall, pas sur la page d'une maison.** La colonne `motif` le
+promettait depuis le lot des points — « affiché dans l'historique public de la
+maison ».
+
+Le Grand Hall l'emporte pour une raison qui ne se voyait pas d'avance : une
+maison ne verrait que **ses propres** décisions, donc jamais celle qui explique
+pourquoi une autre est passée devant.
+
+⚠️ **Un ajustement annulé reste affiché, barré.** Le geste ET son retrait : un
+retrait de points qui disparaîtrait de l'historique serait pire qu'un retrait
+injuste. C'est le schéma qui le dit, et l'écran s'y tient.
+
+⚠️ **Les points DONNÉS à un joueur n'y figurent pas.** Ils portent un nom et un
+motif ; « 5 points à Sigrid pour… » affiché à tout le site n'est pas la même
+chose qu'une décision sur une maison. Ne pas les y ajouter « pour la
+symétrie » — c'est le même raisonnement que `PART_DANS_LE_VIDE`.
+
+**Aucun drapeau sur la feuille du menu** : ni le membre suspendu ni le nouvel
+arrivant n'y entrent. Les annonces leur sont ouvertes pour deux raisons
+écrites — le règlement qui change, le journal de leur bureau qui y renvoie ;
+un classement n'est ni l'un ni l'autre. Même lecture que pour le Registre.
+
+**Le tableau des quatre maisons est UN composant**, servi par la saison en
+cours et par chaque année close. Deux tableaux finiraient par ne plus dire la
+même chose. Il est **borné à 44 rem** : étalé sur toute la page, « Kaldrafn »
+se retrouve à quarante centimètres de son rang et l'œil ne les relie plus.
+
+### `lib/dates.ts` — et le « 1er »
+
+`toLocaleDateString("fr-FR")` rend « 1 août 2026 ». En français on écrit
+« 1er août », et seulement le premier du mois. La faute se voyait sur le
+palmarès dès le premier essai.
+
+**Une fonction, un endroit** — `jourEnToutesLettres`. Les trois écrans du
+domaine des points s'y sont ralliés (les résultats, `/admin/points`,
+`/admin/cloture`), qui portaient chacun la même `jour()` locale.
+
+⚠️ **Une douzaine d'écrans d'administration gardent encore la leur**, sans le
+« 1er ». Les rallier **un par un, au fil des lots qui les touchent** : un
+remplacement en masse sur des écrans qu'on ne regarde pas ensuite est le
+meilleur moyen d'en casser un en silence.
+
+---
+
 ## Le tableau d'affichage d'une maison
 
 Posé le 28 août 2026, avec la page `/maison`. **Un mur de bois dans la salle
@@ -2848,6 +2920,11 @@ d'une maison » et « Le salon d'une maison ».
 rôle, et porte cinq sections — présentations, liens, rôles, absences,
 suggestions. Voir « Le hors RP ».
 
+**Les résultats du Grand Hall sont ouverts** : le tournoi en cours, les
+décisions de l'administration avec leur motif, et le palmarès des années
+closes — qui donne enfin une trace visible à la clôture d'une année. Voir
+« Les résultats ».
+
 **Les alentours sont ouverts** : un quatrième espace, cinq zones et seize
 lieux — la falaise et la mer, le lac, la Forêt Sombre, Kaldvik en entier, le
 massif du nord. On y écrit du jeu de rôle aux mêmes règles qu'au château, et
@@ -2868,10 +2945,13 @@ commun — se poserait par une valeur de plus, jamais par un `null` qui voudrait
 dire « tout le monde ». **Si les pièces restent désertes, c'est la première
 chose à lui reproposer.**
 
-Le Grand Hall, lui, n'a que ses annonces : la bible (§12) y met aussi **le
-calendrier, les résultats et les événements à venir**. Le règlement y est déjà
-— c'est la feuille « Règlement » du groupe. Les trois autres viendront s'y
-ranger sans que rien ne bouge, une ligne dans `liens` chacune.
+Le Grand Hall porte maintenant **trois des cinq** choses que la bible (§12) y
+met : le règlement, les annonces, et **les résultats** depuis le 28 août 2026.
+Restent le calendrier et les événements à venir — et le joueur a tranché que
+ce sera **une seule table** : le calendrier montre tout, « à venir » est le
+filtre de ce qui n'a pas eu lieu. Deux tables finiraient par dire deux choses
+de la même fête. Ce lot remplira au passage `prochainesEpreuves`, **le dernier
+panneau vide du bureau**.
 
 ⚠️ **`totauxParMaison` a disparu**, et il ne faut pas le réécrire. Il sommait
 `Eleve.points` par maison — il supposait « compteur de maison = somme des
@@ -2885,12 +2965,9 @@ retirer à une maison (art. 19.1) sans dire si un total peut passer sous zéro.
 Le plancher qui existe est **d'affichage** — `pointsAuTournoi` —, pas de base :
 la trace doit rester vraie même quand le tournoi arrondit à zéro.
 
-⚠️ **L'historique des ajustements n'est visible que de l'administration.** Le
-brief du joueur le veut « affiché dans l'historique public de la maison ». **La
-page de maison existe maintenant** — c'est donc devenu faisable, et ça ne l'est
-plus par manque d'écran : la question qui reste est de savoir s'il le veut sous
-les tubes, sous le top, ou pas du tout. **C'est une décision qui lui
-appartient**, et elle est toujours en attente.
+**L'historique des ajustements est public depuis le 28 août 2026**, et il est
+au Grand Hall plutôt que sur la page d'une maison — décision du joueur. Voir
+« Les résultats ».
 
 **Le Registre est ouvert** — l'annuaire des membres, groupé par maison, et la
 fiche publique de chaque personnage. C'est lui qui porte « bloquer depuis sa

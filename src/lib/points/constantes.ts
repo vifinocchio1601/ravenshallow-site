@@ -258,6 +258,79 @@ export const TEXTES_POINTS = {
     },
   },
 
+  /**
+   * **Les résultats du Grand Hall** — la feuille publique du tournoi.
+   *
+   * La bible (§12) met « résultats » dans le Grand Hall au même titre que les
+   * annonces et le règlement. On y lit, on n’y débat pas : cette page ne
+   * porte aucun bouton, et ne se règle qu’à `/admin/points`.
+   *
+   * ⚠️ **Ce n’est pas un second affichage des tubes.** Les tubes du bureau
+   * disent où l’on en est ce matin ; cette page-ci porte ce que les tubes ne
+   * peuvent pas montrer — les décisions de l’administration, et les années
+   * closes. Les chiffres viennent du même calcul, `lireLeTournoi`, et ne
+   * peuvent donc pas se contredire.
+   */
+  resultats: {
+    nom: "Résultats",
+    eyebrow: "Le Grand Hall",
+    titre: "Les résultats",
+    chapeau:
+      "Où en sont les quatre maisons, ce que l’administration a ajouté ou retiré, et ce qu’ont donné les années passées. On y lit, on n’y débat pas.",
+
+    saison: {
+      titre: "Le tournoi en cours",
+      ouverteDepuis: "Ouverte le {date}",
+      /** Aucune saison ouverte : il n’y a pas de tournoi, pas quatre zéros. */
+      aucune:
+        "Aucune session n’est ouverte pour l’instant. Le tournoi reprendra à l’ouverture de la suivante.",
+      /** Une saison ouverte, mais rien de marqué : c’est normal, on le dit. */
+      vierge:
+        "Rien n’a encore été marqué cette session. Les quatre maisons sont à égalité, et c’est normal.",
+    },
+
+    tableau: {
+      maison: "Maison",
+      points: "Points",
+      effectif: "Effectif",
+      moyenne: "Moyenne",
+      rang: "Rang",
+      /** Le nom accessible du tableau, que le lecteur d’écran annonce. */
+      aria: "Le classement des quatre maisons",
+    },
+
+    /**
+     * **L’historique public des ajustements** — décision du joueur, 28 août
+     * 2026, et la colonne `motif` le disait déjà : « affiché dans
+     * l’historique public de la maison ». Il est ici plutôt que sur la page
+     * d’une maison : c’est le Grand Hall qui porte l’officiel, et une maison
+     * ne verrait que ses propres décisions — donc jamais celle qui explique
+     * pourquoi une autre est passée devant.
+     *
+     * ⚠️ **Les points donnés à un joueur n’y figurent pas.** Ils portent un
+     * nom et un motif, et un « 5 points à Sigrid pour… » affiché à tout le
+     * site n’est pas la même chose qu’une décision sur une maison.
+     */
+    ajustements: {
+      titre: "Les décisions de l’administration",
+      aide: "Les points ajoutés ou retirés à une maison, avec leur motif (art. 19.1). Ils ne touchent jamais les points personnels d’un élève.",
+      vide: "Aucune décision cette session.",
+      /** Un ajustement annulé reste affiché, barré : le geste ET son retrait. */
+      annule: "Annulé le {date}",
+      parQui: "par {qui}",
+    },
+
+    palmares: {
+      titre: "Les années passées",
+      aide: "Chaque session close garde son classement tel qu’il a été figé le dernier soir. Rien n’y est recalculé.",
+      vide: "Aucune session ne s’est encore achevée. La première est en cours.",
+      closeLe: "Close le {date}",
+      gagnante: "{maison} l’emporte",
+      /** Quatre maisons à zéro : personne ne l’emporte, et on ne triche pas. */
+      aucuneGagnante: "Aucune maison ne l’emporte",
+    },
+  },
+
   /** Ce qu’on lit sous les tubes, au bureau. */
   tournoi: {
     titre: "Le tournoi des maisons",

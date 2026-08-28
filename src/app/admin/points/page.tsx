@@ -7,6 +7,7 @@ import { recalculerAction } from "@/app/admin/cloture/actions";
 import EnTeteAdmin from "@/components/admin/EnTeteAdmin";
 import FormulaireAjustement from "@/components/admin/FormulaireAjustement";
 import FormulaireDon from "@/components/admin/FormulaireDon";
+import { jourEnToutesLettres as jour } from "@/lib/dates";
 import { NOMS_MAISON } from "@/lib/ecole/blasons";
 import { TEXTES_POINTS } from "@/lib/points/constantes";
 import {
@@ -341,15 +342,6 @@ export default async function PointsPage() {
       </div>
     </main>
   );
-}
-
-/** « 27 août 2026 ». */
-function jour(date: Date): string {
-  return date.toLocaleDateString("fr-FR", {
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  });
 }
 
 function Bloc({

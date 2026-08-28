@@ -17,6 +17,7 @@
  */
 
 import { TEXTES_ANNONCES } from "@/lib/annonces/constantes";
+import { TEXTES_POINTS } from "@/lib/points/constantes";
 import { TEXTES_REGISTRE } from "@/lib/registre/constantes";
 import { NOM_COURT } from "@/lib/corbeaux/constantes";
 
@@ -78,6 +79,12 @@ export const ROUTES = {
   // annonce n'est pas une archive — c'est ce qu'on lit cette semaine.
   // L'adresse d'une feuille n'a pas à répéter le nom de son groupe.
   annonces: "/annonces",
+  /**
+   * **Les résultats du tournoi** — la deuxième feuille que la bible (§12)
+   * promet au Grand Hall, après les annonces. Comme elles, l'adresse ne
+   * répète pas le nom de son groupe.
+   */
+  resultats: "/resultats",
   archivesReglement: "/archives/reglement",
   archivesHistoire: "/archives/histoire",
 
@@ -261,6 +268,15 @@ export const MENU: readonly EntreeMenu[] = [
         libelle: TEXTES_ANNONCES.nomCourt,
         pendantBannissement: true,
         avantPremiersPas: true,
+      },
+      {
+        // **Aucun drapeau**, et c'est le défaut voulu : ni le membre suspendu
+        // ni le nouvel arrivant n'y entrent. Les annonces leur sont ouvertes
+        // pour deux raisons écrites — le règlement qui change, et le journal
+        // de leur bureau qui y renvoie. Un classement n'est ni l'un ni
+        // l'autre. Même lecture que pour le Registre.
+        href: ROUTES.resultats,
+        libelle: TEXTES_POINTS.resultats.nom,
       },
       { href: ROUTES.archivesReglement, libelle: "Règlement" },
       { href: ROUTES.archivesHistoire, libelle: "Histoire" },
