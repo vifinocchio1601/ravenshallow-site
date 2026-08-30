@@ -2240,6 +2240,12 @@ chiffrées ; la ligne « Conditions de passage » a quitté ses points ouverts
 (§16), et sa date de mise à jour est passée au 28 août 2026. Une copie de
 l'ancienne version dort dans `Perso/Ravenshallow/Sauvegardes/`.
 
+⚠️ **Les héritages ont bougé le 30 août 2026** : **Sortilèges est l'héritage
+de Sigrid, la Runologie celui d'Einar** — décision du joueur. La bible a suivi
+le même jour, et la phrase de la Clairvoyance qui disait que Sigrid « a laissé
+le sien à la runologie » en est retirée : elle avait cessé d'être vraie. Einar
+porte donc deux matières, comme Torvald en porte deux.
+
 ⚠️ **Le sens de lecture ne change pas pour autant** : le cursus est la source,
 la bible le raconte. Une valeur modifiée ici sans que la bible suive est un
 document à mettre à jour, pas une faute du code.

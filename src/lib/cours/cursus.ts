@@ -20,8 +20,7 @@ import { type Fonction, rangAnnee } from "@/lib/dossier/etats";
  *   enseignée avec la baguette » ; ce rôle-là lui revient désormais ;
  * • **la Clairvoyance passe de Sigrid à Einar** — décision du joueur, prise
  *   en connaissance de l’écart : ce sont les visions d’Einar qui ont guidé le
- *   rituel, et Tideål est la maison des pressentiments. Sigrid garde la
- *   Runologie ;
+ *   rituel, et Tideål est la maison des pressentiments ;
  * • **les trois cycles** — le Seuil, la Marée, la Veille — n’étaient nulle
  *   part.
  *
@@ -29,6 +28,14 @@ import { type Fonction, rangAnnee } from "@/lib/dossier/etats";
  * §9 porte désormais les neuf matières, les trois cycles et les conditions de
  * passage chiffrées, et la ligne « Conditions de passage » a quitté ses points
  * ouverts (§16). Les deux documents disent la même chose.
+ *
+ * ── Les héritages, arbitrés le 30 août 2026 ──
+ *
+ * **Sigrid porte les Sortilèges, Einar la Runologie** — décision du joueur.
+ * La bible donnait la Runologie à Sigrid et laissait les Sortilèges sans
+ * héritage ; les deux documents ont été corrigés le même jour, la bible
+ * comprise. Einar en porte donc deux — la Runologie et la Clairvoyance —,
+ * comme Torvald porte l’herboristerie et l’alchimie.
  *
  * ⚠️ **Ce fichier reste la source.** La bible le raconte, le site l’applique :
  * une valeur qui changerait ici sans que la bible suive n’est pas une faute du
@@ -79,7 +86,7 @@ export const MATIERES: Matiere[] = [
   {
     id: "sortileges",
     nom: "Sortilèges",
-    heritage: null,
+    heritage: "Sigrid Kaldenor",
     statuts: [
       "OBLIGATOIRE",
       "OBLIGATOIRE",
@@ -94,7 +101,7 @@ export const MATIERES: Matiere[] = [
   {
     id: "runologie",
     nom: "Runologie",
-    heritage: "Sigrid Kaldenor",
+    heritage: "Einar Tidevann",
     statuts: [
       "OBLIGATOIRE",
       "OBLIGATOIRE",
