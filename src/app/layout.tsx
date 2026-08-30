@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { cinzel, ebGaramond, kalam } from "./fonts";
+import { cinzel, ebGaramond, kalam, notoRunic } from "./fonts";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -24,7 +24,10 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="fr" className={`${cinzel.variable} ${ebGaramond.variable} ${kalam.variable}`}>
+    <html
+      lang="fr"
+      className={`${cinzel.variable} ${ebGaramond.variable} ${kalam.variable} ${notoRunic.variable}`}
+    >
       <body className="bg-void font-body text-parchment antialiased">
         {children}
       </body>

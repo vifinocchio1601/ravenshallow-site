@@ -1799,3 +1799,179 @@ model DemandePartenariat {
   @@index([recuLe(sort: Desc)])
   @@map("demandes_partenariat")
 }
+
+// ═════════════════════════════════════════════════════════════
+//  Les Grimoires — la bibliothèque de consultation
+// ═════════════════════════════════════════════════════════════
+
+/// **Qui lit un chapitre.** Deux valeurs, et pas trois.
+///
+/// Le joueur a tranché le 30 août 2026 : **tout est lisible**. L'année d'un
+/// sort s'affiche sur sa fiche — l'article 14.4 interdit de le LANCER hors de
+/// son année, pas d'en lire le nom —, et elle ne ferme aucune porte. Une
+/// troisième valeur « à partir de la Ne année » ne déciderait donc de rien
+/// aujourd'hui, et une valeur qui ne décide de rien finit par décider de
+/// quelque chose.
+///
+/// Le jour où un volume devrait vraiment se fermer, ce sera une valeur de
+/// plus **et une migration** : Postgres ne sait pas ajouter une valeur d'enum
+/// depuis le code.
+enum AccesGrimoire {
+  /// Tout membre entrant dans l'école.
+  TOUS
+
+  /// **Ne descend jamais dans le navigateur d'un joueur** — ni le contenu, ni
+  /// le titre du chapitre, ni sa ligne au sommaire. Les quatre sortilèges
+  /// interdits (art. 13.2 et 13.3) sont là.
+  ADMINISTRATION
+}
+
+/// Ce qu'un bloc porte. La forme de `donnees` en dépend, et
+/// `grimoires/schema.ts` est la seule porte qui la vérifie.
+enum TypeBlocGrimoire {
+  /// Du balisage, nettoyé par la liste blanche du site — la seule.
+  PARAGRAPHE
+
+  /// Un titre à l'intérieur d'un chapitre : « Quatrième année · 6 sorts ».
+  /// C'est lui qui peuple le second niveau du sommaire, déduit et non tenu.
+  SOUS_TITRE
+
+  /// Le bloc riche : nom, glyphes, formule, matière, année, effet, limite.
+  /// **Ne se coupe jamais** entre deux pages — mais cela se joue à l'écran,
+  /// pas ici.
+  FICHE_SORT
+
+  /// L'un des quatre. Pas de rune, pas de formule : un verbe.
+  ///
+  /// ⚠️ **Un déclencheur lui interdit tout chapitre qui ne soit pas
+  /// `ADMINISTRATION`**, dans les deux sens : on ne peut ni le poser dans un
+  /// chapitre ouvert, ni ouvrir un chapitre qui en contient un.
+  FICHE_INTERDITE
+
+  /// Les vingt-quatre runes : des en-têtes et des lignes.
+  TABLEAU
+
+  /// Un blanc qui sépare. Ne porte rien.
+  SEPARATEUR
+}
+
+/// La teinte du dos, sur l'étagère. Une liste courte plutôt qu'une couleur
+/// libre : les quatre se dessinent dans la feuille de style, et un volume ne
+/// peut pas arriver avec une couleur qui jure avec le reste.
+enum ReliureGrimoire {
+  CUIR_SOMBRE
+  CUIR_FAUVE
+  TOILE_BLEUE
+  PARCHEMIN
+}
+
+/// **Un volume.** Le premier est le grimoire des Sortilèges ; le bestiaire,
+/// l'histoire et l'herboristerie suivront dans le même format.
+///
+/// ⚠️ **À ne pas confondre avec « La bibliothèque »**, qui est une pièce de
+/// l'aile ouest où l'on joue des scènes. Ici on lit ; là-bas on écrit. Le
+/// vocabulaire les sépare : un grimoire se **consulte**, il ne s'habite pas.
+model Grimoire {
+  id String @id @default(cuid())
+
+  /// L'adresse : `/grimoires/sortileges`. Minuscules, chiffres et tirets —
+  /// la base le vérifie.
+  slug String @unique
+
+  titre String
+
+  /// La ligne sous le titre, dans le lecteur : « Vingt-quatre runes ·
+  /// soixante-cinq sorts · quatre interdits ». Facultative.
+  exergue String?
+
+  /// La ligne qu'on lit sur l'étagère, avant d'ouvrir.
+  description String
+
+  reliure ReliureGrimoire
+
+  /// Sa place sur l'étagère. Pas d'unicité : deux volumes qui échangent leur
+  /// rang le font dans une transaction, et un index unique s'y opposerait.
+  ordre Int
+
+  /// « Administration » — la zone d'administration n'a pas de comptes
+  /// distincts. Même convention que `Annonce.posePar`.
+  posePar String
+
+  modifieLe DateTime?
+
+  /// **Retirer n'efface pas.** Le volume sort de l'étagère et reste entier :
+  /// « Remettre » existe pour que le clic malheureux ne soit pas définitif.
+  /// Les deux colonnes vont ensemble ou pas du tout.
+  retireLe  DateTime?
+  retirePar String?
+
+  creeLe DateTime @default(now())
+  majLe  DateTime @updatedAt
+
+  chapitres ChapitreGrimoire[]
+
+  @@index([ordre])
+  @@map("grimoires")
+}
+
+/// **Un chapitre, et un seul niveau.**
+///
+/// Le document du joueur porte deux niveaux de titres ; le second devient un
+/// bloc `SOUS_TITRE` dans le flux, et le sommaire le retrouve. Deux niveaux
+/// de chapitres auraient demandé le déclencheur du forum — « deux niveaux et
+/// jamais trois » — pour un besoin que personne n'a.
+///
+/// C'est aussi ce qui fait tomber juste la condition d'accès : « Les quatre
+/// sorts interdits » est un chapitre entier.
+model ChapitreGrimoire {
+  id String @id @default(cuid())
+
+  grimoireId String
+  grimoire   Grimoire @relation(fields: [grimoireId], references: [id], onDelete: Cascade)
+
+  /// La seconde moitié de l'adresse : `/grimoires/sortileges/les-sorts-lies`.
+  slug  String
+  titre String
+  ordre Int
+
+  /// **La seule question que le filtrage serveur pose.**
+  acces AccesGrimoire @default(TOUS)
+
+  creeLe DateTime @default(now())
+  majLe  DateTime @updatedAt
+
+  blocs BlocGrimoire[]
+
+  @@unique([grimoireId, slug])
+  @@index([grimoireId, ordre])
+  @@map("chapitres_grimoire")
+}
+
+/// **Un bloc.** Le contenu d'un volume est une suite de blocs, dans l'ordre —
+/// jamais un pavé de HTML libre : c'est ce qui permet au lecteur de remplir
+/// ses pages en mesurant, sans couper une fiche en deux.
+model BlocGrimoire {
+  id String @id @default(cuid())
+
+  chapitreId String
+  chapitre   ChapitreGrimoire @relation(fields: [chapitreId], references: [id], onDelete: Cascade)
+
+  ordre Int
+  type  TypeBlocGrimoire
+
+  /// Le contenu, selon le type. **`grimoires/schema.ts` est la seule porte**
+  /// par laquelle il entre en base — la base, elle, ne garantit que la forme
+  /// générale : un objet, jamais une liste ni un nombre.
+  donnees Json
+
+  /// L'ancre d'un lien précis : `…/les-sorts-lies#sortilege-de-la-charge`.
+  ///
+  /// ⚠️ **C'est elle qui voyage dans un corbeau, jamais un numéro de page.**
+  /// La pagination dépend de la largeur de l'écran et de la taille du texte :
+  /// « page 12 » ne désigne pas le même contenu chez deux lecteurs.
+  ancre String?
+
+  @@unique([chapitreId, ancre])
+  @@index([chapitreId, ordre])
+  @@map("blocs_grimoire")
+}

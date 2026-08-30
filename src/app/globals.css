@@ -2291,3 +2291,476 @@
   font-size: 0.85rem;
   color: var(--ember);
 }
+
+/* ─────────────────────────────────────────────────────────────
+   Les Grimoires — le dos d'un volume sur l'étagère
+   ─────────────────────────────────────────────────────────────
+
+   Un livre vu de trois quarts : le dos peint, puis la tranche de pages.
+   Tout ce qui compte — titre, exergue, ligne de description — est du vrai
+   texte à côté ; ces deux bandes sont du décor, et ne portent rien.
+
+   ⚠️ Les quatre teintes sont déclarées ici et nulle part ailleurs.
+   `reliures.test.ts` relit ce fichier : une reliure acceptée par la base mais
+   sans classe serait un dos invisible que personne ne verrait venir. */
+
+.livre {
+  position: relative;
+  padding-left: 2.6rem;
+}
+
+/* Le dos. */
+.livre::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 1.5rem;
+  border-radius: 4px 1px 1px 4px;
+  background: var(--reliure, linear-gradient(180deg, #2a1f18, #150f0b));
+  box-shadow:
+    inset -7px 0 9px -7px rgb(0 0 0 / 0.9),
+    inset 2px 0 0 rgb(255 255 255 / 0.07);
+}
+
+/* La tranche : des pages serrées, jamais tout à fait régulières. */
+.livre::after {
+  content: "";
+  position: absolute;
+  left: 1.5rem;
+  top: 0.4rem;
+  bottom: 0.4rem;
+  width: 0.35rem;
+  border-radius: 0 2px 2px 0;
+  background: repeating-linear-gradient(
+    180deg,
+    rgb(233 225 205 / 0.55) 0px,
+    rgb(233 225 205 / 0.55) 2px,
+    rgb(185 176 154 / 0.35) 2px,
+    rgb(185 176 154 / 0.35) 3px
+  );
+}
+
+.reliure--cuir-sombre {
+  --reliure: linear-gradient(180deg, #2c2019 0%, #1a1310 55%, #241a14 100%);
+}
+
+.reliure--cuir-fauve {
+  --reliure: linear-gradient(180deg, #7d4b25 0%, #4d2b13 55%, #6a3f1f 100%);
+}
+
+.reliure--toile-bleue {
+  --reliure: linear-gradient(180deg, #23415a 0%, #10222f 55%, #1d374d 100%);
+}
+
+.reliure--parchemin {
+  --reliure: linear-gradient(180deg, #cabc9c 0%, #9c8f74 55%, #bfb192 100%);
+}
+
+/* Les glyphes runiques d'un grimoire — du CONTENU, pas du décor.
+   `.rune` (au-dessus) reste la rune décorative du reste du site, qui suit la
+   police du corps ; celle-ci porte la police runique embarquée, et son repli
+   nomme les deux polices système qui les dessinent. */
+.glyphe {
+  font-family:
+    var(--font-runes), "Noto Sans Runic", "Segoe UI Historic",
+    "Apple Symbols", var(--font-body), serif;
+  letter-spacing: 0.18em;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Les Grimoires — le contenu, et ses deux fonds
+   ─────────────────────────────────────────────────────────────
+
+   Les mêmes blocs se lisent à deux endroits : dans le lecteur, où ils sont
+   de l'encre sur du papier clair, et en lecture continue, où ils sont du
+   parchemin sur la nuit du site. Un seul composant les rend ; ce sont ces
+   deux thèmes qui changent, et rien d'autre.
+
+   ⚠️ Les couleurs ne sont donc jamais posées sur les éléments : elles
+   viennent de variables que `.gr-nuit` et `.gr-papier` redéfinissent. Une
+   classe Tailwind écrite dans le composant rendrait le texte illisible dans
+   l'un des deux — du parchemin clair sur du papier clair, la faute déjà
+   payée sur le journal du bureau. */
+
+.gr-nuit {
+  --gr-texte: var(--parchment-dim);
+  --gr-attenue: var(--silver);
+  --gr-fort: var(--parchment);
+  --gr-accent: var(--aurora-teal);
+  --gr-bord: rgb(142 160 179 / 0.15);
+  --gr-fond: rgb(5 7 11 / 0.4);
+  --gr-alerte: var(--ember);
+}
+
+.gr-papier {
+  --gr-texte: #3a3025;
+  --gr-attenue: #6b5e4b;
+  --gr-fort: #241c12;
+  --gr-accent: #6b3f1c;
+  --gr-bord: rgb(43 35 24 / 0.22);
+  --gr-fond: rgb(43 35 24 / 0.04);
+  --gr-alerte: #7a2d16;
+}
+
+.gr-bloc + .gr-bloc {
+  margin-top: 1rem;
+}
+
+.gr-sous-titre {
+  font-family: var(--font-display), Georgia, serif;
+  font-size: 0.78em;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  color: var(--gr-attenue);
+  scroll-margin-top: 6rem;
+}
+
+.gr-para {
+  color: var(--gr-texte);
+  line-height: 1.85;
+  max-width: 70ch;
+}
+
+.gr-fiche,
+.gr-interdit {
+  border: 1px solid var(--gr-bord);
+  border-radius: 4px;
+  background: var(--gr-fond);
+  padding: 0.9rem 1rem;
+  scroll-margin-top: 6rem;
+}
+
+.gr-interdit {
+  border-color: color-mix(in srgb, var(--gr-alerte) 45%, transparent);
+}
+
+.gr-fiche__tete {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.25rem 0.9rem;
+}
+
+.gr-fiche__glyphes {
+  font-size: 1.5em;
+  line-height: 1;
+  color: var(--gr-accent);
+}
+
+.gr-fiche__nom,
+.gr-interdit__nom {
+  font-family: var(--font-display), Georgia, serif;
+  font-size: 1.02em;
+  color: var(--gr-fort);
+}
+
+.gr-fiche__meta {
+  margin-top: 0.35rem;
+  font-size: 0.86em;
+  color: var(--gr-attenue);
+}
+
+.gr-fiche__formule {
+  color: var(--gr-texte);
+}
+
+.gr-fiche__effet,
+.gr-interdit__texte {
+  margin-top: 0.5rem;
+  max-width: 62ch;
+  line-height: 1.8;
+  color: var(--gr-texte);
+}
+
+.gr-fiche__limite {
+  margin-top: 0.4rem;
+  max-width: 62ch;
+  font-size: 0.88em;
+  font-style: italic;
+  line-height: 1.75;
+  color: var(--gr-attenue);
+}
+
+.gr-fiche__limite b {
+  font-style: normal;
+  font-weight: 400;
+  color: var(--gr-texte);
+}
+
+.gr-interdit__verbe {
+  margin-top: 0.35rem;
+  font-size: 0.88em;
+  color: var(--gr-alerte);
+}
+
+.gr-interdit__rubrique {
+  margin-top: 0.7rem;
+  max-width: 62ch;
+}
+
+.gr-interdit__titre {
+  font-family: var(--font-display), Georgia, serif;
+  font-size: 0.7em;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  color: var(--gr-attenue);
+}
+
+/* Un tableau défile dans sa propre boîte : la page, elle, ne défile jamais
+   en largeur. */
+.gr-tableau {
+  overflow-x: auto;
+}
+
+.gr-tableau table {
+  width: 100%;
+  min-width: 28rem;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.gr-tableau th {
+  border-bottom: 1px solid var(--gr-bord);
+  padding: 0 1rem 0.4rem 0;
+  font-family: var(--font-display), Georgia, serif;
+  font-size: 0.68em;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  color: var(--gr-attenue);
+}
+
+.gr-tableau td {
+  border-bottom: 1px solid color-mix(in srgb, var(--gr-bord) 60%, transparent);
+  padding: 0.4rem 1rem 0.4rem 0;
+  font-size: 0.9em;
+  color: var(--gr-texte);
+}
+
+.gr-tableau td:first-child {
+  font-size: 1.15em;
+  color: var(--gr-accent);
+}
+
+.gr-separateur {
+  width: 8rem;
+  height: 1px;
+  margin: 1.5rem auto;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    var(--gr-bord) 20%,
+    var(--gr-bord) 80%,
+    transparent
+  );
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Les Grimoires — le lecteur
+   ─────────────────────────────────────────────────────────────
+
+   ⚠️ Le RAPPORT est tenu par la BOÎTE, jamais par l'image, et c'est
+   indispensable : les bornes des deux pages sont des pourcentages de cette
+   boîte. Si elle cesse de suivre le rapport du décor, `object-fit` centre
+   gentiment l'image dedans — mais les cadres, eux, se décalent, et le texte
+   sort du papier. Piège déjà payé sur le journal du bureau, puis sur le
+   tableau d'affichage.
+
+   Les mesures viennent de `config/grimoires.json` et sont posées en
+   variables sur `.grimoire` : c'est ce qui permet à la requête média
+   ci-dessous de les redéfinir. Écrites directement sur les éléments, un
+   style en ligne l'emporterait et le téléphone garderait les deux pages. */
+
+.grimoire {
+  position: relative;
+  width: 100%;
+  margin-inline: auto;
+  max-width: var(--decor-max);
+  aspect-ratio: var(--decor-ratio);
+}
+
+.grimoire__decor {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: fill;
+}
+
+.grimoire__page {
+  position: absolute;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  font-size: var(--gr-taille);
+  font-family: var(--font-body), Georgia, serif;
+}
+
+/* ⚠️ L'écart entre deux blocs d'une PAGE se pose ici, et il vaut exactement
+   `ecartBlocs` de la configuration — celui que la pagination compte.
+   `.gr-bloc + .gr-bloc` ne suffit pas : le lecteur enveloppe chaque bloc pour
+   le mesurer, et les blocs ne sont donc plus frères. Les marges n'entrent pas
+   dans `getBoundingClientRect`, il n'y a donc rien compté deux fois. */
+.grimoire__page > * + *,
+.grimoire__mesure > * + * {
+  margin-top: var(--gr-ecart);
+}
+
+.grimoire__page--gauche {
+  left: var(--pg-l);
+  right: var(--pg-r);
+  top: var(--pg-t);
+  bottom: var(--pg-b);
+}
+
+.grimoire__page--droite {
+  left: var(--pd-l);
+  right: var(--pd-r);
+  top: var(--pd-t);
+  bottom: var(--pd-b);
+}
+
+/* La copie qu'on mesure : elle a la largeur d'une page et sa typographie,
+   elle n'a simplement pas de place à l'écran. `visibility: hidden` la garde
+   mesurable — `display: none` ne le serait pas. */
+.grimoire__mesure {
+  position: absolute;
+  top: 0;
+  left: -20000px;
+  visibility: hidden;
+  pointer-events: none;
+  font-family: var(--font-body), Georgia, serif;
+}
+
+/* ⚠️ Sur un téléphone, le décor CÈDE et le texte passe.
+   Le cadre entier ferait 375 px de large : la page de gauche y tiendrait
+   dans 110 px, soit trois mots par ligne. On garde donc le papier et l'on
+   jette le bureau — la même décision que le mur d'une maison, qui remplit sa
+   hauteur sous 640 px plutôt que de réduire sa fenêtre à un timbre. */
+@media (max-width: 639px) {
+  .grimoire {
+    aspect-ratio: auto;
+    height: min(70vh, 34rem);
+    border-radius: 3px;
+    background:
+      radial-gradient(
+        120% 90% at 50% 0%,
+        rgb(233 225 205 / 0.96),
+        rgb(214 203 178 / 0.92)
+      );
+    box-shadow: inset 0 0 22px rgb(43 35 24 / 0.18);
+  }
+
+  .grimoire__decor {
+    display: none;
+  }
+
+  .grimoire__page--gauche {
+    inset: 1.1rem 1rem;
+  }
+
+  .grimoire__page--droite {
+    display: none;
+  }
+}
+
+/* Le sommaire replié : un vrai `details`, qui s'ouvre au clavier sans une
+   ligne de script. */
+.grimoire-sommaire summary {
+  cursor: pointer;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Les Grimoires — la page qui tourne
+   ─────────────────────────────────────────────────────────────
+
+   Une feuille de papier pivote autour de la reliure, six dixièmes de
+   seconde, avec son ombre portée sur ce qu'elle recouvre.
+
+   ⚠️ Elle ne porte AUCUN texte, et c'est délibéré : le contenu, lui, a déjà
+   changé. L'animation ne retient donc jamais la lecture — qui enchaîne les
+   pages ne reste pas coincé derrière elle, il la traverse. C'est la
+   contrainte que le joueur a posée, et la seule façon simple de la tenir.
+
+   Elle est aussi `pointer-events: none` : un clic pendant qu'elle tourne va
+   au bouton, pas à la feuille. */
+
+.grimoire__tour {
+  position: absolute;
+  top: var(--tour-t);
+  bottom: var(--tour-b);
+  pointer-events: none;
+  transform-style: preserve-3d;
+  backface-visibility: hidden;
+  border-radius: 2px;
+  background: linear-gradient(
+    100deg,
+    rgb(226 216 192 / 0.97),
+    rgb(206 194 168 / 0.94) 55%,
+    rgb(186 172 146 / 0.9)
+  );
+  box-shadow: 0 0 24px rgb(0 0 0 / 0.45);
+}
+
+.grimoire {
+  perspective: 1800px;
+}
+
+/* En avant : la page de droite se rabat vers la gauche — le sens de la
+   lecture. */
+.grimoire__tour--avant {
+  left: var(--reliure-x);
+  right: var(--tour-r);
+  transform-origin: left center;
+  animation: gr-tourner-avant var(--tour-duree) ease-in-out forwards;
+}
+
+/* En arrière : c'est la page de gauche qui se relève. */
+.grimoire__tour--arriere {
+  left: var(--tour-l);
+  right: calc(100% - var(--reliure-x));
+  transform-origin: right center;
+  animation: gr-tourner-arriere var(--tour-duree) ease-in-out forwards;
+}
+
+@keyframes gr-tourner-avant {
+  from {
+    transform: rotateY(0deg);
+    opacity: 1;
+  }
+  85% {
+    opacity: 1;
+  }
+  to {
+    transform: rotateY(-178deg);
+    opacity: 0;
+  }
+}
+
+@keyframes gr-tourner-arriere {
+  from {
+    transform: rotateY(0deg);
+    opacity: 1;
+  }
+  85% {
+    opacity: 1;
+  }
+  to {
+    transform: rotateY(178deg);
+    opacity: 0;
+  }
+}
+
+/* ⚠️ Sur un téléphone, il n'y a qu'une page et pas de reliure : une feuille
+   qui pivoterait autour d'un pli qui n'existe pas serait un mouvement sans
+   objet. La page change, simplement. */
+@media (max-width: 639px) {
+  .grimoire__tour {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .grimoire__tour {
+    display: none;
+  }
+}

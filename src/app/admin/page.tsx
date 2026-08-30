@@ -9,6 +9,8 @@ import { TEXTES_ETATS } from "@/lib/dossier/etats";
 import { listerAnnonces } from "@/lib/annonces/depot";
 import { TEXTES_CALENDRIER } from "@/lib/calendrier/constantes";
 import { lireLeCalendrier } from "@/lib/calendrier/depot";
+import { TEXTES_GRIMOIRES } from "@/lib/grimoires/constantes";
+import { listerPourAdministration as listerLesGrimoires } from "@/lib/grimoires/depot";
 import { TEXTES_SALON } from "@/lib/salon/constantes";
 import { TEXTES_CORBEAUX } from "@/lib/corbeaux/constantes";
 import { courrierEnAttente } from "@/lib/corbeaux/courrier";
@@ -49,6 +51,7 @@ export default async function AdminPage() {
     calendrier,
     partenariatsEnAttente,
     dossiersALire,
+    grimoires,
   ] = await Promise.all([
     signalementsEnAttente(),
     courrierEnAttente(),
@@ -56,12 +59,17 @@ export default async function AdminPage() {
     lireLeCalendrier(),
     demandesEnAttente(),
     compterDossiersEnAttente(),
+    listerLesGrimoires(),
   ]);
 
   // Ce que la carte annonce : ce qui vient, jamais le total. Une carte qui
   // dirait « 14 dates » sur un calendrier entièrement passé serait fausse
   // sans être inexacte.
   const datesAVenir = calendrier.aVenir.length;
+
+  // Les volumes POSÉS : un volume retiré n'est plus sur l'étagère de
+  // personne, et l'annoncer ici ferait un compte que le site ne montre pas.
+  const volumesPoses = grimoires.filter((v) => v.retireLe === null).length;
 
   return (
     <main className="relative min-h-[100svh] bg-void">
@@ -207,6 +215,33 @@ export default async function AdminPage() {
             </p>
             <Link href="/admin/calendrier" className="btn btn-ghost mt-6">
               {TEXTES_CALENDRIER.administration.carteLien}
+            </Link>
+          </AdminCard>
+
+          {/* Les grimoires.
+              À côté du calendrier et des annonces, et pour la même raison :
+              aucune permission attribuable ne les ouvre. Le compte est celui
+              des volumes POSÉS — ceux qu'un membre voit sur son étagère. */}
+          <AdminCard
+            rune="ᛒᛟᚲ"
+            eyebrow={TEXTES_GRIMOIRES.administration.carteEyebrow}
+            title={TEXTES_GRIMOIRES.administration.carteTitre}
+          >
+            <p className="leading-[1.7] text-parchment-dim">
+              {TEXTES_GRIMOIRES.administration.carteAccroche}
+            </p>
+            <p className="mt-4 font-display text-[0.68rem] uppercase tracking-[0.18em] text-silver">
+              {volumesPoses === 0
+                ? TEXTES_GRIMOIRES.administration.carteAucun
+                : volumesPoses === 1
+                  ? TEXTES_GRIMOIRES.administration.carteUn
+                  : TEXTES_GRIMOIRES.administration.carteCompte.replace(
+                      "{n}",
+                      String(volumesPoses),
+                    )}
+            </p>
+            <Link href="/admin/grimoires" className="btn btn-ghost mt-6">
+              {TEXTES_GRIMOIRES.administration.carteLien}
             </Link>
           </AdminCard>
 

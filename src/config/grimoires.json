@@ -1,0 +1,30 @@
+{
+  "note": "Les mesures du lecteur de grimoire — pas ses règles. Voir components/grimoires/Lecteur.tsx. Le principe est celui du journal du bureau et du tableau d'affichage : le RAPPORT est tenu par la BOÎTE, jamais par l'image, parce que les bornes des deux pages sont des pourcentages de cette boîte. Si elle cesse de suivre le rapport du décor, object-fit centre gentiment l'image dedans — mais les cadres, eux, se décalent, et le texte sort du papier.",
+  "noteImage": "Les dimensions du fichier fourni par le joueur, déjà optimisé. Ne pas le retoucher. Elles ne donnent que le rapport, jamais la taille d'affichage.",
+  "imageLargeur": 1200,
+  "imageHauteur": 1200,
+
+  "noteZones": "Les deux zones de papier, en pourcentage des dimensions de l'image, RELEVÉES DESSUS par le joueur. Les réajuster à l'œil ferait courir le texte sur la reliure ou sur le bord irrégulier du papier.",
+  "pageGauche": { "gauche": 20.7, "droite": 50.2, "haut": 22.7, "bas": 74.1 },
+  "pageDroite": { "gauche": 53.2, "droite": 82.1, "haut": 22.7, "bas": 73.5 },
+
+  "noteMarge": "Pour que le texte ne touche pas le bord déchiré du papier, en pourcentage de la largeur du décor.",
+  "marge": 2.0,
+
+  "noteLargeur": "Le décor est carré : à pleine largeur sur un grand écran, il ferait mille pixels de haut et l'on perdrait les commandes hors de l'écran. Le plafond est donc un plafond de LARGEUR, et la hauteur suit.",
+  "decorLargeurMax": 1000,
+
+  "noteTailles": "Les trois tailles du texte, en rem. Le confort de lecture prime sur le nombre de pages — c'est la consigne du joueur. Elles valent pour le corps ; les titres et les fiches suivent en proportion.",
+  "taillePetite": 0.78,
+  "tailleMoyenne": 0.9,
+  "tailleGrande": 1.05,
+
+  "noteEcart": "L'espace vertical entre deux blocs d'une même page, en pixels. Il entre dans le calcul de la pagination : le mesurer ailleurs qu'ici ferait déborder la dernière ligne d'une page sur deux.",
+  "ecartBlocs": 14,
+
+  "noteGlissement": "La distance minimale d'un glissement du doigt pour tourner la page, en pixels. En dessous, un simple appui hésitant tournerait la page.",
+  "glissementMin": 45,
+
+  "noteAnimation": "La durée d'une page qui tourne, en millisecondes. Elle ne bloque JAMAIS la navigation : qui enchaîne les pages ne doit pas rester coincé. prefers-reduced-motion la ramène à zéro.",
+  "animationMs": 600
+}

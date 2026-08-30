@@ -91,14 +91,18 @@ describe("l’arbre du parchemin", () => {
     }
   });
 
-  it("« Le domaine » porte l’école, les maisons, les cours et les alentours", () => {
+  it("« Le domaine » porte l’école, les maisons, les cours, les grimoires et les alentours", () => {
     const domaine = MENU.find(
       (e): e is GroupeMenu => estUnGroupe(e) && e.libelle === "Le domaine",
     );
+    // Les grimoires sont posés **après les cours**, et non au Grand Hall :
+    // un grimoire est un support de cours, et l'on va le chercher là où l'on
+    // a son programme.
     expect(domaine?.liens.map((l) => l.href)).toEqual([
       ROUTES.ecole,
       ROUTES.maisons,
       ROUTES.cours,
+      ROUTES.grimoires,
       ROUTES.alentours,
     ]);
   });

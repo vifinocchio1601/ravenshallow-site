@@ -14,6 +14,7 @@
     "points:essai": "vitest run --config vitest.essai.mts src/lib/points/en-base.essai.ts",
     "calendrier:essai": "vitest run --config vitest.essai.mts src/lib/calendrier/en-base.essai.ts",
     "partenariat:essai": "vitest run --config vitest.essai.mts src/lib/partenariat/en-base.essai.ts",
+    "grimoires:essai": "vitest run --config vitest.essai.mts src/lib/grimoires/en-base.essai.ts",
     "courriel:verifier": "node scripts/verifier-courriel.mjs",
     "postinstall": "prisma generate",
     "base:importer": "node scripts/importer-dossiers.mjs",

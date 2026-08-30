@@ -2318,6 +2318,203 @@ se décider une fois. « 0 point » au singulier reste dans `points/affichage.ts
 
 ---
 
+## Les Grimoires
+
+Posés le 30 août 2026. `/grimoires` : l'étagère, et un lecteur qui ouvre le
+livre et tourne les pages. Le premier volume est **le grimoire des
+Sortilèges**, écrit par le joueur — vingt-quatre runes, soixante-cinq sorts,
+quatre interdits.
+
+Rangés sous **« Le domaine »**, après « Les cours » : un grimoire est un
+support de cours, et l'on va le chercher là où l'on a son programme. **Pas au
+Grand Hall**, qui porte l'officiel de l'administration et où la bible (§12) ne
+met rien de tel.
+
+⚠️ **« Les Grimoires » et « La bibliothèque » ne se confondent jamais.** La
+bibliothèque est une pièce de l'aile ouest où l'on **joue des scènes** ; ici
+on **lit**. Le joueur a choisi le nom en connaissance de la collision, le
+30 août 2026, et aucun libellé de l'un ne reprend celui de l'autre.
+
+### Tout est lisible — et c'est la décision qui a taillé le lot
+
+Le prompt d'origine demandait un verrou par année, avec les sorts des années
+suivantes en grisé. **Le joueur a tranché l'inverse le 30 août 2026** : tout
+est lisible, l'année de déblocage s'affiche sur chaque fiche, et une mention
+rappelle qu'un sort ne se lance pas avant. L'article 14.4 interdit de
+**lancer** un sort hors de son année, pas d'en lire la fiche — c'est déjà le
+principe du forum, où presque tout se lit et où l'écriture seule porte les
+verrous.
+
+D'où une condition d'accès à **deux valeurs**, `TOUS` et `ADMINISTRATION`, et
+pas trois. Une troisième — « à partir de la Ne année » — ne déciderait de rien
+aujourd'hui, et une colonne qui ne décide de rien finit par décider de quelque
+chose. Le jour où un volume devrait se fermer, ce sera une valeur de plus
+**et** une migration : Postgres ne sait pas ajouter une valeur d'enum depuis le
+code.
+
+⚠️ **Ne pas « rétablir » un verrou d'année dans `acces.ts`.** `acces.test.ts`
+fige la décision : les deux fonctions prennent deux paramètres, et pas un de
+plus.
+
+### Ce qui ne descend jamais
+
+Les quatre sortilèges interdits (art. 13.2 et 13.3). Le chapitre qui les porte
+n'apparaît **ni au sommaire, ni sur l'étagère, ni en grisé** : il n'existe pas
+pour un joueur. « Il existe, mais pas pour vous » se lit comme une
+confirmation — même choix que le forum, la Tour et le Grand Hall.
+
+**Le dépôt lit d'abord les chapitres sans leurs blocs**, applique
+`chapitresLisibles`, puis ne demande les blocs **que des chapitres retenus** :
+le texte réservé n'est pas filtré après coup, il n'est jamais lu.
+
+⚠️ **La condition n'est jamais recopiée dans un `where`.** Elle vit dans
+`acces.ts`, où elle se teste ; `etancheite.test.ts` relit le code source et
+refuse toute requête sur les trois tables hors du dépôt — **éprouvé en
+introduisant la faute**, il tombe et nomme le fichier.
+
+⚠️ **Un volume dont AUCUN chapitre ne s'ouvre disparaît de l'étagère.** C'est
+la règle du sommaire, d'un cran plus haut : un livre qui s'annoncerait par son
+titre pour s'ouvrir sur rien vaudrait moins qu'une absence. Même raisonnement
+que le groupe de menu dont toutes les feuilles sont fermées.
+
+**Le verrou est aussi en base, et il regarde les deux bouts** : une
+`FICHE_INTERDITE` ne peut ni entrer dans un chapitre ouvert, ni voir son
+chapitre s'ouvrir après coup. Vérifier un seul côté laisserait la porte par
+l'autre — la leçon du déclencheur des deux niveaux de sections du forum. Le
+refus est **traduit en une phrase** par le dépôt, jamais laissé remonter en
+erreur 500.
+
+### Un seul niveau de chapitres, et des blocs
+
+Le document porte deux niveaux de titres ; le second devient un bloc
+`SOUS_TITRE` dans le flux, et le sommaire le retrouve. Deux niveaux de
+chapitres auraient demandé le déclencheur du forum — « deux niveaux et jamais
+trois » — pour un besoin que personne n'a. Cela tombe juste : « Les quatre
+sorts interdits » est un chapitre entier.
+
+**Six types de blocs**, et leur contenu vit en JSON : `PARAGRAPHE`,
+`SOUS_TITRE`, `FICHE_SORT`, `FICHE_INTERDITE`, `TABLEAU`, `SEPARATEUR`. La
+base ne garantit qu'un objet ; `grimoires/schema.ts` est la seule porte, et
+c'est lui qui nettoie le balisage — la liste blanche du site, **la seule**.
+
+⚠️ **Une fiche porte l'identifiant de matière du cursus**, jamais le libellé :
+le nom s'affiche depuis `cours/cursus.ts`, qui est la source. Vérifié le
+30 août 2026 : les 29 couples (matière, année) du grimoire concordent avec le
+cursus, zéro écart.
+
+⚠️ **Les quatre interdits portent des rubriques nommées** — « Ce qu'il fait »,
+« Le prix payé », « La trace visible », « Ce qu'un joueur peut en faire » —,
+pas un effet et une limite comme les autres. Les plier au gabarit des sorts
+ordinaires perdrait ce qui les distingue : le prix payé n'est pas une limite.
+
+### L'import : deux gestes, jamais un
+
+```bash
+node scripts/lire-grimoire.mjs "…/Grimoire_Sortilèges.docx" --slug sortileges --titre "Sortilèges"
+node scripts/poser-grimoire.mjs .donnees/grimoire-sortileges.json
+```
+
+Le premier lit le `.docx` et **montre ce qu'il a compris** ; le second écrit en
+base. Un import d'un seul trait ne laisserait rien voir. **Ré-importer
+remplace** le contenu — pas de doublons —, mais garde le rang sur l'étagère et
+un éventuel retrait : ce ne sont pas du contenu.
+
+**La convention du document**, que les volumes suivants doivent respecter :
+Titre 1 ouvre un chapitre, Titre 2 devient un sous-titre, une fiche de sort est
+un tableau à deux cellules (les glyphes, puis nom / formule ⇥ méta / effet /
+limite), une fiche interdite un tableau à une cellule, et un chapitre est
+**réservé** s'il porte une fiche interdite ou si son premier paragraphe
+commence par « Réservé à l'administration ».
+
+⚠️ **Les apostrophes droites sont converties à la lecture** — le document en
+portait cent soixante. C'est une règle du site, et elle ne se rattrape pas à
+l'affichage sans la recopier partout.
+
+⚠️ **Le script ne peut pas appeler `validerBloc`** : le schéma est
+`server-only`, et l'outillage qui permettrait de l'importer depuis un script
+Node n'est pas installé ici. Il refait donc les vérifications que la base ne
+voit pas — matière au cursus, année, runes, régularité d'un tableau. Et
+`import.test.ts` **repasse le fichier produit par la vraie porte** : le jour où
+le schéma durcira une règle, il tombera avant l'écriture en base.
+
+### Le lecteur
+
+`components/grimoires/Lecteur.tsx`, et l'image `public/grimoires/grimoire_ouvert.webp`
+— fournie **déjà optimisée, ne pas la retoucher**. Les deux zones de papier
+sont **relevées sur l'image par le joueur** et vivent dans
+`config/grimoires.json`.
+
+- ⚠️ **Le rapport est tenu par la BOÎTE, jamais par l'image.** Les bornes des
+  pages sont des pourcentages de cette boîte ; si elle cesse de suivre le
+  rapport du décor, `object-fit` centre l'image et le texte sort du papier.
+  Piège déjà payé sur le journal du bureau, puis sur le tableau d'une maison.
+- ⚠️ **Les mesures sont posées en VARIABLES CSS sur `.grimoire`**, jamais
+  directement sur les pages : c'est ce qui permet à la requête média du
+  téléphone de les redéfinir. Écrites en style en ligne sur l'élément, elles
+  l'emporteraient et le petit écran garderait ses deux pages.
+- **Les blocs sont rendus par le SERVEUR** et remis au lecteur en tableau : il
+  ne fabrique aucun contenu, il mesure une copie invisible et distribue. C'est
+  ce qui garde le nettoyage du balisage côté serveur.
+- **La pagination est pure et testée** — `pagination.ts` : une fiche ne se
+  coupe jamais, un titre ne finit jamais une page, un titre seul sur sa page y
+  reste (sinon on le repousserait à l'infini).
+- **Ce qu'on retient d'un redimensionnement, c'est le BLOC**, jamais le numéro
+  de page : celui-ci ne veut plus rien dire dès que la largeur ou la taille du
+  texte changent. Vérifié à l'écran : 38 pages deviennent 65 en grande taille,
+  et l'on reste sur le même sort.
+- ⚠️ **Un numéro de page ne voyage pas dans un lien.** L'adresse porte le
+  chapitre et l'ancre d'un bloc —
+  `/grimoires/sortileges/les-sorts-lies#sortilege-de-la-charge` —, et se met à
+  jour à chaque page tournée. « Page 12 » chez soi n'est pas « page 12 » chez
+  quelqu'un qui lit sur son téléphone.
+- ⚠️ **Le fragment d'une adresse ne parvient jamais au serveur** : l'ancre est
+  lue dans le navigateur, la page ne peut pas la passer.
+- **Le mode continu est une ADRESSE** — `?lecture=continue` —, pas un
+  interrupteur : il fonctionne sans une ligne de script, et c'est ce qui en
+  fait une vraie alternative. **Un seul rendu des blocs sert aux deux modes.**
+- ⚠️ **Aucune couleur n'est écrite dans le composant de bloc.** Les mêmes blocs
+  se lisent sur le papier du lecteur et sur la nuit du mode continu : les
+  teintes viennent des variables que `.gr-papier` et `.gr-nuit` redéfinissent.
+- **Sur téléphone, le décor cède et le texte passe** : une seule page, le
+  bureau disparaît. À 375 px, la page de gauche tiendrait dans 110 px — trois
+  mots par ligne.
+- **L'animation ne retient jamais la lecture.** La feuille tourne 600 ms autour
+  de la reliure, mais le contenu a déjà changé ; elle ne porte aucun texte et
+  ne reçoit aucun clic. Vérifié en enchaînant deux clics pendant qu'elle
+  volait. `prefers-reduced-motion` et le téléphone la retirent.
+- ⚠️ **La page cible se calcule DEHORS de la mise à jour d'état** : poser
+  l'animation dans la fonction passée à `setPage` reviendrait à modifier un
+  composant pendant qu'un autre se rend.
+
+**Une quatrième police**, contre la règle du projet et **accordée par le
+joueur** : Noto Sans Runic, réduite au seul bloc runique. Aucune des trois
+autres ne dessine les runes, et le repli système est incertain sur Android.
+`.rune` reste la rune décorative du reste du site ; `.glyphe` est celle du
+contenu.
+
+⚠️ **Limite connue : un bloc plus haut qu'une page reste seul sur la sienne et
+défile à l'intérieur.** Le tableau des vingt-quatre runes est dans ce cas
+(949 px pour 468). La seule autre voie serait de le couper en tranches à
+l'import, avec l'en-tête répété — **décision du joueur**, non prise.
+
+### L'administration
+
+`/admin/grimoires` : poser un volume, corriger ce qu'il annonce, le ranger, le
+retirer et le remettre ; et **ouvrir ou fermer un chapitre**, qui est la seule
+décision de tout ce lot qui ferme quelque chose.
+
+**Aucune permission attribuable n'ouvre ces gestes**, et il ne faut pas en
+ajouter : comme les annonces et le calendrier, c'est une décision
+d'administration.
+
+⚠️ **Il n'y a pas d'éditeur de blocs, et c'est un choix.** Le contenu entre par
+l'import : les volumes s'écrivent sous Word, où le joueur les relit. Un éditeur
+ne remplacerait pas le document, il en ferait une seconde version — et c'est
+toujours la copie oubliée qu'un joueur lirait. À reproposer le jour où une
+coquille se corrigera plus souvent qu'un volume ne s'écrira.
+
+---
+
 ## Le partenariat
 
 Posé le 28 août 2026. `/partenariat` : nos bannières, le texte qui nous
@@ -3414,6 +3611,12 @@ massif du nord. On y écrit du jeu de rôle aux mêmes règles qu'au château, e
 les points s'y gagnent. Vérifié à l'écran : une scène ouverte sur le chemin
 escarpé accorde bien son point à la maison, et la même scène à neuf lignes est
 refusée. Voir « Les alentours du château ».
+
+**Les Grimoires sont ouverts** : l'étagère, le lecteur qui tourne ses pages,
+la lecture continue, l'import du grimoire des Sortilèges — cinq chapitres,
+quatre-vingt-douze blocs — et l'écran d'administration. Vérifié à l'écran : un
+élève voit quatre chapitres, le cinquième n'existe pas pour lui, et « Sortilège
+de Hel » n'apparaît dans aucune réponse. Voir « Les Grimoires ».
 
 **Pas encore** : **les leçons, les contrôles et les examens** — le cursus et sa
 navigation sont posés, ce qui s'y accroche ne l'est pas. C'est le dernier

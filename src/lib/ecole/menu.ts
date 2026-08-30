@@ -18,6 +18,7 @@
 
 import { TEXTES_ANNONCES } from "@/lib/annonces/constantes";
 import { TEXTES_CALENDRIER } from "@/lib/calendrier/constantes";
+import { TEXTES_GRIMOIRES } from "@/lib/grimoires/constantes";
 import { TEXTES_POINTS } from "@/lib/points/constantes";
 import { TEXTES_REGISTRE } from "@/lib/registre/constantes";
 import { NOM_COURT } from "@/lib/corbeaux/constantes";
@@ -68,6 +69,15 @@ export const ROUTES = {
    */
   maisons: "/maisons",
   cours: "/cours",
+  /**
+   * **La bibliothèque de consultation** — à ne pas confondre avec « La
+   * bibliothèque », qui est une pièce de l'aile ouest où l'on joue des
+   * scènes. Ici on lit ; là-bas on écrit.
+   *
+   * Rangée sous « Le domaine » plutôt qu'au Grand Hall : un grimoire est un
+   * support de cours, et le joueur ira le chercher là où il a son programme.
+   */
+  grimoires: "/grimoires",
   alentours: "/alentours",
 
   // Le monde des non-mages
@@ -226,6 +236,14 @@ export const MENU: readonly EntreeMenu[] = [
         libelle: "Les maisons",
       },
       { href: ROUTES.cours, libelle: "Les cours" },
+      {
+        // **Aucun drapeau**, comme les quatre voisines : ni le membre
+        // suspendu ni le nouvel arrivant n'y entrent. Les exceptions
+        // écrites — la Tour, les annonces — tiennent à un recours ou à une
+        // obligation de connaître ; un grimoire n'est ni l'un ni l'autre.
+        href: ROUTES.grimoires,
+        libelle: TEXTES_GRIMOIRES.nomBandeau,
+      },
       { href: ROUTES.alentours, libelle: "Les alentours" },
     ],
   },
