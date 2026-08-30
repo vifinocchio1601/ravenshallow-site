@@ -674,7 +674,11 @@ describe("Les alentours sont meublés : cinq zones, seize lieux", () => {
       "Le phare": "TROISIEME_ANNEE",
       "Le lac, en barque": "QUATRIEME_ANNEE",
       "Le passage secret": "QUATRIEME_ANNEE",
-      "La grève, sous la falaise": "CINQUIEME_ANNEE",
+      // ⚠️ **La grève n'y figure plus**, et ce n'est pas un oubli : elle
+      // exigeait la cinquième année au pied de la falaise du château, et
+      // l'exigence est tombée avec le déplacement dans la baie de Kaldvik —
+      // un rivage de village où l'on ramasse du bois flotté n'a pas à être
+      // plus fermé que les quais d'à côté. Décision du joueur, 30 août 2026.
       "Le cœur de la forêt": "CINQUIEME_ANNEE",
     });
   });

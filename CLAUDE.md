@@ -2098,11 +2098,11 @@ les deux espaces cesseraient un jour de parler la même langue.
 
 ### Ce que le joueur a arbitré, et ce que la carte a tranché
 
-- **Kaldvik s'écrit en entier** — quais, place et ruelles, échoppe, phare. La
-  bible ne décrivait que l'échoppe et rangeait le village parmi ses points « à
-  approfondir » ; l'article 12.4 fait de son accord la condition pour
-  l'inventer. **Ces quatre textes font donc autorité pour le RP.** Le gardien
-  du phare est la seule figure ajoutée.
+- **Kaldvik s'écrit en entier** — quais, grève, place et ruelles, échoppe,
+  phare. La bible ne décrivait que l'échoppe et rangeait le village parmi ses
+  points « à approfondir » ; l'article 12.4 fait de son accord la condition
+  pour l'inventer. **Ces cinq textes font donc autorité pour le RP.** Le
+  gardien du phare est la seule figure ajoutée, accordée le 30 août 2026.
 - **Les Hauts Plateaux et le large sont « sur convocation »** — la bible les
   dit « peu exploités », et la zone des naufrages ne se visite pas de son
   propre chef. Le lieu existe, le staff ouvre, l'élève convoqué répond. Ne pas
@@ -2122,6 +2122,66 @@ L'échoppe reprend mot pour mot les détails de la scène d'achat de la baguette
 l'enseigne gravée, le crâne d'ours au linteau. **Deux textes qui se
 contredisent coûtent plus cher qu'une répétition** : c'est la leçon de la Salle
 de Banquet, et un essai en base le fige.
+
+### La relecture des cinq zones — 30 août 2026
+
+Elle a eu lieu, comme celle des cinq ailes du château, et **elle fait autorité
+pour le RP** : l'article 12.4 fait de l'accord du joueur la condition pour
+inventer un lieu, et la bible rangeait Kaldvik parmi ses points à approfondir.
+Cinq corrections, une migration chacune.
+
+⚠️ **La carte a tranché trois fois sur cinq, et aucune de ces trois erreurs ne
+se voyait en lisant le texte.** Il faut l'ouvrir — `public/crests/carte.jpg` —,
+jamais se fier au nom des lieux. C'est la leçon de l'aile nord, payée une
+seconde fois.
+
+| | Ce qui n'allait pas |
+| --- | --- |
+| **La grève** | décrivait le chemin de la grotte sans la nommer |
+| **La grève**, encore | gardait une exigence de cinquième année devenue sans objet |
+| **La cascade** | faisait tomber le lac là où sa propre zone parle d'une rivière |
+| **Le cœur de la forêt** | disait « les professeurs n'interdisent pas » sur une porte fermée |
+| **Le phare** | posé sur une digue que la carte ne porte pas |
+
+**La grève est la correction la plus instructive.** Elle décrivait, au pied de
+la falaise du château, une bande de galets découverte à marée basse où l'on
+descendait « par une faille où l'on ne passe qu'un par un ». Aucun mot
+interdit — le contrôle mécanique passait —, et pourtant c'était **le chemin
+d'accès à la grotte**, que la bible (§3) dit « accessible seulement par la mer
+ou par un passage escarpé, juste en dessous du château ». La carte, elle, ne
+porte aucune grève à cet endroit : la mer y bat la roche.
+
+⚠️ **On ne nomme pas la chose — et l'on ne construit pas non plus la porte à
+côté du verrou.** C'est le prolongement de la leçon des souterrains, et le
+contrôle mécanique ne l'attrapera jamais : il relit des mots, pas une
+géographie. Décision du joueur : déplacer le texte dans la baie de Kaldvik,
+où le bois flotté et les filets perdus sont même mieux à leur place.
+
+⚠️ **Le déplacement d'un lieu ne déplace pas ses verrous avec lui.** L'année
+exigée dit ce qu'un endroit a de dangereux, pas ce qu'il est : la grève gardait
+sa cinquième année et devenait le lieu le plus fermé du village, à trente pas
+de quais ouverts à tous.
+
+**Le cœur de la forêt est interdit, et l'on y va quand même** — arbitrage du
+joueur. L'interdit est **dans le monde**, il n'empêche pas un élève d'y aller à
+ses risques et périls, et le verrou de cinquième année ne bouge pas pour
+autant. ⚠️ **Ce n'est pas le cas des souterrains** : là-bas, rappeler
+l'interdit désignait la grotte. Ici il n'y a rien de caché à protéger, et
+l'interdit ne montre que ce qu'il dit.
+
+⚠️ **Le phare EST sur la carte** — je l'avais cru inventé et signalé comme tel.
+C'est l'erreur inverse, et elle vaut d'être notée : on se méfie de ce qu'on a
+écrit, et l'on oublie de vérifier que la source ne le portait pas déjà.
+
+**La bible a été corrigée le même jour**, à la demande du joueur : sa §2
+disait le Lac « attenant au château », ce que la carte dément. Elle porte
+maintenant « au nord-ouest du château, séparé de lui par les bois », et sa date
+de mise à jour est passée au 30 août 2026. Une copie de l'ancienne version dort
+dans `Perso/Ravenshallow/Sauvegardes/`.
+
+⚠️ **Trois inventions ont été accordées** et font autorité au même titre que le
+reste : le **sentier des corniches**, le **ponton du lac** — sans lui, « le lac,
+en barque » n'a pas de barques —, et le **gardien du phare**.
 
 ### Les trois contrôles sont désormais mécaniques
 
