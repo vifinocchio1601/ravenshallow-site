@@ -1,6 +1,9 @@
 import Link from "next/link";
 import RuneDivider from "./RuneDivider";
 import { DISCORD, FOOTER_LINKS, LIENS_LEGAUX } from "@/lib/content";
+import { TEXTES_PARTENARIAT } from "@/lib/partenariat/constantes";
+
+const t = TEXTES_PARTENARIAT;
 
 export default function Footer() {
   return (
@@ -41,6 +44,44 @@ export default function Footer() {
                 ))}
               </ul>
             </nav>
+
+            {/* — Voter pour nous —
+                Les mêmes boutons que `/partenariat`, tirés de la même liste :
+                deux copies finiraient par pointer vers deux votes.
+
+                ⚠️ **Ils sont harmonisés par la HAUTEUR, jamais par la
+                largeur** : le logo carré de l'un et la bannière basse de
+                l'autre n'ont pas le même rapport, et à largeur commune l'un
+                écraserait l'autre. Même raison que les blasons des tubes. */}
+            <div className="mt-10">
+              <h2 className="font-display text-[0.68rem] uppercase tracking-[0.22em] text-silver">
+                {t.annuaires.titrePied}
+              </h2>
+              <ul className="mt-4 flex flex-wrap items-center gap-4">
+                {t.annuaires.liste.map((annuaire) => (
+                  <li key={annuaire.cle}>
+                    <a
+                      href={annuaire.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      title={annuaire.titre}
+                      className="inline-flex rounded-sm border border-silver/12 bg-void/40 p-2 transition-colors duration-300 hover:border-aurora-teal/40"
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={annuaire.image}
+                        alt={annuaire.alt}
+                        width={annuaire.largeur}
+                        height={annuaire.hauteur}
+                        loading="lazy"
+                        decoding="async"
+                        className="h-7 w-auto"
+                      />
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </div>
           </div>
 
           {/* — Discord — */}

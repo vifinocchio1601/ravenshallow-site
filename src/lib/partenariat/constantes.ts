@@ -98,6 +98,16 @@ export const TEXTES_PARTENARIAT = {
    */
   annuaires: {
     titre: "Nous donner de la voix",
+    /**
+     * Le même geste, en pied de page — **décision du joueur, 30 août 2026**.
+     * Il n'était que sur `/partenariat` ; c'est là qu'il a le plus d'effet,
+     * mais c'est aussi la page qu'un visiteur ne pense pas à ouvrir.
+     *
+     * ⚠️ **Deux affichages, une seule liste.** Recopier les adresses dans le
+     * pied de page, ce serait garantir qu'un jour l'un des deux boutons
+     * pointe vers un vote périmé.
+     */
+    titrePied: "Voter pour nous",
     chapeau:
       "Sans partenariat, sans compte, et en un clic : un vote fait remonter le forum dans les annuaires, et c’est par là qu’arrive une bonne part des joueurs.",
     /**
