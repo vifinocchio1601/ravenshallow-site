@@ -2891,8 +2891,10 @@ de 200 % qui n'apprend rien.
 
 ### Ce qui reste au joueur
 
-- **La clé d'API expire-t-elle ?** À vérifier dans la console, colonne
-  *Expires*. Si c'est une date, les suggestions s'arrêteront ce jour-là.
+- **La clé d’API n’expire pas** — vérifié avec le joueur le 31 août 2026. Si
+  elle était un jour recréée avec une échéance, les suggestions s’arrêteraient
+  ce jour-là sans que rien ne l’explique : le rapport continuerait de partir,
+  et cette seule section disparaîtrait.
 - **Le seuil des premiers pas** (`premiersPasEnAttenteJours`, 14) est une
   proposition, pas une règle du règlement.
 - **Les erreurs sont gardées trente jours.** Rien ne l'impose ; c'est une
