@@ -100,14 +100,51 @@ export const TEXTES_PARTENARIAT = {
     titre: "Nous donner de la voix",
     chapeau:
       "Sans partenariat, sans compte, et en un clic : un vote fait remonter le forum dans les annuaires, et c’est par là qu’arrive une bonne part des joueurs.",
-    forumRpg: {
-      /** Le lien et l'image viennent de l'annuaire : on ne les réécrit pas. */
-      url: "https://www.forumrpg.fr/vote/ravenshallow-ecole-de-magie-ez646h",
-      image: "https://www.forumrpg.fr/assets/mainLogo-DXM7fhnO.png",
-      titre: "Voter pour Ravenshallow - École de magie",
-      alt: "Voter pour Ravenshallow - École de magie sur Forum RPG Portal",
-      legende: "Forum RPG Portal — un vote par jour et par personne.",
-    },
+    /**
+     * **Une liste, et non deux blocs recopiés.** Le second annuaire est
+     * arrivé le 30 août 2026 ; un bloc dupliqué aurait divergé du premier au
+     * troisième.
+     *
+     * ⚠️ **Le lien et l'image viennent de l'annuaire : on ne les réécrit
+     * pas.** Ce sont les boutons qu'ils fournissent, et l'adresse de vote
+     * porte notre identifiant chez eux.
+     *
+     * ⚠️ **Les dimensions sont celles du FICHIER, relevées dessus.** Elles ne
+     * donnent que le rapport ; la largeur affichée est à part. Un rapport
+     * faux fait sauter la page au chargement de l'image — le piège déjà payé
+     * sur Forum RPG Portal, dont le logo était annoncé carré et ne l'est pas.
+     */
+    liste: [
+      {
+        cle: "forum-rpg",
+        url: "https://www.forumrpg.fr/vote/ravenshallow-ecole-de-magie-ez646h",
+        image: "https://www.forumrpg.fr/assets/mainLogo-DXM7fhnO.png",
+        largeur: 112,
+        hauteur: 105,
+        largeurAffichee: 88,
+        titre: "Voter pour Ravenshallow - École de magie",
+        alt: "Voter pour Ravenshallow - École de magie sur Forum RPG Portal",
+        legende: "Forum RPG Portal — un vote par jour et par personne.",
+      },
+      {
+        cle: "root-top",
+        /**
+         * ⚠️ **En `http`, tel que l'annuaire le fournit.** C'est un lien
+         * sortant, pas une ressource de la page : rien n'est bloqué, et le
+         * forcer en `https` risquerait de ne plus compter le vote.
+         */
+        url: "http://www.root-top.com/topsite/obsession27/in.php?ID=27763",
+        image: "https://img.root-top.com/topsite/obsession27/banner.gif",
+        // Le fichier s'appelle « .gif » et c'est un PNG de 90 × 28. Le
+        // navigateur lit le vrai type ; ce sont ces nombres-là qui comptent.
+        largeur: 90,
+        hauteur: 28,
+        largeurAffichee: 90,
+        titre: "Voter pour Ravenshallow — École de magie nordique",
+        alt: "Voter pour Ravenshallow — École de magie nordique sur Root-Top",
+        legende: "Root-Top — le même geste, sur un second annuaire.",
+      },
+    ],
   },
 
   partenaires: {

@@ -175,38 +175,41 @@ export default async function PartenariatPage() {
               classe des forums au nombre de voix. Les mêler ferait passer un
               vote pour un échange. */}
           <Section titre={t.annuaires.titre} chapeau={t.annuaires.chapeau}>
-            <div className="mt-6 flex flex-wrap items-center gap-6">
-              <a
-                href={t.annuaires.forumRpg.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                title={t.annuaires.forumRpg.titre}
-                className="shrink-0 rounded-sm border border-silver/12 bg-fjord/60 p-3 transition-colors duration-300 hover:border-aurora-teal/40"
-              >
-                {/* L'image est servie par l'annuaire lui-même : c'est le
-                    bouton qu'il fournit, et on ne le réécrit pas. Si son
-                    adresse change un jour, le texte de remplacement s'affiche
-                    et le lien reste cliquable. */}
-                {/* ⚠️ Les dimensions sont celles du fichier — 112 × 105, et
-                    non 88 × 88 : leur logo n'est pas carré. Ce sont elles qui
-                    donnent le rapport, et la classe qui donne la taille
-                    affichée. Un rapport faux fait sauter la page au
-                    chargement de l'image. */}
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={t.annuaires.forumRpg.image}
-                  alt={t.annuaires.forumRpg.alt}
-                  width={112}
-                  height={105}
-                  loading="lazy"
-                  decoding="async"
-                  className="h-auto w-[88px]"
-                />
-              </a>
-              <p className="max-w-[38ch] leading-[1.8] text-parchment-dim">
-                {t.annuaires.forumRpg.legende}
-              </p>
-            </div>
+            <ul className="mt-6 grid gap-5">
+              {t.annuaires.liste.map((annuaire) => (
+                <li
+                  key={annuaire.cle}
+                  className="flex flex-wrap items-center gap-6"
+                >
+                  <a
+                    href={annuaire.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    title={annuaire.titre}
+                    className="shrink-0 rounded-sm border border-silver/12 bg-fjord/60 p-3 transition-colors duration-300 hover:border-aurora-teal/40"
+                  >
+                    {/* L'image est servie par l'annuaire lui-même : c'est le
+                        bouton qu'il fournit, et on ne le réécrit pas. Si son
+                        adresse change un jour, le texte de remplacement
+                        s'affiche et le lien reste cliquable. */}
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={annuaire.image}
+                      alt={annuaire.alt}
+                      width={annuaire.largeur}
+                      height={annuaire.hauteur}
+                      loading="lazy"
+                      decoding="async"
+                      style={{ width: annuaire.largeurAffichee }}
+                      className="h-auto max-w-full"
+                    />
+                  </a>
+                  <p className="max-w-[38ch] leading-[1.8] text-parchment-dim">
+                    {annuaire.legende}
+                  </p>
+                </li>
+              ))}
+            </ul>
           </Section>
 
           {/* — Le bloc de liens — */}
