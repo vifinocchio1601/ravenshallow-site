@@ -225,6 +225,9 @@ function enregistrer(): void {
     writeFileSync(temporaire, JSON.stringify(magasin, null, 2), "utf8");
     renameSync(temporaire, FICHIER_DONNEES);
   } catch (erreur) {
+    // ⚠️ Pas de `noterErreur` ici : c’est l’échafaudage JSON du poste de
+    // développement, qui ne tourne que sans base — et la trace des erreurs
+    // vit justement en base. La console suffit.
     console.error("[depot] enregistrement impossible", erreur);
   }
 }

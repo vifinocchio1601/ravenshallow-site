@@ -8,6 +8,7 @@ import {
   versionTexte,
 } from "./messages";
 import { creerJeton, lienDossier } from "@/lib/dossier/jeton";
+import { noterErreur } from "@/lib/erreurs/depot";
 
 /**
  * Envoi des courriels aux joueurs.
@@ -84,6 +85,7 @@ async function poster(
   } catch (erreur) {
     // Un envoi raté ne doit jamais faire échouer le dépôt d’un dossier.
     console.error("[courriel] échec d’envoi", erreur);
+    await noterErreur("courriel", erreur);
     return {
       envoye: false,
       raison: "echec",
@@ -125,6 +127,7 @@ async function posterAvecLien(
     );
   } catch (erreur) {
     console.error("[courriel] préparation impossible", erreur);
+    await noterErreur("courriel", erreur);
     return {
       envoye: false,
       raison: "echec",

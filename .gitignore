@@ -14,3 +14,8 @@ next-env.d.ts
 
 # Dossiers enregistrés tant que la base n’est pas branchée
 .donnees/
+
+# La mémoire de La Veille — ce qu'une ronde laisse à la suivante.
+# Elle vit dans le cache des Actions, jamais dans le dépôt : celui-ci est
+# public, et un carnet de surveillance commité par mégarde y resterait.
+/.veille/

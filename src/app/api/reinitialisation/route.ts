@@ -9,6 +9,7 @@ import { MESSAGES_CONNEXION } from "@/lib/connexion/constantes";
 import { adresseDuSite, envoyerChangementMotDePasse } from "@/lib/mail/envoyer";
 import { COOKIE_SESSION, optionsCookie } from "@/lib/session/session";
 import { ROUTES } from "@/lib/ecole/menu";
+import { noterErreur } from "@/lib/erreurs/depot";
 
 /**
  * Enregistrement du nouveau mot de passe.
@@ -71,6 +72,11 @@ export async function POST(request: Request) {
     );
     if (!resultat.envoye) {
       console.error("[réinitialisation] notification non partie", resultat);
+      await noterErreur(
+        "reinitialisation",
+        new Error(`notification non partie : ${resultat.raison}`),
+        "/api/reinitialisation",
+      );
     }
 
     // La session courante tombe avec les autres : `sessionVersion` a changé.
@@ -80,6 +86,7 @@ export async function POST(request: Request) {
     return reponse;
   } catch (erreur) {
     console.error("[réinitialisation] échec technique", erreur);
+    await noterErreur("reinitialisation", erreur, "/api/reinitialisation");
     return NextResponse.json(
       { erreur: MESSAGES_CONNEXION.indisponible },
       { status: 503 },

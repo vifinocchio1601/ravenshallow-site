@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { visageEstPris } from "@/lib/dossier/depot-base";
 import { verifierJeton } from "@/lib/dossier/jeton";
+import { noterErreur } from "@/lib/erreurs/depot";
 
 /**
  * Registre des visages — art. 6.3.
@@ -45,6 +46,7 @@ export async function GET(request: Request) {
     return NextResponse.json({ pris: await visageEstPris(nom, saufCompteId) });
   } catch (erreur) {
     console.error("[visages] registre injoignable", erreur);
+    await noterErreur("visages", erreur, "/api/visages");
     return NextResponse.json({ erreur: "Registre indisponible" }, { status: 503 });
   }
 }

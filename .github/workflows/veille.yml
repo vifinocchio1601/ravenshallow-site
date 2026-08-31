@@ -1,0 +1,160 @@
+# La Veille — une ronde par jour, à 5 h heure de Bruxelles.
+#
+# ── Pourquoi DEUX déclenchements ──
+#
+# Le planificateur de GitHub ne connaît que l'heure universelle, et ignore
+# l'heure d'été. Une ronde posée « à 3 h UTC » part à 4 h à Bruxelles l'hiver
+# et à 5 h l'été : programmée une fois pour toutes, elle se décalerait d'une
+# heure deux fois par an.
+#
+# On déclenche donc à 3 h ET à 4 h UTC, et `heure.ts` fait sortir celle qui
+# n'est pas à 5 h locales. Une seule des deux travaille, selon la saison :
+#
+#   hiver (UTC+1)   3 h UTC → 4 h Bruxelles → sort     4 h UTC → 5 h → TRAVAILLE
+#   été   (UTC+2)   3 h UTC → 5 h Bruxelles → TRAVAILLE  4 h UTC → 6 h → sort
+#
+# Celle qui sort coûte une trentaine de secondes, et le dépôt étant public,
+# ses minutes ne sont pas comptées.
+#
+# ⚠️ **Ce n'est pas un réveil de précision.** Le planificateur de GitHub part
+# en retard quand la plateforme est chargée — quelques minutes, parfois
+# davantage. Une ronde qui s'exécute à 5 h 08 est une ronde normale ; la garde
+# tolère tout le retard jusqu'au bout de l'heure, et resserrer ce délai ferait
+# sauter la ronde du jour.
+#
+# ── Ce que ce workflow ne fait jamais ──
+#
+# ⚠️ **Il n'affiche rien.** Le dépôt est PUBLIC, donc ces journaux d'exécution
+# le sont aussi : n'importe qui peut les lire. La ronde n'écrit que des lignes
+# de progression sans contenu, et tout ce qui compte part par courriel.
+#
+# ⚠️ **Il n'écrit rien nulle part.** `contents: read` et rien de plus : ce
+# workflow ne peut pas pousser un commit, ouvrir une issue, ni toucher au
+# dépôt. C'est la même promesse que les identifiants de base en lecture seule,
+# tenue par GitHub cette fois.
+
+name: La Veille
+
+on:
+  schedule:
+    # Voir l'explication ci-dessus : deux départs, un seul travaille.
+    - cron: "0 3 * * *"
+    - cron: "0 4 * * *"
+  # Le déclenchement à la demande, depuis l'onglet Actions.
+  workflow_dispatch:
+
+# Aucun droit d'écriture. La Veille regarde, elle ne touche à rien.
+permissions:
+  contents: read
+
+# Deux rondes en même temps liraient la même mémoire et se marcheraient
+# dessus. La seconde attend — elle ne s'annule pas : un rapport en retard vaut
+# mieux qu'un rapport absent.
+concurrency:
+  group: veille
+  cancel-in-progress: false
+
+jobs:
+  ronde:
+    runs-on: ubuntu-latest
+    # ⚠️ Ce délai est un FILET, pas la borne de durée. La ronde s'arrête
+    # d'elle-même au bout de dix minutes et envoie ce qu'elle a — voir
+    # `DUREE_MAX_RONDE_MS`. Si celui-ci se déclenche, c'est que la borne
+    # interne a elle-même échoué, et le dernier pas envoie l'alerte.
+    timeout-minutes: 20
+
+    env:
+      # L'adresse du site est publique : elle n'a rien à faire dans un secret,
+      # et la voir ici évite de se demander ce que la ronde surveille.
+      VEILLE_SITE_URL: https://ravenshallow.com
+      # Où la mémoire d'une ronde à l'autre est rangée.
+      VEILLE_MEMOIRE: .veille/memoire.json
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # Node 24 : il exécute le TypeScript nativement, ce qui évite au projet
+      # une dépendance d'outillage. Voir `scripts/alias-veille.mjs`.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+
+      - name: Installer les dépendances du site
+        run: npm ci
+
+      # ── Ce que la ronde ajoute, et que le site n'a pas ──
+      #
+      # ⚠️ `--no-save` : ni Playwright ni le SDK d'Anthropic n'entrent dans
+      # `package.json`. C'est le parti pris déjà pris pour `sharp`, installé le
+      # temps de fabriquer les bannières et jamais gardé — le site ne doit pas
+      # porter le poids des outils de sa surveillance.
+      - name: Installer les outils de la ronde
+        run: npm install --no-save playwright @anthropic-ai/sdk
+
+      # Les navigateurs pèsent lourd et ne changent pas tous les jours.
+      - name: Reprendre le navigateur en cache
+        id: cache-navigateur
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-chromium-${{ runner.os }}
+
+      - name: Poser le navigateur
+        if: steps.cache-navigateur.outputs.cache-hit != 'true'
+        run: npx playwright install --with-deps chromium
+
+      # ── La mémoire d'une ronde à l'autre ──
+      #
+      # ⚠️ **Le cache d'un dépôt public n'est pas un coffre** : un workflow
+      # lancé depuis une bifurcation peut atteindre les caches de la branche
+      # par défaut. Le fichier ne porte donc que des empreintes d'anomalies et
+      # des compteurs — aucun nom, aucune adresse, aucun texte de membre. C'est
+      # la règle « le rapport ne contient que des nombres » qui rend ce
+      # rangement acceptable, pas l'inverse.
+      #
+      # ⚠️ La clé porte le numéro de l'exécution parce qu'un cache GitHub est
+      # IMMUABLE une fois écrit : réutiliser la même clé chaque jour figerait
+      # la mémoire du premier matin. `restore-keys` retrouve la plus récente.
+      - name: Reprendre la mémoire d’hier
+        uses: actions/cache@v4
+        with:
+          path: .veille
+          key: veille-memoire-${{ github.run_id }}
+          restore-keys: veille-memoire-
+
+      # ── La ronde ──
+      #
+      # `--manuelle` passe outre la garde d'heure : sans lui, un déclenchement
+      # à la demande sortirait aussitôt et ne servirait à rien.
+      - name: Faire la ronde
+        id: ronde
+        env:
+          VEILLE_DATABASE_URL: ${{ secrets.VEILLE_DATABASE_URL }}
+          VEILLE_COURRIEL: ${{ secrets.VEILLE_COURRIEL }}
+          VEILLE_MOT_DE_PASSE: ${{ secrets.VEILLE_MOT_DE_PASSE }}
+          MAIL_EXPEDITEUR: ${{ secrets.MAIL_EXPEDITEUR }}
+          MAIL_APP_PASSWORD: ${{ secrets.MAIL_APP_PASSWORD }}
+          # Facultative : sans elle, le rapport part sans ses suggestions.
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            npm run veille:envoyer -- --manuelle
+          else
+            npm run veille:envoyer
+          fi
+
+      # ── Si la ronde meurt sans avoir pu parler ──
+      #
+      # ⚠️ **Un échec silencieux est pire qu'une panne.** `ronde.ts` envoie
+      # déjà un courriel court quand elle tombe elle-même. Ce pas-ci couvre ce
+      # qu'elle ne peut pas couvrir : un `npm ci` qui échoue, un délai de vingt
+      # minutes atteint, un processus tué. Sans lui, l'absence de rapport se
+      # confondrait avec « tout va bien ».
+      - name: Prévenir que la ronde est tombée
+        if: failure()
+        env:
+          MAIL_EXPEDITEUR: ${{ secrets.MAIL_EXPEDITEUR }}
+          MAIL_APP_PASSWORD: ${{ secrets.MAIL_APP_PASSWORD }}
+          VEILLE_EXECUTION: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: node scripts/veille-alerte.mjs

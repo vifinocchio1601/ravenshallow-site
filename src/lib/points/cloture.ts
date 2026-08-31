@@ -87,7 +87,10 @@ export async function ceQueLaClotureFerait(): Promise<AVenir | null> {
     compteursDeLaSaison(saison.id),
     effectifs(),
     prisma.eleve.findMany({
-      where: { statut: "ACCEPTE", utilisateur: { archiveLe: null } },
+      where: {
+        statut: "ACCEPTE",
+        utilisateur: { archiveLe: null, compteDeService: false },
+      },
       select: {
         id: true,
         prenomNom: true,

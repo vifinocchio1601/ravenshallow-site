@@ -4,6 +4,7 @@ import { ConflitDossier, creerDossier, journaliserCourriel } from "@/lib/dossier
 import { schemaDossier } from "@/lib/dossier/schema";
 import { envoyerConfirmationDossier } from "@/lib/mail/envoyer";
 import type { Genre } from "@/lib/dossier/etats";
+import { noterErreur } from "@/lib/erreurs/depot";
 
 /**
  * Envoi du dossier d’admission.
@@ -81,6 +82,7 @@ export async function POST(request: Request) {
       );
     }
     console.error("[dossier] création impossible", erreur);
+    await noterErreur("dossier", erreur, "/api/dossier");
     return NextResponse.json(
       { erreur: MESSAGES.baseIndisponible },
       { status: 503 },

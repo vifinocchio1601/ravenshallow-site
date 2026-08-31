@@ -55,6 +55,9 @@ npm run forum:essai       # exerce les pouvoirs ET le forum SUR LA VRAIE BASE
 npm run points:essai      # exerce les points, la clôture et l'archivage SUR LA VRAIE BASE
 npm run calendrier:essai  # exerce le calendrier SUR LA VRAIE BASE
 npm run partenariat:essai # exerce les partenariats SUR LA VRAIE BASE
+npm run veille            # une ronde de surveillance, rapport à l'écran
+npm run veille:envoyer    # une ronde complète, courriel compris
+npm run veille:essai      # exerce la lecture seule SUR LA VRAIE BASE
 ```
 
 `base:migrer` existe parce que la CLI Prisma ne lit pas `.env.local` : le
@@ -2683,6 +2686,220 @@ signale : un lien vers une ancre absente ne fait tout simplement rien.
 
 ---
 
+## La Veille — la ronde de surveillance
+
+Posée le 31 août 2026. **Une ronde par jour, à 5 h heure de Bruxelles, et un
+rapport par courriel.** Elle regarde le site, elle n'y touche jamais.
+
+    npm run veille            une ronde, rapport à l'écran, rien d'envoyé
+    npm run veille:envoyer    une ronde complète, courriel compris
+    npm run veille:exemple    à quoi ressemble un rapport, sans en attendre un
+    npm run veille:essayer    un collecteur seul (disponibilite, coherence…)
+    npm run veille:essai      les identifiants et le compte, SUR LA VRAIE BASE
+
+### Trois règles, et la première commande tout le reste
+
+**1. Lecture seule, et c'est PostgreSQL qui la tient.** Le rôle
+`veille_lecture` n'a que `SELECT` — posé par `scripts/veille-identifiants.mjs`,
+qui **retire tout avant d'accorder**. « Elle n'écrit pas » ne peut pas être une
+convention : une convention tient tant que personne ne se trompe.
+
+⚠️ **Deux verrous, et il faut les deux.** Le second : aucun fichier de
+`lib/veille/` n'importe `lib/prisma.ts`, qui porte la chaîne d'écriture. Un
+`import` machinal donnerait les pleins pouvoirs sans que rien ne le signale.
+`veille/etancheite.test.ts` relit le code source — **éprouvé en introduisant
+les quatre fautes, il tombe sur chacune**.
+
+⚠️ **`base.ts` demande à la base QUI PARLE** (`SELECT current_user`) avant la
+première requête, et s'arrête si ce n'est pas `veille_lecture`. Une chaîne
+peut mentir sur son rôle ; la base non. La même garde ouvre `en-base.essai.ts`,
+et elle y est vitale : cet essai envoie de vrais `TRUNCATE` et de vrais `DROP`,
+qui ne sont sans danger que parce qu'ils partent d'un rôle qui les refuse.
+
+**2. Aucune donnée personnelle, et la protection est en AMONT.** Les
+collecteurs ne demandent jamais `prenomNom`, `biographie`, `email` ni le corps
+d'un message. `rapport/caviardage.ts` n'est qu'un filet — et il **REFUSE** le
+rapport au lieu de le nettoyer : un rapport qui se caviarderait tout seul
+partirait proprement, et le collecteur fautif resterait sous un masque pendant
+des années.
+
+⚠️ **Le filet ne protège pas des NOMS**, et il ne faut pas croire le contraire :
+aucun moyen honnête de reconnaître un nom français dans un texte sans le
+comparer à la base. Les noms sont protégés par la règle, vérifiée en relisant
+le code. `en-base.essai.ts` prend les **vrais noms de la base** et exige qu'aucun
+ne figure dans un rapport construit sur elle — éprouvé en faisant remonter un
+nom par un collecteur : il tombe et le nomme.
+
+**3. Le contenu des membres est une donnée, jamais une consigne.** Et ce qui
+la protège n'est pas une détection : **aucun texte de membre ne traverse le
+code de La Veille**. Le motif de `MOTIF_CONSIGNE` est appliqué *par Postgres*,
+et la requête ne rend que des identifiants. Le résumé envoyé au modèle est
+**composé champ par champ** à partir de textes que La Veille a elle-même
+écrits ; les `detail` n'y entrent jamais.
+
+⚠️ Le contrôle des consignes apparentes sert à **prévenir le joueur**, pas à se
+défendre. Éprouvé sur la vraie base : **9 fausses consignes attrapées, 9
+phrases de jeu de rôle laissées tranquilles** — dont « Tu es maintenant une
+élève de Nattorm, lui dit la directrice », qu'une première version prenait
+pour une injection.
+
+### La garde d'heure — deux départs, un seul travail
+
+Le planificateur de GitHub ne connaît que l'heure universelle et **ignore
+l'heure d'été**. On déclenche donc à 3 h ET à 4 h UTC, et `heure.ts` fait
+sortir celle qui n'est pas à 5 h locales.
+
+| | 3 h UTC | 4 h UTC |
+| --- | --- | --- |
+| hiver (UTC+1) | 4 h → sort | **5 h → travaille** |
+| été (UTC+2) | **5 h → travaille** | 6 h → sort |
+
+⚠️ **Ce n'est pas un réveil de précision.** GitHub part en retard quand la
+plateforme est chargée. La garde compare une HEURE, pas un instant : à 5 h 08
+comme à 5 h 59 elle travaille. **Resserrer ce délai ferait sauter la ronde du
+jour.**
+
+⚠️ `--manuelle` passe outre — sans lui, un déclenchement à la demande sortirait
+aussitôt.
+
+### Le compte de service
+
+`veille@ravenshallow.invalid`, **Veille Automatique**. Il lui faut un dossier
+ACCEPTÉ pour ouvrir le bureau, le forum et les grimoires — et c'est ce qui le
+rendait visible. D'où `Utilisateur.compteDeService`, qui l'exclut de **sept
+requêtes exactement** : le Registre, la fiche publique, la recherche de la
+Tour, les élèves à qui donner des points, le top du mois, l'effectif du
+tournoi, les passages d'année.
+
+⚠️ **La condition s'écrit en toutes lettres dans chacune**, jamais factorisée :
+c'est le procédé du courrier du château. La sortir des `where` la rendrait
+invisible.
+
+⚠️ **L'administration ne filtre RIEN.** Le compte figure dans `/admin/membres`
+et `/admin/absences` : un compte qu'on cache à son propre gardien est pire
+qu'un compte visible.
+
+⚠️ **Il est écarté de tous les chiffres de vie.** Il se connecte chaque matin :
+sans cela le rapport annoncerait « 1 membre actif » un jour où personne n'est
+venu. Vu pour de bon au premier essai — sa création comptait comme « 1 nouveau
+dossier ».
+
+⚠️ **Son adresse ne commence pas par `essai.`**, à dessein : `corbeaux:essai`
+efface `essai.*` **et** `.invalid`. Un futur ménage qui viserait `.invalid`
+seul l'emporterait.
+
+### Ce que la ronde vérifie
+
+Six collecteurs, **chacun dans son filet** — `orchestration.ts` est le seul
+endroit qui sache qu'un collecteur peut tomber, et il le **nomme** dans ce qui
+manque. Un trou silencieux se lirait comme « rien à signaler ».
+
+| | |
+| --- | --- |
+| `disponibilite` | 19 pages, leur code et leur temps — **et que les pages fermées répondent bien 307 SANS session** |
+| `parcours` | Playwright : les écrans s'affichent-ils vraiment, la console est-elle propre |
+| `erreurs` | les 24 h, **groupées par famille** — 50 fois la même erreur font une ligne |
+| `coherence` | huit contrôles de dégâts silencieux |
+| `attente` | dossiers, signalements, scènes muettes, comptes inactifs |
+| `vie` | sept chiffres, **et leur écart** — le chiffre brut n'apprend rien |
+
+⚠️ **`points/carnet.ts` a été extrait du dépôt pour ce lot.** La Veille compare
+les compteurs au carnet ; si elle refaisait l'addition dans son coin, elle
+vérifierait ses propres calculs. **Une seule règle, deux clients** — le site
+avec le sien, La Veille avec ses identifiants de lecture.
+
+### Les erreurs du serveur — une table, et le caviardage à l'ÉCRITURE
+
+`erreurs_serveur`, posée par `20260831120000_erreurs_serveur`. Les journaux de
+Vercel ne durent que quelques heures : « les erreurs des dernières 24 h »
+n'était pas une question à laquelle on pouvait répondre.
+
+**`console.error` reste**, et doit rester : on y regarde en direct quand
+quelque chose brûle. `lib/erreurs/depot.ts` s'y ajoute.
+
+⚠️ **Le message est caviardé AVANT d'être écrit**, jamais à la lecture. Un
+message d'erreur porte volontiers une adresse — « envoi raté vers untel@… » —,
+et la politique de confidentialité promet qu'elles ne sont pas conservées.
+**Ce qui n'est jamais écrit ne fuit pas** : même raisonnement que `majeur16`,
+qui remplace l'âge au lieu de le masquer.
+
+⚠️ `noterErreur` **n'échoue jamais bruyamment** : journaliser une erreur ne
+doit pas en provoquer une seconde. Et elle est **attendue** (`await`), non
+lancée à la volée : sur Vercel, une fonction peut se terminer avant qu'un
+appel non attendu n'aboutisse.
+
+### Le rapport
+
+Texte seul, **66 colonnes**, lu sur un téléphone à 8 h. Quatre sections, de
+l'urgent au moins pressé, puis « ce que la ronde n'a pas pu voir ».
+
+⚠️ **L'objet ne fait AUCUNE somme.** Une première version additionnait
+dossiers, signalements et courrier sous le mot « dossiers » : elle annonçait
+« 6 dossiers » là où il y en avait trois. Un chiffre faux dans la seule ligne
+qu'on lit tous les jours est à la pire place possible.
+
+⚠️ **« Tout va bien » ne se dit que si la ronde a tout vu.** Une ronde amputée
+annonce « 1 contrôle n'a pas abouti » — le silence est exactement ce qu'on
+cherche à rendre impossible.
+
+⚠️ **La mémoire vit dans le cache des Actions, pas en base** — La Veille ne
+sait pas écrire, et lui ouvrir une table percerait le principe qui la fonde.
+Le dépôt étant public, ce cache n'est pas un coffre : le fichier ne porte que
+des empreintes et des compteurs. Il est dans `.gitignore`.
+
+### Les suggestions
+
+Un appel à l'API Claude, `claude-opus-5`, effort `low`. **Le modèle ne reçoit
+que les constats agrégés**, n'a aucun outil, et sa réponse est recopiée dans
+une section à part, sous un avertissement qui dit d'où elle vient.
+
+⚠️ **Si l'appel échoue, le rapport part quand même.** La synthèse est un
+confort, les faits sont le rapport. La raison de l'échec s'affiche seulement
+sous `npm run veille`, jamais dans les Actions — dont le journal est public.
+
+### Ce qui n'entre pas dans le projet
+
+**Playwright et `@anthropic-ai/sdk` s'installent en `--no-save` dans le CI**,
+comme `sharp` pour les bannières. `package.json` et son verrou restent intacts
+— vérifié après chaque essai.
+
+**Aucun runner TypeScript** : Node 24 l'exécute, et `scripts/alias-veille.mjs`
+(une trentaine de lignes) résout les `@/`.
+
+⚠️ **Ce résolveur ne touche jamais à `node_modules`.** Il attrapait les imports
+relatifs des paquets en CommonJS : `nodemailer` demandait `./lib/mailer` et
+recevait une URL `file://`, que le chargeur CJS ne sait pas lire. La ronde
+tombait sur un « Cannot find module » qui accusait nodemailer d'un défaut venu
+d'ailleurs.
+
+### Deux pièges d'outillage, et ils donnaient le même faux positif
+
+⚠️ **Playwright remplissait le formulaire avant que React n'ait hydraté la
+page**, qui remettait le champ à vide. Le mot de passe, saisi une fraction de
+seconde plus tard, survivait — le formulaire partait donc sans adresse, et la
+page répondait « Indique ton adresse e-mail ». **La ronde aurait signalé chaque
+matin que la connexion du site est cassée.** Même piège sur le lien du
+grimoire : le clic partait avant que `<Link>` n'ait pris la main.
+
+D'où : on remplit, **puis on relit**, et l'on recommence ; et l'on **navigue
+plutôt qu'on ne clique** vers le lecteur.
+
+⚠️ **Un faux positif quotidien est pire qu'une surveillance absente**, parce
+qu'au bout d'une semaine on ne lit plus le rapport. C'est la raison du plancher
+sur les écarts (`PLANCHE_POUR_L_ECART`) : passer de 1 post à 3 est une hausse
+de 200 % qui n'apprend rien.
+
+### Ce qui reste au joueur
+
+- **La clé d'API expire-t-elle ?** À vérifier dans la console, colonne
+  *Expires*. Si c'est une date, les suggestions s'arrêteront ce jour-là.
+- **Le seuil des premiers pas** (`premiersPasEnAttenteJours`, 14) est une
+  proposition, pas une règle du règlement.
+- **Les erreurs sont gardées trente jours.** Rien ne l'impose ; c'est une
+  rétention choisie pour borner la table.
+
+---
+
 ## Les transactions
 
 **Toute transaction interactive passe par `transaction()`**, dans
@@ -3611,6 +3828,11 @@ massif du nord. On y écrit du jeu de rôle aux mêmes règles qu'au château, e
 les points s'y gagnent. Vérifié à l'écran : une scène ouverte sur le chemin
 escarpé accorde bien son point à la maison, et la même scène à neuf lignes est
 refusée. Voir « Les alentours du château ».
+
+**La Veille tourne** : une ronde par jour à 5 h heure de Bruxelles, six
+collecteurs, un rapport par courriel — et des identifiants de base qui n'ont
+que le droit de lire, éprouvés sur sept formes d'écriture refusées. Voir
+« La Veille ».
 
 **Les Grimoires sont ouverts** : l'étagère, le lecteur qui tourne ses pages,
 la lecture continue, l'import du grimoire des Sortilèges — cinq chapitres,

@@ -12,6 +12,7 @@ import { noterLaConnexion } from "@/lib/dossier/archivage";
 import { destinationApres } from "@/lib/session/acces";
 import { COOKIE_SESSION, creerSession, optionsCookie } from "@/lib/session/session";
 import type { EtatEtape, StatutAcces, StatutDossier } from "@/lib/dossier/etats";
+import { noterErreur } from "@/lib/erreurs/depot";
 
 /**
  * Connexion d’un joueur.
@@ -129,6 +130,7 @@ export async function POST(request: Request) {
     return reponse;
   } catch (erreur) {
     console.error("[connexion] échec technique", erreur);
+    await noterErreur("connexion", erreur, "/api/connexion");
     return NextResponse.json(
       { erreur: MESSAGES_CONNEXION.indisponible },
       { status: 503 },

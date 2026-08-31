@@ -1,0 +1,13 @@
+{
+  "reponseLenteMs": 3000,
+  "reponseTresLenteMs": 8000,
+  "delaiParPageMs": 20000,
+  "dureeMaxRondeMs": 600000,
+  "ecartNotableEnPourcent": 60,
+  "planchePourLEcart": 5,
+  "joursDHistorique": 7,
+  "retentionErreursJours": 30,
+  "suggestionsMax": 3,
+  "erreursDetailleesMax": 8,
+  "premiersPasEnAttenteJours": 14
+}

@@ -28,6 +28,12 @@ import {
  * ne rend que des identifiants, et l'image passe ensuite par
  * `/api/portraits/[id]`, qui se met en cache. Piège déjà payé sur la carte de
  * l'auteur d'un post.
+ *
+ * ⚠️ **Les comptes de service n'y figurent pas** — celui de La Veille, qui se
+ * connecte chaque matin pour vérifier que les écrans s'affichent. La condition
+ * est écrite en toutes lettres dans les deux requêtes, jamais factorisée : la
+ * sortir d'ici la rendrait invisible, et c'est la leçon du courrier du
+ * château. `veille/etancheite.test.ts` la vérifie fonction par fonction.
  */
 
 export type LigneDuRegistre = {
@@ -70,7 +76,7 @@ type FicheLue = {
  */
 export async function lireLeRegistre(): Promise<GroupeDuRegistre[]> {
   const fiches: FicheLue[] = await prisma.eleve.findMany({
-    where: { statut: "ACCEPTE" },
+    where: { statut: "ACCEPTE", utilisateur: { compteDeService: false } },
     select: {
       id: true,
       prenomNom: true,
@@ -169,7 +175,11 @@ export async function lireLaFiche(
   eleveId: string,
 ): Promise<FichePublique | null> {
   const f = await prisma.eleve.findFirst({
-    where: { id: eleveId, statut: "ACCEPTE" },
+    where: {
+      id: eleveId,
+      statut: "ACCEPTE",
+      utilisateur: { compteDeService: false },
+    },
     select: {
       id: true,
       utilisateurId: true,

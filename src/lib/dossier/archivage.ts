@@ -1,6 +1,7 @@
 import "server-only";
 import { transaction } from "@/lib/base/transaction";
 import { prisma } from "@/lib/prisma";
+import { noterErreur } from "@/lib/erreurs/depot";
 
 /**
  * **L’archivage d’un compte — art. 7.3.**
@@ -78,6 +79,7 @@ export async function noterLaConnexion(utilisateurId: string): Promise<void> {
     });
   } catch (erreur) {
     console.error("[archivage] la connexion n’a pas pu être notée", erreur);
+    await noterErreur("archivage", erreur);
   }
 }
 

@@ -802,6 +802,9 @@ export async function chercherPersonnages(
   const trouves = await prisma.utilisateur.findMany({
     where: {
       id: { not: compte.id, notIn: bloques },
+      // Le compte de service ne se propose à personne : on ne lui écrit pas,
+      // il ne répond jamais. Voir `Utilisateur.compteDeService`.
+      compteDeService: false,
       eleve: {
         statut: "ACCEPTE",
         prenomNom: { contains: requete, mode: "insensitive" },

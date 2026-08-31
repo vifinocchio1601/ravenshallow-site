@@ -112,6 +112,32 @@ model Utilisateur {
   archiveLe  DateTime?
   archivePar String?
 
+  /// **Un compte qui n'appartient à personne.** Aujourd'hui il n'y en a qu'un :
+  /// celui de La Veille, qui se connecte chaque matin pour vérifier que les
+  /// écrans s'affichent, et qui ne publie jamais rien.
+  ///
+  /// Il lui faut un dossier ACCEPTÉ pour ouvrir le bureau, le forum et les
+  /// grimoires — et c'est précisément ce qui le rendait visible : le Registre
+  /// liste tous les dossiers acceptés, et la recherche de la Tour aussi. Sur
+  /// trois membres, un quatrième nommé « Veille » se remarque.
+  ///
+  /// **Cette colonne décide de quelque chose**, et de sept choses exactement :
+  /// le Registre, la fiche publique, la recherche de correspondants, la liste
+  /// des élèves à qui donner des points, le top du mois, l'effectif du
+  /// tournoi, et la liste des passages d'année. Partout ailleurs — et
+  /// notamment dans TOUTE la zone d'administration — le compte se voit comme
+  /// les autres : l'administration doit savoir ce qui existe chez elle.
+  ///
+  /// ⚠️ **La condition s'écrit en toutes lettres dans chacune des sept
+  /// requêtes**, jamais factorisée dans une constante. C'est le procédé du
+  /// courrier du château (`AVEC_ADMINISTRATION`) : la sortir des `where` la
+  /// rendrait invisible, et `veille/etancheite.test.ts` découpe les trois
+  /// dépôts fonction par fonction pour vérifier qu'aucune ne l'oublie.
+  ///
+  /// ⚠️ **Ce n'est ni un rôle, ni une sanction, ni un statut d'accès.** Les
+  /// droits viennent de `role` et de `statutAcces`, et rien ici ne les touche.
+  compteDeService Boolean @default(false)
+
   eleve Eleve?
 
   /// Le fil de ce membre : décisions sur son dossier, modifications de sa
@@ -1974,4 +2000,65 @@ model BlocGrimoire {
   @@unique([chapitreId, ancre])
   @@index([chapitreId, ordre])
   @@map("blocs_grimoire")
+}
+
+// ─────────────────────────────────────────────────────────────
+//  Les erreurs du serveur — la trace que La Veille relit
+// ─────────────────────────────────────────────────────────────
+
+/// Une erreur survenue côté serveur, gardée le temps d'être vue.
+///
+/// ── Pourquoi une table, alors que Vercel a des journaux ──
+///
+/// Parce qu'ils ne durent pas. Selon la formule, les journaux d'exécution de
+/// Vercel se gardent quelques heures — moins que les vingt-quatre que La Veille
+/// doit couvrir —, et leur lecture dépend d'un jeton et d'un plan. Une table
+/// tient la promesse sans dépendre d'aucun réglage d'hébergeur.
+///
+/// **Ceci ne remplace pas `console.error`, cela s'y ajoute.** Les journaux de
+/// Vercel gardent leur usage — on y regarde en direct quand quelque chose brûle.
+///
+/// ── Ce qui n'y entre jamais ──
+///
+/// ⚠️ **Aucune adresse de courriel, aucun texte de membre.** Le message et la
+/// pile sont CAVIARDÉS à l'écriture par `lib/erreurs/depot.ts`, pas à la
+/// lecture : une adresse effacée au moment de l'affichage serait quand même
+/// passée par la base, et la politique de confidentialité promet qu'elle n'y
+/// est pas. Ce qui n'est jamais écrit ne fuit pas.
+///
+/// ── Ce que la base tient elle-même ──
+///
+/// La portée, le type et le message ne sont jamais vides au sens de Postgres
+/// (`~ '[^[:space:]]'`, jamais `btrim`, qui ne retire que les espaces), et une
+/// ligne **ne se réécrit pas** : c'est une trace. Elle peut être effacée — la
+/// rétention l'exige —, jamais remplacée. Même principe que le carnet des
+/// points et que la copie d'un signalement.
+model ErreurServeur {
+  id String @id @default(cuid())
+
+  /// D'où elle vient : « connexion », « dossier », « courriel »… C'est le
+  /// préfixe que les `console.error` du site portent déjà entre crochets.
+  portee String
+
+  /// Le nom de la classe d'erreur — `PrismaClientKnownRequestError`, `TypeError`.
+  /// C'est lui qui sert à REGROUPER : cinquante fois la même erreur font une
+  /// ligne dans le rapport, pas cinquante.
+  type String
+
+  /// Le code, quand il y en a un : `P2028` de Prisma, `ECONNREFUSED` de Node.
+  code String?
+
+  /// Le message, caviardé. Borné : une erreur bavarde ne doit pas peser.
+  message String @db.Text
+
+  /// La route où c'est arrivé, quand on la connaît.
+  chemin String?
+
+  survenuLe DateTime @default(now())
+
+  /// Groupé par type, sur une fenêtre de temps : c'est exactement la requête
+  /// que fait la ronde, tous les matins.
+  @@index([survenuLe])
+  @@index([portee, type, survenuLe])
+  @@map("erreurs_serveur")
 }

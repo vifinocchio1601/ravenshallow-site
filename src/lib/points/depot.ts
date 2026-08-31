@@ -11,6 +11,7 @@ import {
 } from "@/lib/ecole/tournoi";
 import { prisma } from "@/lib/prisma";
 import { nettoyerTexteLibre } from "@/lib/texte";
+import { totauxDepuisLeCarnet } from "./carnet";
 import { TEXTES_POINTS } from "./constantes";
 import {
   bornesDuMois,
@@ -424,7 +425,7 @@ export async function listerLesElevesPourLesPoints(): Promise<
   { eleveId: string; prenomNom: string; maison: Maison | null; points: number }[]
 > {
   const fiches = await prisma.eleve.findMany({
-    where: { statut: "ACCEPTE" },
+    where: { statut: "ACCEPTE", utilisateur: { compteDeService: false } },
     orderBy: { prenomNom: "asc" },
     select: { id: true, prenomNom: true, maison: true, etatMaison: true, points: true },
   });
@@ -481,7 +482,11 @@ export async function topDuMois(
   // n’a marqué. Une requête sur le carnet seul ne rendrait que ceux qui ont
   // des points, et le top serait vide en début de mois.
   const fiches = await prisma.eleve.findMany({
-    where: { statut: "ACCEPTE", maison },
+    where: {
+      statut: "ACCEPTE",
+      maison,
+      utilisateur: { compteDeService: false },
+    },
     orderBy: { prenomNom: "asc" },
     select: {
       id: true,
@@ -683,21 +688,11 @@ export async function compteursDeLaSaison(
 export async function recalculerLesCompteurs(
   saisonId: string,
 ): Promise<Record<Maison, number>> {
-  const [gagnes, ajustements] = await Promise.all([
-    prisma.pointGagne.findMany({
-      where: { saisonId, repriseLe: null, NOT: { maison: null } },
-      select: { maison: true, points: true },
-    }),
-    prisma.ajustementMaison.findMany({
-      where: { saisonId, annuleLe: null },
-      select: { maison: true, points: true },
-    }),
-  ]);
-
-  const totaux = totauxVides();
-  for (const ligne of [...gagnes, ...ajustements]) {
-    if (ligne.maison) totaux[ligne.maison] += ligne.points;
-  }
+  // ⚠️ L’addition vit dans `carnet.ts`, et non ici : La Veille la refait
+  // chaque matin pour comparer aux compteurs, avec ses propres identifiants de
+  // lecture. Deux additions du même carnet finiraient par diverger, et c’est
+  // celle qui vérifie qui aurait tort.
+  const totaux = await totauxDepuisLeCarnet(prisma, saisonId);
 
   // Les quatre ensemble, dans une transaction : un recalcul à moitié écrit
   // laisserait des compteurs plus faux qu’avant de le lancer.
@@ -778,7 +773,10 @@ export async function lireLeTournoi(): Promise<Tournoi | null> {
  */
 export async function effectifs(): Promise<Record<Maison, number>> {
   const membres = await prisma.eleve.findMany({
-    where: { statut: "ACCEPTE", utilisateur: { archiveLe: null } },
+    where: {
+      statut: "ACCEPTE",
+      utilisateur: { archiveLe: null, compteDeService: false },
+    },
     select: { maison: true, etatMaison: true },
   });
   return effectifsParMaison(membres);

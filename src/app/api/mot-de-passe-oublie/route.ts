@@ -11,6 +11,7 @@ import {
   noterEchec,
 } from "@/lib/connexion/tentatives";
 import { adresseDuSite, envoyerLienReinitialisation } from "@/lib/mail/envoyer";
+import { noterErreur } from "@/lib/erreurs/depot";
 
 /**
  * Demande de réinitialisation.
@@ -64,10 +65,16 @@ export async function POST(request: Request) {
       // Le joueur voit la même confirmation ; à nous de savoir pourquoi rien
       // n’est parti, sans quoi la panne resterait invisible.
       console.error("[oubli] courriel non parti", resultat);
+      await noterErreur(
+        "oubli",
+        new Error(`courriel non parti : ${resultat.raison}`),
+        "/api/mot-de-passe-oublie",
+      );
     }
     return confirmation();
   } catch (erreur) {
     console.error("[oubli] échec technique", erreur);
+    await noterErreur("oubli", erreur, "/api/mot-de-passe-oublie");
     return confirmation();
   }
 }
