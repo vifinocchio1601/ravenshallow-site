@@ -55,6 +55,7 @@ try {
 const { daterLesAnomalies } = await import("./anomalies");
 const { depot, refermer, verifierLaLectureSeule } = await import("./base");
 const { orchestrer } = await import("./orchestration");
+const { aUneMaison } = await import("@/lib/session/acces");
 const { collecterCeQuiAttend } = await import("./collecteurs/attente");
 const { collecterLaCoherence } = await import("./collecteurs/coherence");
 const { collecterLaDisponibilite, ouvrirUneSession, parLeReseau } = await import(
@@ -178,6 +179,19 @@ async function faireLaRonde(): Promise<Bilan> {
   // sans que rien ne le signale.
   await verifierLaLectureSeule(base);
 
+  /**
+   * ⚠️ **La question passe par `aUneMaison`, la couture du site**, jamais par
+   * une comparaison d'état écrite ici : `acces.ts` est le seul endroit qui ait
+   * le droit de comparer un `EtatEtape` à une valeur. Le recopier ferait
+   * diverger La Veille du site le jour où la règle changerait — et c'est elle
+   * qui aurait tort.
+   */
+  const fiche = await base.eleve.findFirst({
+    where: { utilisateur: { email: secrets.compte.courriel } },
+    select: { maison: true, etatMaison: true },
+  });
+  const compteAUneMaison = fiche ? aUneMaison(fiche) : false;
+
   const cookie = await ouvrirUneSession(
     secrets.site,
     secrets.compte.courriel,
@@ -195,7 +209,11 @@ async function faireLaRonde(): Promise<Bilan> {
     {
       nom: "la disponibilité",
       faire: () =>
-        collecterLaDisponibilite({ demandeur: parLeReseau(secrets.site), cookie }),
+        collecterLaDisponibilite({
+          demandeur: parLeReseau(secrets.site),
+          cookie,
+          compteAUneMaison,
+        }),
     },
     { nom: "les erreurs du serveur", faire: () => collecterLesErreurs({ base, instant }) },
     { nom: "ce qui attend", faire: () => collecterCeQuiAttend({ base, instant }) },

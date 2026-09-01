@@ -39,6 +39,7 @@ describe("un site en bonne santé", () => {
     const { anomalies, donnees } = await collecterLaDisponibilite({
       demandeur: siteEnBonneSante(),
       cookie: "ravenshallow_session=x",
+      compteAUneMaison: true,
     });
     expect(anomalies).toHaveLength(0);
     expect(donnees.pages).toHaveLength(PAGES_PUBLIQUES.length + PAGES_FERMEES.length);
@@ -50,6 +51,7 @@ describe("les pannes", () => {
     const { anomalies } = await collecterLaDisponibilite({
       demandeur: siteQuiRepond({ "/reglement": 500 }),
       cookie: null,
+      compteAUneMaison: true,
     });
     const panne = anomalies.find((a) => a.ou === "/reglement");
     expect(panne?.gravite).toBe("PANNE");
@@ -60,6 +62,7 @@ describe("les pannes", () => {
     const { anomalies } = await collecterLaDisponibilite({
       demandeur: siteQuiRepond({ "/": 0 }),
       cookie: null,
+      compteAUneMaison: true,
     });
     expect(anomalies.find((a) => a.ou === "/")?.cle).toContain("muette");
   });
@@ -79,6 +82,7 @@ describe("les pannes", () => {
     const { anomalies } = await collecterLaDisponibilite({
       demandeur: siteQuiRepond(reponses),
       cookie: "ravenshallow_session=x",
+      compteAUneMaison: true,
     });
 
     const fuite = anomalies.find((a) => a.cle.includes("ouverte-sans-session"));
@@ -96,6 +100,7 @@ describe("les pannes", () => {
       const { anomalies } = await collecterLaDisponibilite({
         demandeur: siteQuiRepond(reponses),
         cookie: "ravenshallow_session=x",
+      compteAUneMaison: true,
       });
       expect(anomalies, `code ${code}`).toHaveLength(0);
     }
@@ -105,6 +110,7 @@ describe("les pannes", () => {
     const { anomalies } = await collecterLaDisponibilite({
       demandeur: siteEnBonneSante(),
       cookie: null,
+      compteAUneMaison: true,
     });
     const souci = anomalies.find((a) => a.cle === "disponibilite:connexion-impossible");
     expect(souci?.gravite).toBe("PANNE");
@@ -118,6 +124,7 @@ describe("la lenteur", () => {
     const { anomalies } = await collecterLaDisponibilite({
       demandeur: siteEnBonneSante(),
       cookie: "ravenshallow_session=x",
+      compteAUneMaison: true,
       horloge: horlogeDeValeurs([0, 9000]),
     });
 
@@ -133,8 +140,63 @@ describe("la lenteur", () => {
     const { anomalies } = await collecterLaDisponibilite({
       demandeur: siteEnBonneSante(),
       cookie: "ravenshallow_session=x",
+      compteAUneMaison: true,
       horloge: horlogeDeValeurs([0, 2500]),
     });
     expect(anomalies).toHaveLength(0);
+  });
+});
+
+describe("une page qui dépend de l’état du compte", () => {
+  /**
+   * ⚠️ **Le faux positif vécu au premier matin, et corrigé ici.**
+   *
+   * Le compte de La Veille a été passé en « sans objet » depuis
+   * l'administration — comme une directrice, ce qu'il est au fond. `/maison`
+   * s'est alors refermée sur lui, et la ronde a annoncé DEUX PANNES qui n'en
+   * étaient pas : la page faisait exactement ce qu'elle doit.
+   *
+   * Un faux positif quotidien est pire qu'une surveillance absente : au bout
+   * d'une semaine on ne lit plus le rapport.
+   */
+  it("n’est PAS une panne quand le compte n’a pas de maison", async () => {
+    const reponses: Record<string, number> = {};
+    for (const p of PAGES_FERMEES) {
+      reponses[p.chemin] = 307;
+      // Sans maison, le site referme aussi ces deux-là sur un compte connecté.
+      reponses[`${p.chemin}#connecte`] = p.exigeUneMaison ? 307 : 200;
+    }
+
+    const { anomalies, donnees } = await collecterLaDisponibilite({
+      demandeur: siteQuiRepond(reponses),
+      cookie: "ravenshallow_session=x",
+      compteAUneMaison: false,
+    });
+
+    expect(anomalies, "aucune panne : la page se referme comme elle doit").toHaveLength(0);
+    expect(donnees.nonVerifiees.map((p) => p.chemin)).toEqual([
+      "/maison",
+      "/maison/salon",
+    ]);
+    // Et elle DIT pourquoi : un trou silencieux se lirait « rien à signaler ».
+    expect(donnees.nonVerifiees[0].raison).toContain("pas de maison");
+  });
+
+  it("mais reste une panne quand le compte EN a une", async () => {
+    const reponses: Record<string, number> = {};
+    for (const p of PAGES_FERMEES) {
+      reponses[p.chemin] = 307;
+      reponses[`${p.chemin}#connecte`] = 200;
+    }
+    reponses["/maison#connecte"] = 307; // là, c'est vraiment cassé
+
+    const { anomalies, donnees } = await collecterLaDisponibilite({
+      demandeur: siteQuiRepond(reponses),
+      cookie: "ravenshallow_session=x",
+      compteAUneMaison: true,
+    });
+
+    expect(anomalies.find((a) => a.ou === "/maison")?.gravite).toBe("PANNE");
+    expect(donnees.nonVerifiees).toHaveLength(0);
   });
 });

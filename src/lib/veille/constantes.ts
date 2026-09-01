@@ -44,6 +44,21 @@ export type PageSurveillee = {
    * inconnu, ce serait la plus grave des anomalies possibles.
    */
   connecte: boolean;
+  /**
+   * Cette page dépend-elle de l'état du compte, et non du seul fait d'être
+   * connecté ?
+   *
+   * ⚠️ **Sans ce drapeau, La Veille criait à la panne sur une page qui se
+   * refermait légitimement.** `/maison` est gardée par `exigeUneMaison` : le
+   * jour où le compte de service est passé en « sans objet » — comme une
+   * directrice, ce qu'il est au fond —, elle a répondu 307, et la ronde a
+   * annoncé deux PANNES qui n'en étaient pas.
+   *
+   * Un faux positif quotidien est pire qu'une surveillance absente : au bout
+   * d'une semaine on ne lit plus le rapport. Ces pages-là sont donc vérifiées
+   * quand le compte peut les ouvrir, et **déclarées non vérifiées** sinon.
+   */
+  exigeUneMaison?: true;
 };
 
 /**
@@ -74,8 +89,13 @@ export const PAGES_FERMEES: readonly PageSurveillee[] = [
   { chemin: "/calendrier", nom: "Le calendrier", connecte: true },
   { chemin: "/resultats", nom: "Les résultats", connecte: true },
   { chemin: "/cours", nom: "Les cours", connecte: true },
-  { chemin: "/maison", nom: "Ma maison", connecte: true },
-  { chemin: "/maison/salon", nom: "Le salon", connecte: true },
+  { chemin: "/maison", nom: "Ma maison", connecte: true, exigeUneMaison: true },
+  {
+    chemin: "/maison/salon",
+    nom: "Le salon",
+    connecte: true,
+    exigeUneMaison: true,
+  },
 ];
 
 // ─────────────────────────────────────────────────────────────

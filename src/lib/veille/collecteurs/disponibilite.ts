@@ -46,6 +46,16 @@ export type EtatDUnePage = {
 
 export type Disponibilite = {
   pages: EtatDUnePage[];
+  /**
+   * Les pages que la ronde n'a pas pu vérifier, et pourquoi.
+   *
+   * ⚠️ **Ce n'est pas une anomalie, et c'est tout le point.** Une page qui se
+   * referme parce que le compte de service n'a pas de maison se comporte
+   * exactement comme elle doit. Le dire dans « ce que la ronde n'a pas pu
+   * voir » est honnête ; l'annoncer en PANNE serait un faux positif — et un
+   * faux positif quotidien vide le rapport de son sens en une semaine.
+   */
+  nonVerifiees: { nom: string; chemin: string; raison: string }[];
   /** Combien ont répondu comme prévu. */
   saines: number;
   /** La plus lente, pour le rapport — même quand tout va bien. */
@@ -113,16 +123,27 @@ export type Options = {
   demandeur: Demandeur;
   /** Le cookie de session du compte de service, s'il a pu se connecter. */
   cookie: string | null;
+  /**
+   * La maison du compte de service s'affiche-t-elle ?
+   *
+   * ⚠️ **La question se pose avec `aUneMaison`, la couture du site**, jamais
+   * en comparant `etatMaison` ici : `acces.ts` est le seul endroit qui ait le
+   * droit de comparer un état à une valeur, et le recopier ferait diverger La
+   * Veille du site le jour où la règle changerait.
+   */
+  compteAUneMaison: boolean;
   horloge?: () => number;
 };
 
 export async function collecterLaDisponibilite({
   demandeur,
   cookie,
+  compteAUneMaison,
   horloge = () => Date.now(),
 }: Options): Promise<Recolte<Disponibilite>> {
   const anomalies: Anomalie[] = [];
   const pages: EtatDUnePage[] = [];
+  const nonVerifiees: Disponibilite["nonVerifiees"] = [];
 
   // ── Les pages publiques ──
   for (const page of PAGES_PUBLIQUES) {
@@ -152,6 +173,20 @@ export async function collecterLaDisponibilite({
   // ── Les mêmes, avec la session du compte de service ──
   if (cookie) {
     for (const page of PAGES_FERMEES) {
+      // Une page qui dépend d'une maison ne se vérifie que si le compte en a
+      // une. Sinon elle répond 307 — et c'est ce qu'elle doit faire.
+      if (page.exigeUneMaison && !compteAUneMaison) {
+        nonVerifiees.push({
+          nom: page.nom,
+          chemin: page.chemin,
+          raison:
+            "Le compte de La Veille n’a pas de maison qui s’affiche : cette " +
+            "page se referme sur lui, comme elle le ferait sur la directrice. " +
+            "Pour la surveiller, il faudrait lui rendre une maison depuis sa " +
+            "fiche.",
+        });
+        continue;
+      }
       const etat = await mesurer(page, demandeur, cookie, horloge);
       pages.push(etat);
       anomalies.push(...jugerUnePage(etat, 200));
@@ -176,6 +211,7 @@ export async function collecterLaDisponibilite({
   return {
     donnees: {
       pages,
+      nonVerifiees,
       saines: pages.filter((p) => p.code === 200 && p.dureeMs < REPONSE_LENTE_MS).length,
       laPlusLente,
     },

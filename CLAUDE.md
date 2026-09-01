@@ -2889,6 +2889,22 @@ qu'au bout d'une semaine on ne lit plus le rapport. C'est la raison du plancher
 sur les écarts (`PLANCHE_POUR_L_ECART`) : passer de 1 post à 3 est une hausse
 de 200 % qui n'apprend rien.
 
+⚠️ **Et c'est la leçon du premier matin.** Le compte de La Veille est passé en
+`SANS_OBJET` depuis l'administration — décision du joueur, et elle est juste :
+ce n'est pas une élève, pas plus que la directrice. `/maison` et
+`/maison/salon`, gardées par `exigeUneMaison`, se sont donc refermées sur lui,
+et la ronde a annoncé **deux PANNES qui n'en étaient pas**.
+
+D'où le drapeau `exigeUneMaison` sur ces deux pages : quand le compte n'a pas
+de maison, elles ne sont pas vérifiées, et le rapport le **dit** dans « ce que
+la ronde n'a pas pu voir ». La question se pose par `aUneMaison`, la couture du
+site — jamais en comparant `etatMaison` dans le collecteur.
+
+**Le prix à payer est réel** : ces deux pages ne sont plus surveillées tant que
+le compte reste sans maison. Lui en rendre une (fiche du membre, `RETABLIR`)
+les rouvrirait sans rien coûter d'autre — `compteDeService` l'écarte déjà du
+tournoi et du Registre.
+
 ### Ce qui reste au joueur
 
 - **La clé d’API n’expire pas** — vérifié avec le joueur le 31 août 2026. Si

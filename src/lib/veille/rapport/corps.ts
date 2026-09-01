@@ -285,7 +285,10 @@ function lesSuggestions(suggestions: string[] | null): string[] {
 // ─────────────────────────────────────────────────────────────
 
 function ceQuiManque(bilan: Bilan): string[] {
-  if (bilan.manquants.length === 0 && !bilan.ecourtee) return [];
+  const sautees = bilan.disponibilite?.nonVerifiees ?? [];
+  if (bilan.manquants.length === 0 && sautees.length === 0 && !bilan.ecourtee) {
+    return [];
+  }
 
   const lignes = section(TEXTES.sections.manquant);
 
@@ -303,6 +306,14 @@ function ceQuiManque(bilan: Bilan): string[] {
   for (const manquant of bilan.manquants) {
     lignes.push(`  ${manquant.nom}`);
     lignes.push(...replier(manquant.raison, "    "));
+    lignes.push("");
+  }
+
+  // Les pages qu'on a sciemment sautées — ce n'est pas une panne, c'est une
+  // page qui se referme comme elle doit.
+  for (const page of bilan.disponibilite?.nonVerifiees ?? []) {
+    lignes.push(`  ${page.nom} (${page.chemin})`);
+    lignes.push(...replier(page.raison, "    "));
     lignes.push("");
   }
 

@@ -44,6 +44,7 @@ const { collecterCeQuiAttend } = await import("./collecteurs/attente");
 const { collecterLaVie } = await import("./collecteurs/vie");
 const { collecterLesErreurs } = await import("./collecteurs/erreurs");
 const { collecterLeParcours } = await import("./collecteurs/parcours");
+const { aUneMaison } = await import("@/lib/session/acces");
 
 const secrets = lireLesSecrets();
 const instant = new Date();
@@ -62,9 +63,17 @@ const COLLECTEURS: Record<string, () => Promise<unknown>> = {
       secrets.compte.courriel,
       secrets.compte.motDePasse,
     );
+    // La question passe par `aUneMaison`, la couture du site — voir `ronde.ts`.
+    const base = depot(secrets.base);
+    await verifierLaLectureSeule(base);
+    const fiche = await base.eleve.findFirst({
+      where: { utilisateur: { email: secrets.compte.courriel } },
+      select: { maison: true, etatMaison: true },
+    });
     return collecterLaDisponibilite({
       demandeur: parLeReseau(secrets.site),
       cookie,
+      compteAUneMaison: fiche ? aUneMaison(fiche) : false,
     });
   },
 
