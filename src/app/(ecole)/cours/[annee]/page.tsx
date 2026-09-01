@@ -16,6 +16,7 @@ import {
 } from "@/lib/cours/cursus";
 import { FONCTIONS, libelleAnnee, type Fonction } from "@/lib/dossier/etats";
 import { ROUTES } from "@/lib/ecole/menu";
+import { leconsDe, peutOuvrirLaLecon } from "@/lib/cours/lecons";
 import { avecDe } from "@/lib/francais";
 import { pouvoirsDe } from "@/lib/forum/depot-pouvoirs";
 import { estStaff } from "@/lib/forum/pouvoirs";
@@ -89,7 +90,13 @@ export default async function Page({ params }: { params: { annee: string } }) {
 
         <ul className="mt-5 grid grid-cols-1 gap-3">
           {imposees.map((matiere) => (
-            <LigneMatiere key={matiere.id} matiere={matiere} annee={annee} />
+            <LigneMatiere
+              key={matiere.id}
+              matiere={matiere}
+              annee={annee}
+              anneeOuverte
+              staff={estStaff(pouvoirs)}
+            />
           ))}
         </ul>
       </section>
@@ -118,7 +125,13 @@ export default async function Page({ params }: { params: { annee: string } }) {
 
           <ul className="mt-5 grid grid-cols-1 gap-3">
             {offertes.map((matiere) => (
-              <LigneMatiere key={matiere.id} matiere={matiere} annee={annee} />
+              <LigneMatiere
+                key={matiere.id}
+                matiere={matiere}
+                annee={annee}
+                anneeOuverte
+                staff={estStaff(pouvoirs)}
+              />
             ))}
           </ul>
 
@@ -141,9 +154,14 @@ export default async function Page({ params }: { params: { annee: string } }) {
 function LigneMatiere({
   matiere,
   annee,
+  anneeOuverte,
+  staff,
 }: {
   matiere: Matiere;
   annee: Annee;
+  /** L’année est déjà ouverte : on est sur sa page. */
+  anneeOuverte: boolean;
+  staff: boolean;
 }) {
   const statut = statutDe(matiere.id, annee);
   // Les prérequis sont nommés, jamais montrés par leur identifiant : c’est le
@@ -176,6 +194,70 @@ function LigneMatiere({
           <span>{T.matiere.prerequis.replace("{matieres}", requis.join(", "))}</span>
         ) : null}
       </p>
+
+      <LeconsDeLaMatiere
+        matiereId={matiere.id}
+        annee={annee}
+        anneeOuverte={anneeOuverte}
+        staff={staff}
+      />
     </li>
+  );
+}
+
+/**
+ * Les leçons en ligne d’une matière.
+ *
+ * ⚠️ **Une leçon qu’on ne peut pas ouvrir ne s’affiche pas du tout**, à la
+ * différence d’une année fermée ou d’une maison qu’on ne visite pas — qui,
+ * elles, se montrent avec leur raison écrite.
+ *
+ * La différence tient à ce qu’on annonce : une porte close est un fait du
+ * monde, qu’un élève gagne à connaître. Une leçon pas encore ouverte n’est pas
+ * une porte, c’est du travail en cours — l’annoncer promettrait une date qu’on
+ * n’a pas.
+ *
+ * Le staff, lui, la voit **avec la mention en toutes lettres**.
+ */
+function LeconsDeLaMatiere({
+  matiereId,
+  annee,
+  anneeOuverte,
+  staff,
+}: {
+  matiereId: string;
+  annee: Annee;
+  anneeOuverte: boolean;
+  staff: boolean;
+}) {
+  const visibles = leconsDe(matiereId, annee).filter((l) =>
+    peutOuvrirLaLecon(l, anneeOuverte, staff),
+  );
+  if (visibles.length === 0) return null;
+
+  return (
+    <ul className="mt-4 grid grid-cols-1 gap-2 border-t border-silver/10 pt-4">
+      {visibles.map((lecon) => (
+        <li key={lecon.rang} className="min-w-0">
+          <a
+            href={`${ROUTES.cours}/${annee}/${lecon.matiereId}/${lecon.rang}`}
+            className="group inline-flex flex-wrap items-baseline gap-x-3 gap-y-1 font-body text-sm text-parchment transition-colors duration-300 hover:text-aurora-teal"
+          >
+            <span className="min-w-0 break-words">
+              {T.lecons.lien
+                .replace("{rang}", String(lecon.rang))
+                .replace("{total}", String(lecon.surCombien))
+                .replace("{titre}", lecon.titre)}
+            </span>
+            {/* ⚠️ En toutes lettres, jamais une couleur seule. */}
+            {lecon.ouverteAuxEleves ? null : (
+              <span className="font-display text-[0.6rem] uppercase tracking-[0.16em] text-silver">
+                {T.lecons.fermee}
+              </span>
+            )}
+          </a>
+        </li>
+      ))}
+    </ul>
   );
 }

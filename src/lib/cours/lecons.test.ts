@@ -1,0 +1,111 @@
+import { describe, expect, it } from "vitest";
+import {
+  LECONS,
+  lecon,
+  leconsDe,
+  nomDeLaMatiere,
+  peutOuvrirLaLecon,
+  type Lecon,
+} from "./lecons";
+import { matiereDe } from "./cursus";
+
+const laTorche = LECONS[0];
+
+describe("les leçons déclarées", () => {
+  it("portent un identifiant de matière qui existe au cursus", () => {
+    // ⚠️ Le libellé s'affiche depuis le cursus, qui est la source. Une leçon
+    // qui nommerait une matière inconnue s'afficherait sans nom, et personne
+    // ne verrait pourquoi.
+    for (const l of LECONS) {
+      expect(matiereDe(l.matiereId), l.matiereId).not.toBeNull();
+    }
+  });
+
+  it("ont un rang qui tient dans le total annoncé", () => {
+    for (const l of LECONS) {
+      expect(l.rang, l.titre).toBeGreaterThanOrEqual(1);
+      expect(l.rang, l.titre).toBeLessThanOrEqual(l.surCombien);
+    }
+  });
+
+  it("n’ont pas deux fois le même rang dans une matière", () => {
+    const vues = new Set<string>();
+    for (const l of LECONS) {
+      const cle = `${l.matiereId}/${l.annee}/${l.rang}`;
+      expect(vues.has(cle), cle).toBe(false);
+      vues.add(cle);
+    }
+  });
+
+  /**
+   * ⚠️ **La décision du joueur, figée ici.** Le 1er septembre 2026 : la
+   * première leçon est posée pour qu'il la voie dans le site, pas pour qu'on
+   * la joue — le contrôle qui la suit n'existe pas encore côté serveur, et
+   * ouvrir la leçon promettrait une suite qui n'arrive pas.
+   *
+   * Ce test tombera le jour où l'on ouvrira une leçon. C'est voulu : ce sera
+   * une décision, pas un effet de bord, et elle méritera qu'on vienne ici.
+   */
+  it("ne sont ouvertes à aucun élève, pour l’instant", () => {
+    for (const l of LECONS) {
+      expect(l.ouverteAuxEleves, l.titre).toBe(false);
+    }
+  });
+
+  it("rendent le nom de leur matière depuis le cursus", () => {
+    expect(nomDeLaMatiere(laTorche)).toBe(matiereDe("sortileges")?.nom);
+  });
+});
+
+describe("trouver une leçon", () => {
+  it("par sa matière et son rang", () => {
+    expect(lecon("sortileges", "1")?.titre).toBe("La Torche");
+  });
+
+  it("rend null pour ce qui n’existe pas", () => {
+    expect(lecon("sortileges", "2")).toBeNull();
+    expect(lecon("duel", "1")).toBeNull();
+    expect(lecon("matiere-inventee", "1")).toBeNull();
+  });
+
+  it("refuse un rang qui n’est pas un entier positif", () => {
+    for (const rang of ["0", "-1", "1.5", "abc", "", "1e3", " 1"]) {
+      expect(lecon("sortileges", rang), rang).toBeNull();
+    }
+  });
+
+  it("liste les leçons d’une matière dans l’ordre", () => {
+    expect(leconsDe("sortileges", 1).map((l) => l.rang)).toEqual([1]);
+    expect(leconsDe("sortileges", 2)).toEqual([]);
+    expect(leconsDe("duel", 1)).toEqual([]);
+  });
+});
+
+describe("qui peut ouvrir une leçon", () => {
+  const fermee: Lecon = { ...laTorche, ouverteAuxEleves: false };
+  const ouverte: Lecon = { ...laTorche, ouverteAuxEleves: true };
+
+  it("le staff passe partout, même sur une leçon fermée", () => {
+    expect(peutOuvrirLaLecon(fermee, true, true)).toBe(true);
+    // Et même si son année ne l'atteint pas : c'est le parti pris du forum.
+    expect(peutOuvrirLaLecon(fermee, false, true)).toBe(true);
+  });
+
+  it("un élève n’ouvre pas une leçon fermée, même de son année", () => {
+    expect(peutOuvrirLaLecon(fermee, true, false)).toBe(false);
+  });
+
+  it("un élève ouvre une leçon ouverte de son année", () => {
+    expect(peutOuvrirLaLecon(ouverte, true, false)).toBe(true);
+  });
+
+  /**
+   * Art. 14.4 — « les matières accessibles à un personnage sont celles de son
+   * année en cours ». La question n'est pas reposée ici : elle arrive déjà
+   * tranchée par `peutOuvrirLAnnee`, et la reposer en ferait une seconde
+   * source qui divergerait.
+   */
+  it("un élève n’ouvre pas une leçon d’une année qu’il n’a pas atteinte", () => {
+    expect(peutOuvrirLaLecon(ouverte, false, false)).toBe(false);
+  });
+});

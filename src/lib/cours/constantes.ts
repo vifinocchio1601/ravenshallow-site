@@ -49,6 +49,20 @@ export const TEXTES_COURS = {
   },
 
   annee: {
+    /**
+     * Les leçons d'une matière.
+     *
+     * ⚠️ **« Pas encore ouverte » est dit en toutes lettres**, jamais signalé
+     * par la seule couleur ni par une absence : le staff voit le lien, l'élève
+     * ne le voit pas du tout — et quand il le verra, il n'y aura plus de
+     * mention. Un état ne se signale jamais par la seule couleur.
+     */
+    lecons: {
+      titre: "Leçons",
+      lien: "Leçon {rang} sur {total} — {titre}",
+      fermee: "Pas encore ouverte aux élèves",
+    },
+
     retour: "Retour aux sept années",
     /** « Cycle du Seuil », en tête de page. */
     cycle: "Cycle : {cycle}",

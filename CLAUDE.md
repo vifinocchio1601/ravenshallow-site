@@ -2319,6 +2319,82 @@ Aucune ne se voyait en lisant le code, et les trois sont du même genre que
 se décider une fois. « 0 point » au singulier reste dans `points/affichage.ts`,
 « le 1er août » dans `dates.ts`.
 
+### La première leçon en ligne — Sortilèges L1-1
+
+Posée le 1er septembre 2026. **« La Torche », la leçon 1 sur 4 de Sortilèges
+en première année** — écrite par le joueur, en HTML autonome et interactif.
+
+⚠️ **Elle n'est ouverte à aucun élève, et c'est une décision.** Le contrôle
+qui la suit n'existe pas encore côté serveur ; ouvrir la leçon promettrait une
+suite qui n'arrive pas. `LECONS[].ouverteAuxEleves` est à faux, et
+`lecons.test.ts` fige ce choix — le test tombera le jour où l'on ouvrira, ce
+qui est voulu : ce sera une décision, pas un effet de bord.
+
+**Le staff, lui, voit la leçon** avec la mention « Pas encore ouverte aux
+élèves » en toutes lettres. Un élève ne voit pas le lien du tout, et l'adresse
+lui rend 404 — « elle existe, mais pas pour vous » se lit comme une
+confirmation.
+
+### Une route, et non une page
+
+Une leçon est une page complète : son propre `<head>`, ses 456 Ko de style,
+son script de mise en scène. L'insérer dans le gabarit de l'école ferait
+entrer en collision deux feuilles de style qui n'ont pas été écrites l'une
+pour l'autre. Elle est donc **servie entière**, par
+`cours/[annee]/[matiere]/[lecon]/route.ts`.
+
+⚠️ **C'est le seul endroit du site qui rende du HTML non passé par React.** Il
+n'y a rien à assainir : ce HTML vient du dépôt, relu et versionné. **Ne jamais
+faire servir par cette route un contenu venu de la base ou d'un formulaire** —
+ce serait rouvrir en grand ce que `nettoyerHtml` ferme partout ailleurs.
+
+La garde y est refaite **en entier** : une route se contourne en l'appelant.
+Elle relit l'état du compte en base, comme `garde.ts` pour les pages.
+
+⚠️ **L'année de l'adresse doit être celle de la leçon.** Sans cette égalité,
+`/cours/7/sortileges/1` désignerait une leçon de première année, et la garde
+d'année ne voudrait plus rien dire.
+
+⚠️ **Le rang s'écrit en chiffres, et rien d'autre.** `Number(" 1")` vaut 1 :
+s'en remettre à la conversion laisserait `%201` mener à la même leçon par une
+seconde adresse. Le défaut que `cleDeMaison` évitait déjà.
+
+### Le HTML vit dans un module, pas dans `public/`
+
+Deux exigences ferment les autres portes : il doit être **déployé** et
+**gardé**. Dans `public/`, il serait servi sans garde. Lu par `fs`, il
+risquerait de ne pas être embarqué — Next ne trace que ce qu'il voit importer,
+et la page marcherait en développement pour rendre 500 en production.
+
+⚠️ **Ce n'est pas le rangement définitif.** Le jour où il y aura plusieurs
+leçons, elles iront en base comme les grimoires, avec un script d'import : une
+correction ne doit pas demander un déploiement. Pour une seule leçon, une
+table serait un moteur sans voiture.
+
+### L'image, sortie de la page
+
+⚠️ **Le fichier d'origine portait la MÊME image encodée trois fois** — 489 Ko
+dont 326 pour rien, et rien de tout cela ne pouvait être mis en cache. Elle est
+maintenant dans `public/cours/sortileges/salle.jpg`, téléchargée une fois et
+gardée : **la page est passée de 684 Ko à 32 Ko**. Piège déjà payé sur les
+portraits des fiches.
+
+Elle reste en **JPEG** : le WebP ne gagnait que 4 %, l'image étant déjà bien
+compressée. Même raison que la carte.
+
+### Ce qui reste à faire
+
+⚠️ **Le contrôle ne peut pas être mis en ligne tel quel.** Dans le fichier du
+joueur, `Controle_Sortileges_L1-1.html`, **les cinq bonnes réponses et leurs
+explications sont dans le JavaScript de la page** : n'importe quel élève
+ouvrant le code source les aurait avant de commencer. Son propre commentaire
+l'annonce — « comme il le sera côté serveur ».
+
+C'est exactement ce que la Cérémonie du Miroir a résolu : le barème vit dans
+un fichier `server-only` et ne quitte jamais le serveur. Le contrôle demandera
+le même traitement, plus une table pour les réponses et la note.
+
+
 ---
 
 ## Les Grimoires
