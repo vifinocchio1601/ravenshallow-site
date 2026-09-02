@@ -80,6 +80,14 @@ export const LECONS: readonly Lecon[] = [
     titre: "Vingt-quatre signes, vingt-quatre sons",
     ouverteAuxEleves: false,
   },
+  {
+    matiereId: "magie_defensive",
+    annee: 1,
+    rang: 1,
+    surCombien: 4,
+    titre: "La garde et la distance",
+    ouverteAuxEleves: false,
+  },
 ];
 
 /**

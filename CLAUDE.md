@@ -2222,7 +2222,7 @@ lui aussi.
 ## Les cours — le cursus, et les deux écrans
 
 Posés le 28 août 2026. `/cours` montre les sept années groupées par cycle ;
-`/cours/<n>` montre le programme de l'une. **Deux leçons y sont accrochées**
+`/cours/<n>` montre le programme de l'une. **Trois leçons y sont accrochées**
 depuis le 1er septembre — voir « Les leçons en ligne » ; **les contrôles et
 les examens, eux, ne sont pas construits**, et l'écran le dit.
 
@@ -2322,18 +2322,19 @@ se décider une fois. « 0 point » au singulier reste dans `points/affichage.ts
 
 ### Les leçons en ligne
 
-Deux, toutes deux en première année, toutes deux écrites par le joueur en HTML
-autonome et interactif :
+Trois, toutes en première année, toutes écrites par le joueur en HTML autonome
+et interactif :
 
 | | |
 | --- | --- |
 | **Sortilèges L1-1** | « La Torche », leçon 1 sur 4 — 1er septembre 2026 |
-| **Runologie L1-1** | « Vingt-quatre signes, vingt-quatre sons », leçon 1 sur 4 — 2 septembre 2026 |
+| **Runologie L1-1** | « Vingt-quatre signes, vingt-quatre sons » — 2 septembre 2026 |
+| **Magie défensive L1-1** | « La garde et la distance » — 2 septembre 2026 |
 
-**Poser la seconde n'a demandé que trois lignes** : une entrée dans `LECONS`,
-une clé dans `CONTENUS`, un module de contenu. La page de l'année liste par
-`leconsDe` et n'a pas eu à bouger — c'est le plan du lot précédent, et il
-tient.
+**Chacune n'a demandé que trois gestes** : un module de contenu, une entrée
+dans `LECONS`, une clé dans `CONTENUS`. La page de l'année liste par
+`leconsDe` et n'a jamais eu à bouger — c'est le plan du premier lot, et il
+tient trois fois.
 
 ⚠️ **Aucune n'est ouverte aux élèves, et c'est une décision.** Le contrôle qui
 suit chacune n'existe pas encore côté serveur ; ouvrir une leçon promettrait
@@ -2345,8 +2346,8 @@ qui est voulu : ce sera une décision, pas un effet de bord.
 élèves » en toutes lettres. Un élève ne voit pas le lien du tout, et l'adresse
 lui rend 404 — « elle existe, mais pas pour vous » se lit comme une
 confirmation. Vérifié à l'écran le 2 septembre 2026, avec le même compte
-basculé d'un rôle à l'autre : élève, 404 et aucun lien ; modérateur, les deux
-leçons annoncées et la Runologie qui s'ouvre.
+basculé d'un rôle à l'autre : élève, 404 et aucun lien ; modérateur, les trois
+leçons annoncées et chacune qui s'ouvre.
 
 ⚠️ **Une leçon déclarée sans contenu rend 404, en silence.** La liste vit dans
 `lecons.ts`, le HTML est branché dans `CONTENUS` à l'autre bout, et rien
@@ -2386,15 +2387,16 @@ Deux exigences ferment les autres portes : il doit être **déployé** et
 risquerait de ne pas être embarqué — Next ne trace que ce qu'il voit importer,
 et la page marcherait en développement pour rendre 500 en production.
 
-⚠️ **Ce n'est pas le rangement définitif, et le seuil approche.** Le jour où
-il y aura plusieurs leçons, elles iront en base comme les grimoires, avec un
-script d'import : une correction ne doit pas demander un déploiement. Deux ne
-le justifient pas encore ; **quatre, si**. Relire cette note au prochain lot
-plutôt que d'ajouter un troisième fichier par habitude.
+⚠️ **Ce n'est pas le rangement définitif, et le seuil est ATTEINT.** Elles
+iront en base comme les grimoires, avec un script d'import : une correction de
+coquille ne doit pas demander un déploiement — et il y en a déjà une à faire
+(« 4 cercle »). Trois modules tiennent encore ; neuf matières n'y tiendront
+pas. **La question a été posée au joueur le 2 septembre 2026 ; ne pas poser
+une quatrième leçon dans un module sans sa réponse.**
 
 ### L'image, sortie de la page — et ce sera vrai à chaque fois
 
-⚠️ **Les deux fichiers portaient la MÊME image encodée TROIS FOIS.** Ce n'est
+⚠️ **Les trois fichiers portaient la MÊME image encodée TROIS FOIS.** Ce n'est
 pas un accident du premier : c'est la façon dont ces pages sont écrites, et
 c'est donc le premier geste de tout lot de leçon. Toujours **comparer les
 empreintes** avant de conclure qu'il y a plusieurs images.
@@ -2403,10 +2405,16 @@ empreintes** avant de conclure qu'il y a plusieurs images.
 | --- | --- | --- |
 | Sortilèges L1-1 | 489 Ko, dont 326 pour rien | 684 Ko → **32 Ko** |
 | Runologie L1-1 | 637 Ko, dont 425 pour rien | 856 Ko → **27 Ko** |
+| Magie défensive L1-1 | 646 Ko, dont 431 pour rien | 660 Ko → **29 Ko** |
 
-Elles vivent dans `public/cours/<matiere>/salle.jpg`, téléchargées une fois et
-gardées — rien de tout cela ne pouvait l'être en base64. Piège déjà payé sur
-les portraits des fiches.
+Elles vivent dans `public/cours/<slug>/`, téléchargées une fois et gardées —
+rien de tout cela ne pouvait l'être en base64. Piège déjà payé sur les
+portraits des fiches.
+
+⚠️ **Le dossier porte un SLUG, pas l'identifiant de matière** :
+`magie-defensive` pour `magie_defensive`. L'adresse est écrite en toutes
+lettres dans le HTML, rien ne la dérive de `matiereId`, et tous les slugs du
+site s'écrivent en tirets.
 
 Elles restent en **JPEG** : le WebP ne gagnait que 4 %, l'image étant déjà bien
 compressée. Même raison que la carte.
@@ -2414,8 +2422,33 @@ compressée. Même raison que la carte.
 ### Le texte du joueur est servi au signe près
 
 **On ne corrige rien dans une leçon**, pas même les apostrophes droites, que
-les deux fichiers portent. Ce qu'on trouve se **signale**, et c'est à lui de
-trancher. Trois points lui ont été remontés sur la Runologie, aucun corrigé :
+les trois fichiers portent. Ce qu'on trouve se **signale**, et c'est à lui de
+trancher.
+
+Sur la **Magie défensive**, un seul point, et il se voit à l'écran :
+
+- ⚠️ **« 4 cercle » — le mot ne s'accorde jamais.** « cercle » est en dur dans
+  le HTML, à côté d'un compteur qui monte jusqu'à dix. Juste à 0 et à 1, faux
+  ensuite. C'est la faute de « Il manque 1 lignes » et de « 1 matières
+  imposées », cette fois dans son texte à lui.
+
+**Ce qui a été vérifié et qui tient** : les quatre runes du linteau —
+ᛉᚨᚱᚾ, Algiz Ansuz Raidho Naudhiz — sont **toutes dans la table de la leçon de
+Runologie**, ce qui rend vraie la promesse « dans quinze jours, en runologie,
+vous saurez les lire » ; la halle est bien dans **l'aile est**, comme la salle
+de duel en base ; et le `<div class="g">` vide du bloc « Module » est un
+**cercle de craie dessiné en CSS**, pas une rune oubliée — ne pas le
+« réparer ».
+
+⚠️ **La halle de magie défensive n'est PAS l'une des vingt pièces du
+château.** La base porte « La salle de duel » dans la même aile — plancher
+marqué, deuxième année exigée —, la leçon décrit une halle voûtée au
+rez-de-chaussée, dalles et cercles à la craie, en première année. Rien ne se
+contredit **si ce sont deux pièces**, et c'est ainsi que je l'ai lu. Mais la
+halle n'existe nulle part sur le forum : l'y ajouter demanderait une
+migration, et c'est **sa décision** (art. 12.4).
+
+Sur la **Runologie**, trois points, aucun corrigé :
 
 - ⚠️ **Sowilo n'a pas le même dessin qu'au grimoire** — U+16CA (ᛊ) dans la
   leçon, U+16CB (ᛋ) dans le tableau des vingt-quatre runes du grimoire des
@@ -2443,9 +2476,13 @@ C'est exactement ce que la Cérémonie du Miroir a résolu : le barème vit dans
 un fichier `server-only` et ne quitte jamais le serveur. Le contrôle demandera
 le même traitement, plus une table pour les réponses et la note.
 
-**La Runologie n'a pas encore de contrôle du tout** — le dossier ne porte que
-la leçon. Le bouton « Passer le contrôle » de sa dernière page ne fait rien de
-plus que se désactiver, comme celui de Sortilèges.
+**Celui de la Magie défensive est dans le même cas** — `bonne:1`, `bonne:2`
+dans son `QUESTIONS`, et le même commentaire du joueur : « ordre des réponses
+mélangé à l'affichage, comme il le sera côté serveur ».
+
+**La Runologie n'a pas encore de contrôle du tout** — son dossier ne porte que
+la leçon. Le bouton « Passer le contrôle » des trois pages ne fait rien de plus
+que se désactiver.
 
 
 ---
@@ -3988,8 +4025,9 @@ quatre-vingt-douze blocs — et l'écran d'administration. Vérifié à l'écran
 de Hel » n'apparaît dans aucune réponse. Voir « Les Grimoires ».
 
 **Pas encore** : **les contrôles et les examens** — c'est le dernier chantier,
-et le plus gros. Deux leçons sont posées (Sortilèges et Runologie, première
-année, fermées aux élèves), mais rien de ce qui doit s'y accrocher ne l'est :
+et le plus gros. Trois leçons sont posées (Sortilèges, Runologie et Magie
+défensive, première année, fermées aux élèves), mais rien de ce qui doit s'y
+accrocher ne l'est :
 le rythme d'une leçon par matière et par semaine (`delaiEntreLeconsJours`), un
 contrôle à envoi unique, un examen qui n'ouvre qu'une fois tous les contrôles
 envoyés, deux seuils — 50 % par matière, 60 % de moyenne —, et
@@ -3997,8 +4035,10 @@ envoyés, deux seuils — 50 % par matière, 60 % de moyenne —, et
 table.
 
 ⚠️ **C'est le contrôle qui tient tout le reste.** Tant qu'il n'existe pas côté
-serveur, aucune leçon ne s'ouvre aux élèves — les deux qui sont en ligne ne se
-voient que du staff.
+serveur, aucune leçon ne s'ouvre aux élèves — les trois qui sont en ligne ne se
+voient que du staff. **Deux maquettes de contrôle existent déjà** (Sortilèges
+et Magie défensive), et les deux portent leurs bonnes réponses dans leur
+JavaScript : c'est le même travail à faire une fois, pas deux.
 
 ⚠️ **Les valeurs de tout cela sont DÉJÀ écrites**, dans `REGLES` de
 `cours/cursus.ts`. Le lot qui viendra les lit ; il ne les redécide pas.

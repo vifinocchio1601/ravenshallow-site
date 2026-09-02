@@ -1,4 +1,5 @@
 import { cookies } from "next/headers";
+import { LECON_MAGIE_DEFENSIVE_L1_1 } from "@/contenu/cours/magie-defensive-l1-1";
 import { LECON_RUNOLOGIE_L1_1 } from "@/contenu/cours/runologie-l1-1";
 import { LECON_SORTILEGES_L1_1 } from "@/contenu/cours/sortileges-l1-1";
 import { estUneAnnee, peutOuvrirLAnnee, type Annee } from "@/lib/cours/cursus";
@@ -45,6 +46,7 @@ export const dynamic = "force-dynamic";
 const CONTENUS: Record<string, string> = {
   "sortileges/1": LECON_SORTILEGES_L1_1,
   "runologie/1": LECON_RUNOLOGIE_L1_1,
+  "magie_defensive/1": LECON_MAGIE_DEFENSIVE_L1_1,
 };
 
 function introuvable(): Response {

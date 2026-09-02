@@ -18,6 +18,7 @@ import { matiereDe } from "./cursus";
  */
 const laTorche = lecon("sortileges", "1")!;
 const lesSignes = lecon("runologie", "1")!;
+const laGarde = lecon("magie_defensive", "1")!;
 
 describe("les leçons déclarées", () => {
   it("portent un identifiant de matière qui existe au cursus", () => {
@@ -63,6 +64,7 @@ describe("les leçons déclarées", () => {
   it("rendent le nom de leur matière depuis le cursus", () => {
     expect(nomDeLaMatiere(laTorche)).toBe(matiereDe("sortileges")?.nom);
     expect(nomDeLaMatiere(lesSignes)).toBe(matiereDe("runologie")?.nom);
+    expect(nomDeLaMatiere(laGarde)).toBe(matiereDe("magie_defensive")?.nom);
   });
 
   /**
@@ -100,11 +102,13 @@ describe("trouver une leçon", () => {
     expect(lecon("runologie", "1")?.titre).toBe(
       "Vingt-quatre signes, vingt-quatre sons",
     );
+    expect(lecon("magie_defensive", "1")?.titre).toBe("La garde et la distance");
   });
 
   it("rend null pour ce qui n’existe pas", () => {
     expect(lecon("sortileges", "2")).toBeNull();
     expect(lecon("runologie", "2")).toBeNull();
+    expect(lecon("magie_defensive", "2")).toBeNull();
     expect(lecon("duel", "1")).toBeNull();
     expect(lecon("matiere-inventee", "1")).toBeNull();
   });
@@ -118,6 +122,7 @@ describe("trouver une leçon", () => {
   it("liste les leçons d’une matière dans l’ordre", () => {
     expect(leconsDe("sortileges", 1).map((l) => l.rang)).toEqual([1]);
     expect(leconsDe("runologie", 1).map((l) => l.rang)).toEqual([1]);
+    expect(leconsDe("magie_defensive", 1).map((l) => l.rang)).toEqual([1]);
     expect(leconsDe("sortileges", 2)).toEqual([]);
     expect(leconsDe("runologie", 2)).toEqual([]);
     expect(leconsDe("duel", 1)).toEqual([]);
