@@ -42,7 +42,7 @@ joueur, pas des choix d'implémentation. Ne pas les réécrire sans demander.
 
 ```bash
 npm run dev              # http://localhost:3000
-npm test                 # vitest, 891 tests — ne touche JAMAIS la base
+npm test                 # vitest, 1080 tests — ne touche JAMAIS la base
 npm run lint
 npx tsc --noEmit
 npm run build            # à passer avant tout déploiement
@@ -2222,8 +2222,9 @@ lui aussi.
 ## Les cours — le cursus, et les deux écrans
 
 Posés le 28 août 2026. `/cours` montre les sept années groupées par cycle ;
-`/cours/<n>` montre le programme de l'une. **Les leçons, les contrôles et les
-examens ne sont pas construits** — c'est le lot d'après, et l'écran le dit.
+`/cours/<n>` montre le programme de l'une. **Deux leçons y sont accrochées**
+depuis le 1er septembre — voir « Les leçons en ligne » ; **les contrôles et
+les examens, eux, ne sont pas construits**, et l'écran le dit.
 
 ### Le cursus est du joueur, et il fait autorité
 
@@ -2319,21 +2320,40 @@ Aucune ne se voyait en lisant le code, et les trois sont du même genre que
 se décider une fois. « 0 point » au singulier reste dans `points/affichage.ts`,
 « le 1er août » dans `dates.ts`.
 
-### La première leçon en ligne — Sortilèges L1-1
+### Les leçons en ligne
 
-Posée le 1er septembre 2026. **« La Torche », la leçon 1 sur 4 de Sortilèges
-en première année** — écrite par le joueur, en HTML autonome et interactif.
+Deux, toutes deux en première année, toutes deux écrites par le joueur en HTML
+autonome et interactif :
 
-⚠️ **Elle n'est ouverte à aucun élève, et c'est une décision.** Le contrôle
-qui la suit n'existe pas encore côté serveur ; ouvrir la leçon promettrait une
-suite qui n'arrive pas. `LECONS[].ouverteAuxEleves` est à faux, et
+| | |
+| --- | --- |
+| **Sortilèges L1-1** | « La Torche », leçon 1 sur 4 — 1er septembre 2026 |
+| **Runologie L1-1** | « Vingt-quatre signes, vingt-quatre sons », leçon 1 sur 4 — 2 septembre 2026 |
+
+**Poser la seconde n'a demandé que trois lignes** : une entrée dans `LECONS`,
+une clé dans `CONTENUS`, un module de contenu. La page de l'année liste par
+`leconsDe` et n'a pas eu à bouger — c'est le plan du lot précédent, et il
+tient.
+
+⚠️ **Aucune n'est ouverte aux élèves, et c'est une décision.** Le contrôle qui
+suit chacune n'existe pas encore côté serveur ; ouvrir une leçon promettrait
+une suite qui n'arrive pas. `LECONS[].ouverteAuxEleves` est à faux, et
 `lecons.test.ts` fige ce choix — le test tombera le jour où l'on ouvrira, ce
 qui est voulu : ce sera une décision, pas un effet de bord.
 
-**Le staff, lui, voit la leçon** avec la mention « Pas encore ouverte aux
+**Le staff, lui, voit les leçons** avec la mention « Pas encore ouverte aux
 élèves » en toutes lettres. Un élève ne voit pas le lien du tout, et l'adresse
 lui rend 404 — « elle existe, mais pas pour vous » se lit comme une
-confirmation.
+confirmation. Vérifié à l'écran le 2 septembre 2026, avec le même compte
+basculé d'un rôle à l'autre : élève, 404 et aucun lien ; modérateur, les deux
+leçons annoncées et la Runologie qui s'ouvre.
+
+⚠️ **Une leçon déclarée sans contenu rend 404, en silence.** La liste vit dans
+`lecons.ts`, le HTML est branché dans `CONTENUS` à l'autre bout, et rien
+n'oblige les deux à s'accorder — l'oubli ne se verrait qu'en ouvrant la page,
+c'est-à-dire jamais tant qu'elle est fermée aux élèves. `lecons.test.ts` relit
+donc le code source de la route, comme `etancheite.test.ts` relit celui de
+l'administration. Éprouvé en retirant la ligne : il tombe et nomme la clé.
 
 ### Une route, et non une page
 
@@ -2366,21 +2386,50 @@ Deux exigences ferment les autres portes : il doit être **déployé** et
 risquerait de ne pas être embarqué — Next ne trace que ce qu'il voit importer,
 et la page marcherait en développement pour rendre 500 en production.
 
-⚠️ **Ce n'est pas le rangement définitif.** Le jour où il y aura plusieurs
-leçons, elles iront en base comme les grimoires, avec un script d'import : une
-correction ne doit pas demander un déploiement. Pour une seule leçon, une
-table serait un moteur sans voiture.
+⚠️ **Ce n'est pas le rangement définitif, et le seuil approche.** Le jour où
+il y aura plusieurs leçons, elles iront en base comme les grimoires, avec un
+script d'import : une correction ne doit pas demander un déploiement. Deux ne
+le justifient pas encore ; **quatre, si**. Relire cette note au prochain lot
+plutôt que d'ajouter un troisième fichier par habitude.
 
-### L'image, sortie de la page
+### L'image, sortie de la page — et ce sera vrai à chaque fois
 
-⚠️ **Le fichier d'origine portait la MÊME image encodée trois fois** — 489 Ko
-dont 326 pour rien, et rien de tout cela ne pouvait être mis en cache. Elle est
-maintenant dans `public/cours/sortileges/salle.jpg`, téléchargée une fois et
-gardée : **la page est passée de 684 Ko à 32 Ko**. Piège déjà payé sur les
-portraits des fiches.
+⚠️ **Les deux fichiers portaient la MÊME image encodée TROIS FOIS.** Ce n'est
+pas un accident du premier : c'est la façon dont ces pages sont écrites, et
+c'est donc le premier geste de tout lot de leçon. Toujours **comparer les
+empreintes** avant de conclure qu'il y a plusieurs images.
 
-Elle reste en **JPEG** : le WebP ne gagnait que 4 %, l'image étant déjà bien
+| | encodée dans la page | sortie en fichier |
+| --- | --- | --- |
+| Sortilèges L1-1 | 489 Ko, dont 326 pour rien | 684 Ko → **32 Ko** |
+| Runologie L1-1 | 637 Ko, dont 425 pour rien | 856 Ko → **27 Ko** |
+
+Elles vivent dans `public/cours/<matiere>/salle.jpg`, téléchargées une fois et
+gardées — rien de tout cela ne pouvait l'être en base64. Piège déjà payé sur
+les portraits des fiches.
+
+Elles restent en **JPEG** : le WebP ne gagnait que 4 %, l'image étant déjà bien
 compressée. Même raison que la carte.
+
+### Le texte du joueur est servi au signe près
+
+**On ne corrige rien dans une leçon**, pas même les apostrophes droites, que
+les deux fichiers portent. Ce qu'on trouve se **signale**, et c'est à lui de
+trancher. Trois points lui ont été remontés sur la Runologie, aucun corrigé :
+
+- ⚠️ **Sowilo n'a pas le même dessin qu'au grimoire** — U+16CA (ᛊ) dans la
+  leçon, U+16CB (ᛋ) dans le tableau des vingt-quatre runes du grimoire des
+  Sortilèges. Deux caractères Unicode distincts pour la même rune : le mur du
+  fond et le grimoire ne montrent pas le même signe. **Les vingt-trois autres
+  concordent, noms et sens mot pour mot** ;
+- ⚠️ **Wunjo vaut « w » dans la table et « v » dans KALDVIK.** L'exercice
+  promet que chaque signe « rend sa valeur sonore, et rien d'autre », et le
+  même signe en donne deux à deux endroits de la même page ;
+- les apostrophes droites, que la leçon de Sortilèges porte déjà.
+
+**Ce qui a été vérifié et qui est juste** : « Elena Runa Tidevann » est bien le
+nom de la directrice — la bible dit « Elena R. Tidevann, le R. pour Runa » —,
+et la Runologie est bien obligatoire en première année au cursus.
 
 ### Ce qui reste à faire
 
@@ -2393,6 +2442,10 @@ l'annonce — « comme il le sera côté serveur ».
 C'est exactement ce que la Cérémonie du Miroir a résolu : le barème vit dans
 un fichier `server-only` et ne quitte jamais le serveur. Le contrôle demandera
 le même traitement, plus une table pour les réponses et la note.
+
+**La Runologie n'a pas encore de contrôle du tout** — le dossier ne porte que
+la leçon. Le bouton « Passer le contrôle » de sa dernière page ne fait rien de
+plus que se désactiver, comme celui de Sortilèges.
 
 
 ---
@@ -3934,13 +3987,18 @@ quatre-vingt-douze blocs — et l'écran d'administration. Vérifié à l'écran
 élève voit quatre chapitres, le cinquième n'existe pas pour lui, et « Sortilège
 de Hel » n'apparaît dans aucune réponse. Voir « Les Grimoires ».
 
-**Pas encore** : **les leçons, les contrôles et les examens** — le cursus et sa
-navigation sont posés, ce qui s'y accroche ne l'est pas. C'est le dernier
-chantier, et le plus gros : une leçon par matière et par semaine
-(`delaiEntreLeconsJours`), un contrôle à envoi unique, un examen qui n'ouvre
-qu'une fois tous les contrôles envoyés, deux seuils — 50 % par matière, 60 %
-de moyenne —, et **l'inscription aux options** de la Marée et de la Veille,
-qui demande une table.
+**Pas encore** : **les contrôles et les examens** — c'est le dernier chantier,
+et le plus gros. Deux leçons sont posées (Sortilèges et Runologie, première
+année, fermées aux élèves), mais rien de ce qui doit s'y accrocher ne l'est :
+le rythme d'une leçon par matière et par semaine (`delaiEntreLeconsJours`), un
+contrôle à envoi unique, un examen qui n'ouvre qu'une fois tous les contrôles
+envoyés, deux seuils — 50 % par matière, 60 % de moyenne —, et
+**l'inscription aux options** de la Marée et de la Veille, qui demande une
+table.
+
+⚠️ **C'est le contrôle qui tient tout le reste.** Tant qu'il n'existe pas côté
+serveur, aucune leçon ne s'ouvre aux élèves — les deux qui sont en ligne ne se
+voient que du staff.
 
 ⚠️ **Les valeurs de tout cela sont DÉJÀ écrites**, dans `REGLES` de
 `cours/cursus.ts`. Le lot qui viendra les lit ; il ne les redécide pas.

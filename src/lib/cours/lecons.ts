@@ -9,17 +9,17 @@ import { matiereDe, type Annee } from "./cursus";
  * leçons existent, et **si elles sont ouvertes aux élèves**.
  *
  * ⚠️ **Aucune ne l'est pour l'instant.** Décision du joueur du 1er septembre
- * 2026 : la première leçon est posée pour qu'il la voie dans le site, pas pour
- * qu'on la joue. Le contrôle qui la suit n'existe pas encore côté serveur — et
- * tant qu'il n'existe pas, ouvrir la leçon promettrait une suite qui n'arrive
- * pas.
+ * 2026, reconduite le 2 : les leçons sont posées pour qu'il les voie dans le
+ * site, pas pour qu'on les joue. Le contrôle qui suit chacune n'existe pas
+ * encore côté serveur — et tant qu'il n'existe pas, ouvrir une leçon
+ * promettrait une suite qui n'arrive pas.
  *
  * ── Pourquoi un drapeau plutôt qu'une absence ──
  *
- * On aurait pu ne pas déclarer la leçon du tout. Mais alors le joueur ne
- * pourrait pas la regarder en ligne, et c'est précisément ce qu'il demande.
- * Le drapeau dit ce qu'on veut dire — « elle existe, elle n'est pas encore
- * ouverte » — là où une absence dirait « elle n'existe pas ».
+ * On aurait pu ne déclarer aucune des deux. Mais alors le joueur ne pourrait
+ * pas les regarder en ligne, et c'est précisément ce qu'il demande. Le drapeau
+ * dit ce qu'on veut dire — « elle existe, elle n'est pas encore ouverte » — là
+ * où une absence dirait « elle n'existe pas ».
  *
  * C'est le même parti pris qu'`EtatEtape` : une case vide ne dit rien, un état
  * tranche.
@@ -70,6 +70,14 @@ export const LECONS: readonly Lecon[] = [
     rang: 1,
     surCombien: 4,
     titre: "La Torche",
+    ouverteAuxEleves: false,
+  },
+  {
+    matiereId: "runologie",
+    annee: 1,
+    rang: 1,
+    surCombien: 4,
+    titre: "Vingt-quatre signes, vingt-quatre sons",
     ouverteAuxEleves: false,
   },
 ];

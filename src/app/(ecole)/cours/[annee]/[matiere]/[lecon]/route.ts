@@ -1,4 +1,5 @@
 import { cookies } from "next/headers";
+import { LECON_RUNOLOGIE_L1_1 } from "@/contenu/cours/runologie-l1-1";
 import { LECON_SORTILEGES_L1_1 } from "@/contenu/cours/sortileges-l1-1";
 import { estUneAnnee, peutOuvrirLAnnee, type Annee } from "@/lib/cours/cursus";
 import { lecon, peutOuvrirLaLecon } from "@/lib/cours/lecons";
@@ -43,6 +44,7 @@ export const dynamic = "force-dynamic";
 /** Le contenu de chaque leçon, par sa clé. */
 const CONTENUS: Record<string, string> = {
   "sortileges/1": LECON_SORTILEGES_L1_1,
+  "runologie/1": LECON_RUNOLOGIE_L1_1,
 };
 
 function introuvable(): Response {
