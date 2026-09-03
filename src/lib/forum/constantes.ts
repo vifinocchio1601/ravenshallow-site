@@ -90,9 +90,9 @@ export const TEXTES_POUVOIRS = {
       portee: "Tout le forum",
     },
     VOIR_LES_CONTROLES: {
-      nom: "Voir les contrôles",
+      nom: "Entrer dans la salle des professeurs",
       detail:
-        "Consulter les contrôles de leçon envoyés : qui, quelle matière, quelle note. La porte des professeurs, qui sont des joueurs ordinaires. N'ouvre ni les années non atteintes, ni les leçons avant leur heure, ni les copies.",
+        "Ouvrir le relevé de chaque élève : ce qu'il a passé, ses notes, son avancement dans les cours. La porte des professeurs, qui sont des joueurs ordinaires. N'ouvre ni les années qu'il n'a pas atteintes, ni les leçons avant leur heure, ni les copies.",
       portee: "Tout le forum",
     },
   },

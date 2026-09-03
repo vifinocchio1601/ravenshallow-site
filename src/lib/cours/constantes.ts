@@ -139,23 +139,81 @@ export const TEXTES_COURS = {
    * ne montre que des notes, et le vocabulaire ne doit pas promettre plus que
    * ce que la permission ouvre.
    */
-  controles: {
+  /**
+   * **La salle des professeurs** — le nom est du joueur, 4 septembre 2026, et
+   * il est meilleur que « le registre des contrôles » qu'il remplace : ce
+   * n'est pas un tableau de bord, c'est une pièce où l'on entre.
+   *
+   * ⚠️ **On y lit des notes, jamais des copies.** Le vocabulaire ne doit
+   * promettre que ce que la permission ouvre.
+   */
+  salle: {
     /** L'entrée sur la page des cours, visible du seul détenteur. */
-    entree: "Le registre des contrôles",
-    entreeAide: "Qui a passé quoi, et avec quelle note.",
+    entree: "La salle des professeurs",
+    entreeAide: "Le relevé de chaque élève, et son avancement dans les cours.",
 
-    titre: "Le registre des contrôles",
+    titre: "La salle des professeurs",
     chapeau:
-      "Les contrôles de leçon envoyés, du plus récent au plus ancien. On y lit une note, jamais une copie : les réponses d'un élève ne quittent pas le serveur.",
+      "Choisissez un élève pour ouvrir son relevé : ce qu'il a passé, ses notes, et où il en est dans le programme de son année.",
 
-    /** Le singulier a sa phrase : « 1 contrôles » est la faute qu'on ne relit pas. */
-    compte: "{n} contrôles envoyés",
-    compteUn: "1 contrôle envoyé",
-    aucun: "Aucun contrôle n'a encore été envoyé.",
+    /** Le regroupement de la liste. Les années d'abord, le château ensuite. */
+    chateau: "Le château",
+    chateauAide:
+      "Ceux qui portent un titre plutôt qu'une année. Ils passent les contrôles comme les autres.",
+
+    aucun: "Aucun membre à afficher.",
+
+    /** Sur chaque ligne : où en est ce membre. Le singulier a sa phrase. */
+    avancement: "{n} contrôles envoyés",
+    avancementUn: "1 contrôle envoyé",
+    avancementAucun: "Aucun contrôle envoyé",
+
+    /** Les derniers envois, tous élèves confondus. */
+    recents: "Les derniers contrôles envoyés",
+    recentsAucun: "Aucun contrôle n'a encore été envoyé.",
 
     /** La ligne survit au compte : le nom, lui, s'en va. */
     compteParti: "Un membre qui n'est plus là",
   },
+
+  /**
+   * **Le relevé d'un élève.** Ses notes, et son avancement.
+   */
+  releve: {
+    retour: "Retour à la salle des professeurs",
+    /**
+     * ⚠️ **`{qui}` reçoit déjà « de … » ou « d’… »** — voir `avecDe`. « Relevé
+     * de Ingrid » est la faute qu'on a déjà corrigée sur les héritages du
+     * cursus, et elle revient partout où un nom suit une préposition.
+     */
+    titre: "Relevé {qui}",
+
+    /** Le résumé en tête : ce qu'il a passé sur ce qui lui est ouvert. */
+    resume: "{envoyes} contrôles passés sur {possibles} ouverts",
+    resumeUn: "1 contrôle passé sur {possibles} ouverts",
+    resumeUnSeulOuvert: "{envoyes} contrôle passé sur 1 ouvert",
+    resumeRien: "Aucune leçon ne lui est encore ouverte",
+
+    /**
+     * Le total des notes.
+     *
+     * ⚠️ **Ce n'est pas une moyenne d'examen.** Les deux seuils du cursus —
+     * 50 % par matière, 60 % de moyenne — portent sur les examens de fin
+     * d'année, qui ne sont pas construits. Les nommer ici ferait croire à un
+     * élève qu'il est reçu ou recalé sur ses contrôles de leçon.
+     */
+    total: "{points} bonnes réponses sur {surCombien}",
+    totalAucun: "Rien de noté pour l'instant",
+
+    /** En face de chaque leçon. */
+    passe: "{note} sur {surCombien}",
+    pasPasse: "Pas encore passé",
+    pasOuverte: "Pas encore ouverte",
+
+    /** Une année du programme qui ne porte aucune leçon en ligne. */
+    rien: "Aucune leçon n'est encore en ligne pour son année.",
+  },
+
 
   /** Les inscriptions ne sont pas construites non plus. */
   inscriptions: {

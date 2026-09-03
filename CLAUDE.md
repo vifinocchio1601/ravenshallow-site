@@ -143,6 +143,7 @@ logique ailleurs, l'y ajouter.
 | `lib/cours/questionnaires.ts` | **les trente questions et leurs bonnes réponses** — `server-only`, jamais expédié au client. `enoncesDe` est la seule porte vers le navigateur |
 | `lib/cours/garde.ts` | **les six questions qu'on pose avant d'ouvrir une leçon**, partagées par les trois routes des cours |
 | `lib/cours/delai.ts` | **les sept jours entre deux leçons** — quand la suivante s'ouvre, et comment le temps qui reste s'écrit. Pur : ni base, ni horloge |
+| `lib/cours/releve.ts` | **comment se compose le relevé d'un élève** — quelles années y figurent, et ce qui compte dans l'avancement. Pur : ni base, ni horloge. Ne connaît aucune réponse |
 | `lib/cours/depot.ts` | l'accès aux contrôles. **Seul endroit qui compose une requête** sur `controles_envoyes` — et le seul qui enchaîne corriger, écrire la note et accorder les points, dans une seule transaction |
 | `lib/partenariat/bannieres.ts` | **les trois formats de bannière, et le code qu'un partenaire colle chez lui** — HTML et BBCode. **Aucun import** : la page, les textes et le composant de copie y puisent sans qu'un cycle se forme. Le seul endroit qui connaisse le nom de domaine du site |
 | `lib/partenariat/freins.ts` | **ce qui distingue un robot d'un partenaire** — le pot de miel, le délai de remplissage, le plafond horaire. Pur : ni horloge, ni base |
@@ -2338,8 +2339,14 @@ se décider une fois. « 0 point » au singulier reste dans `points/affichage.ts
 ### Les leçons en ligne
 
 **Six, toute la première année**, toutes écrites par le joueur en HTML
-autonome et interactif — et **ouvertes aux élèves le vendredi 4 septembre 2026
-à 9 h**, heure de Bruxelles, fixée par lui et annoncée au Grand Hall.
+autonome et interactif — et **ouvertes aux élèves depuis le 3 septembre 2026 à
+20 h**, heure de Bruxelles.
+
+⚠️ **La date a bougé une fois, et les deux fois c'est lui qui l'a fixée.**
+D'abord le vendredi 4 à 9 h, annoncé au Grand Hall ; puis, le 3 au soir :
+« ouvre les cours de toute façon, il n'y a pas d'inscrit pour le moment ».
+**L'annonce du Grand Hall dit encore vendredi 9 h** — c'est à lui de la
+corriger, un texte affiché aux membres ne se réécrit pas depuis le code.
 
 | | |
 | --- | --- |
@@ -2770,15 +2777,16 @@ matières afficheraient alors deux décomptes différents pour le même envoi.
 `peutOuvrirLaLecon`**, et nulle part ailleurs. La règle est déjà écrite ; il ne
 manque qu'un appelant.
 
-### L'accès professeurs
+### La salle des professeurs
 
-Posé le 4 septembre 2026, à la demande du joueur : « ce qu'il faudrait sur la
-page des cours, c'est un accès professeurs. »
+Posée le 4 septembre 2026, à la demande du joueur — et **le nom est de lui** :
+ce n'est pas un tableau de bord, c'est une pièce où l'on entre. On y choisit un
+élève, et l'on ouvre son relevé.
 
-⚠️ **Il ne se déduit PAS du rôle affiché.** Écrire « Professeur d'alchimie »
-dans `Eleve.roleAffiche` n'ouvre rien, jamais — c'est une règle du joueur que
-`role-affiche.test.ts` tient de trois façons. Un professeur est un **joueur
-ordinaire** ; il lui faut donc un vrai pouvoir.
+⚠️ **L'accès ne se déduit PAS du rôle affiché.** Écrire « Professeur
+d'alchimie » dans `Eleve.roleAffiche` n'ouvre rien, jamais — c'est une règle du
+joueur que `role-affiche.test.ts` tient de trois façons. Un professeur est un
+**joueur ordinaire** ; il lui faut donc un vrai pouvoir.
 
 **D'où `VOIR_LES_CONTROLES`, la sixième permission**, et pas autre chose :
 
@@ -2787,39 +2795,65 @@ ordinaire** ; il lui faut donc un vrai pouvoir.
 | les nommer modérateurs | donnerait le forum entier avec — masquer un post, lire les espaces réservés d'une maison, passer partout |
 | une permission par matière | plus juste, mais neuf lignes à poser par professeur au lieu d'une |
 
-⚠️ **Elle n'ouvre QUE la lecture des contrôles** — décision du joueur, qui a
-écarté explicitement les trois autres portes proposées : les années qu'un
-professeur n'a pas atteintes (art. 14.4 vaut pour tout le monde), les leçons
-avant leur heure, et l'écriture des leçons. Une permission qui ouvrirait
-plusieurs choses à la fois ne se retirerait plus proprement.
+⚠️ **Elle n'ouvre QUE cela** — le joueur a écarté explicitement les trois
+autres portes proposées : les années qu'un professeur n'a pas atteintes
+(art. 14.4 vaut pour tout le monde), les leçons avant leur heure, et l'écriture
+des leçons. Une permission qui ouvrirait plusieurs choses à la fois ne se
+retirerait plus proprement.
 
-⚠️ **Aucune copie ne descend.** Le dépôt ne rend pas `reponses`, et l'écran
-n'aurait pas de quoi les afficher : un professeur a besoin d'une note. Le jour
-où il faudra les copies, ce sera une décision, pas un `select` de plus glissé
-dans un lot.
+### Ce que le relevé montre, et ce qu'il ne montre pas
 
-**Rien n'a eu à bouger dans l'administration** : `/admin/pouvoirs` et le
-panneau de la fiche parcourent tous deux `PERMISSIONS`. Une permission de plus
-est donc **une ligne dans la liste**, et elle apparaît partout — c'est le plan
-du lot des pouvoirs, et il tient pour la première fois. Un essai vérifie en
-retour que chacune porte bien un libellé : sans lui, la case serait cochable
-et sans nom.
+`/cours/professeurs` liste les membres — chacun avec son année **ou son titre**
+(`libellePlace`) et ce qu'il a passé —, puis les derniers envois, qui répondent
+à une autre question : non pas « où en est untel » mais « qui a travaillé cette
+semaine ». `/cours/professeurs/<id>` ouvre le relevé.
 
-⚠️ **`/cours/controles` n'est pas une année.** Le segment est statique, il
-l'emporte sur `[annee]` — qui de toute façon refuserait « controles ». Et
+⚠️ **Aucune copie, nulle part.** Le dépôt ne demande pas `reponses`, et
+`releve.test.ts` compte les champs d'un contrôle rendu pour que personne n'en
+ajoute un. Un relevé porte des notes ; le jour où il faudra les copies, ce sera
+une décision du joueur, pas un champ de plus dans un `select`.
+
+⚠️ **Aucun seuil n'est affiché.** Les deux du cursus — 50 % par matière, 60 %
+de moyenne — portent sur les **examens**, qui ne sont pas construits. Les
+montrer ici ferait croire à un professeur qu'un élève est reçu ou recalé sur
+ses contrôles de leçon. On montre des faits : « 3 contrôles passés sur 6
+ouverts », « 11 bonnes réponses sur 15 ».
+
+⚠️ **L'avancement se mesure sur ce qui est OUVERT**, jamais sur ce qui existera.
+« 0 sur 24 » à la rentrée serait faux et décourageant. Un contrôle passé avant
+l'heure — le staff le peut — s'affiche quand même, mais ne gonfle pas le
+dénominateur : sinon le relevé annoncerait « 1 sur 0 ».
+
+⚠️ **Les années sans aucune leçon en ligne n'y figurent pas.** Six années vides
+sous la première noieraient la seule qui porte quelque chose. Elles
+apparaîtront d'elles-mêmes.
+
+### Trois pièges payés à l'écran
+
+⚠️ **La maison d'un professeur ne s'affiche pas.** La colonne `maison` est
+**toujours** écrite, et lire `eleve.maison` faisait apparaître la directrice
+comme une élève de Tideål. C'est `aUneMaison` qui tranche — dans le dépôt,
+jamais en comparant l'état dans un composant.
+
+⚠️ **« Relevé de Ingrid ».** Deux fautes du même genre en deux lots : `avecDe`
+existe dans `lib/francais.ts` depuis les héritages du cursus, et il faut y
+penser **partout où un nom suit une préposition**.
+
+⚠️ **`/cours/professeurs` n'est pas une année.** Le segment est statique, il
+l'emporte sur `[annee]` — qui de toute façon refuserait « professeurs ». Et
 `routeAutorisee` reconnaît tout ce qui commence par `/cours/` : il n'y a rien à
 déclarer au menu ni dans `ROUTES_HORS_MENU`.
 
+**Rien n'a eu à bouger dans l'administration** : `/admin/pouvoirs` et le
+panneau de la fiche parcourent tous deux `PERMISSIONS`. Une permission de plus
+est **une ligne dans la liste** — c'est le plan du lot des pouvoirs, et il tient
+pour la première fois. Un essai vérifie en retour que chacune porte un libellé :
+sans lui, la case serait cochable et sans nom.
+
 **L'entrée ne s'affiche qu'à qui l'ouvre**, et ce n'est pas une entorse à
 « une porte close s'affiche » : les années fermées et les maisons où l'on
-n'entre pas se montrent parce que ce sont des faits du monde. Un registre
+n'entre pas se montrent parce que ce sont des faits du monde. Un écran
 d'administration n'en est pas un.
-
-⚠️ **La maison d'un professeur ne s'affiche pas dans le registre**, et le piège
-a été rencontré à l'écran : la colonne `maison` est **toujours** écrite, et
-lire `eleve.maison` faisait apparaître la directrice comme une élève de Tideål.
-C'est `aUneMaison` qui tranche — dans le dépôt, jamais en comparant l'état dans
-un composant.
 
 ### Ce qui reste à faire
 

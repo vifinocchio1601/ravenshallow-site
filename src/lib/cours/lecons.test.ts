@@ -154,8 +154,10 @@ describe("les leçons déclarées", () => {
   });
 
   /**
-   * ⚠️ **La date d'ouverture, figée ici.** Le joueur l'a fixée au vendredi
-   * 4 septembre 2026 à 9 h, heure de Bruxelles, et l'a annoncée au Grand Hall.
+   * ⚠️ **La date d'ouverture, figée ici.** Le joueur l'avait fixée au vendredi
+   * 4 septembre 2026 à 9 h ; il l'a avancée au 3 au soir, l'école n'ayant
+   * encore aucun inscrit. Les deux fois, c'est une décision — et les deux
+   * fois, ce test est venu la recueillir.
    *
    * C'était un booléen jusqu'au 3 septembre au soir — l'ouverture dépendait
    * donc du moment du déploiement, et un `git push` la veille a ouvert les
@@ -167,10 +169,11 @@ describe("les leçons déclarées", () => {
    * machine qui fait tourner les essais n'est pas forcément à Bruxelles, et
    * Vercel vit en UTC. 9 h à Bruxelles en septembre, c'est 7 h UTC.
    */
-  it("s’ouvrent le 4 septembre 2026 à 9 h, heure de Bruxelles", () => {
+  it("s’ouvrent le 3 septembre 2026 à 20 h, heure de Bruxelles", () => {
     for (const l of LECONS) {
+      // 20 h à Bruxelles en septembre (heure d'été) = 18 h UTC.
       expect(l.ouverteAuxElevesLe?.toISOString(), l.titre).toBe(
-        "2026-09-04T07:00:00.000Z",
+        "2026-09-03T18:00:00.000Z",
       );
     }
   });

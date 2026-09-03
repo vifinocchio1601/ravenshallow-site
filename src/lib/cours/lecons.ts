@@ -8,11 +8,10 @@ import { matiereDe, type Annee } from "./cursus";
  * Deux choses : quelles leçons existent, et **si elles sont ouvertes aux
  * élèves**.
  *
- * ✅ **Les six de première année s'ouvrent le vendredi 4 septembre 2026 à 9 h**,
- * heure de Bruxelles — date et heure fixées par le joueur, et annoncées au
- * Grand Hall. Elles étaient fermées avant cela pour une raison précise, qui a
- * cessé d'exister : le contrôle qui suit chacune n'existait pas côté serveur,
- * et ouvrir une leçon promettait une suite qui n'arrivait pas.
+ * ✅ **Les six de première année sont ouvertes** depuis le 3 septembre 2026 à
+ * 20 h, heure de Bruxelles. Elles étaient fermées avant cela pour une raison
+ * précise, qui a cessé d'exister : le contrôle qui suit chacune n'existait pas
+ * côté serveur, et ouvrir une leçon promettait une suite qui n'arrivait pas.
  *
  * ⚠️ **L'ouverture est une DATE, jamais un déploiement.** C'était un booléen
  * jusqu'au 3 septembre au soir, et l'ouverture dépendait donc du moment où
@@ -86,13 +85,26 @@ export type Lecon = {
  */
 /**
  * ⚠️ **L'instant d'ouverture des six leçons de première année**, une seule
- * fois. Le joueur l'a fixé au vendredi 4 septembre 2026 à 9 h, heure de
- * Bruxelles, et l'a annoncé au Grand Hall.
+ * fois. Il est écrit ici plutôt que six fois : les six s'ouvrent ensemble,
+ * c'est une même annonce, et six copies finiraient par diverger d'une minute.
  *
- * Il est écrit ici plutôt que six fois : les six s'ouvrent ensemble, c'est
- * une même annonce, et six copies finiraient par diverger d'une minute.
+ * ── Deux dates en deux jours, et les deux sont du joueur ──
+ *
+ * Il avait d'abord fixé le **vendredi 4 septembre 2026 à 9 h**, annoncé au
+ * Grand Hall. Puis, le 3 au soir : « ouvre les cours de toute façon, il n'y a
+ * pas d'inscrit pour le moment, donc maintenant ou demain matin c'est
+ * pareil. » D'où le 3 septembre à 20 h.
+ *
+ * ⚠️ **L'annonce du Grand Hall dit encore vendredi 9 h**, et c'est à lui de
+ * la corriger s'il le veut — un texte affiché aux membres ne se réécrit pas
+ * depuis le code.
+ *
+ * ⚠️ **Ce qui n'a PAS changé, c'est le mécanisme.** L'ouverture reste une
+ * date, jamais un déploiement : c'était un booléen le 3 septembre au matin, et
+ * un `git push` a ouvert les cours un jour trop tôt. Avancer la date est une
+ * décision ; la faire dépendre du moment où l'on pousse n'en est pas une.
  */
-const OUVERTURE_PREMIERE_ANNEE = new Date("2026-09-04T09:00:00+02:00");
+const OUVERTURE_PREMIERE_ANNEE = new Date("2026-09-03T20:00:00+02:00");
 
 export const LECONS: readonly Lecon[] = [
   {

@@ -3,6 +3,8 @@ import { transaction } from "@/lib/base/transaction";
 import { accorderLesPointsDUnControle } from "@/lib/points/depot";
 import { prisma } from "@/lib/prisma";
 import { aUneMaison } from "@/lib/session/acces";
+import { libellePlace, rangAnnee, type Fonction } from "@/lib/dossier/etats";
+import type { ControleAuReleve } from "./releve";
 import type { Annee } from "./cursus";
 import {
   corriger,
@@ -159,6 +161,139 @@ export async function listerLesControles(): Promise<ControleVu[]> {
     surCombien: l.surCombien,
     envoyeLe: l.envoyeLe,
   }));
+}
+
+/** Un membre, tel que la salle des professeurs le liste. */
+export type MembreDeLaSalle = {
+  eleveId: string;
+  prenomNom: string;
+  /** L’année, **ou le titre au château qui la remplace** — `libellePlace`. */
+  place: string;
+  /** L’année du cursus, pour le tri et pour le regroupement. */
+  annee: number;
+  /** La maison **si elle s’affiche**, jamais la colonne brute. */
+  maison: string | null;
+  /** Combien de contrôles il a envoyés, toutes matières confondues. */
+  controlesEnvoyes: number;
+};
+
+/**
+ * **Tous les membres, pour la salle des professeurs.**
+ *
+ * ⚠️ **Le compte de service n’y figure pas** — celui de La Veille, qui se
+ * connecte chaque matin. La condition est écrite en toutes lettres ici, jamais
+ * factorisée : la sortir du `where` la rendrait invisible. C’est le procédé du
+ * courrier du château et du Registre.
+ *
+ * ⚠️ **Les professeurs et la directrice y figurent**, et il ne faut pas
+ * essayer de les écarter : il n’existe aucune colonne « n’est pas un élève »,
+ * et `roleAffiche` est décoratif — le lire pour décider d’un affichage est
+ * précisément ce que la règle du joueur interdit. `libellePlace` met leur
+ * titre à la place de l’année, et cela suffit à les reconnaître. Même choix
+ * que la liste des passages d’année.
+ *
+ * ⚠️ **Aucun portrait.** Deux cents kilo-octets par fiche en base : une
+ * requête de liste n’en ramène jamais. Piège payé sur le Registre.
+ */
+export async function listerLesMembresDeLaSalle(): Promise<MembreDeLaSalle[]> {
+  const fiches = await prisma.eleve.findMany({
+    where: { statut: "ACCEPTE", utilisateur: { compteDeService: false } },
+    select: {
+      id: true,
+      prenomNom: true,
+      fonction: true,
+      roleAffiche: true,
+      maison: true,
+      etatMaison: true,
+    },
+  });
+
+  // Un seul aller-retour pour tous les comptes, plutôt qu’une requête par
+  // ligne : la salle en affichera trente le jour où l’école sera pleine.
+  const comptes = await prisma.controleEnvoye.groupBy({
+    by: ["eleveId"],
+    _count: { _all: true },
+  });
+  const parEleve = new Map(
+    comptes.map((c) => [c.eleveId, c._count._all] as const),
+  );
+
+  return fiches
+    .map((f) => ({
+      eleveId: f.id,
+      prenomNom: f.prenomNom,
+      place: libellePlace(f.fonction as Fonction, f.roleAffiche),
+      annee: rangAnnee(f.fonction as Fonction),
+      maison: aUneMaison({ etatMaison: f.etatMaison }) ? f.maison : null,
+      controlesEnvoyes: parEleve.get(f.id) ?? 0,
+    }))
+    .sort(
+      (a, b) =>
+        a.annee - b.annee || a.prenomNom.localeCompare(b.prenomNom, "fr"),
+    );
+}
+
+/** Une fiche, et ce qu’elle a passé. */
+export type FichePourLeReleve = {
+  eleveId: string;
+  prenomNom: string;
+  place: string;
+  annee: number;
+  maison: string | null;
+  controles: ControleAuReleve[];
+};
+
+/**
+ * **Une fiche et tous ses contrôles**, pour composer son relevé.
+ *
+ * Rend `null` pour une fiche qui n’existe pas, dont le dossier n’est pas
+ * accepté, ou qui est un compte de service — les trois se lisent de la même
+ * façon à l’écran : « Ce couloir ne mène nulle part ». Distinguer les cas se
+ * lirait comme une confirmation.
+ *
+ * ⚠️ **`reponses` n’est pas demandé**, et ne doit jamais l’être ici : un relevé
+ * porte des notes. Le jour où il faudra les copies, ce sera une décision du
+ * joueur, pas un champ de plus dans ce `select`.
+ */
+export async function fichePourLeReleve(
+  eleveId: string,
+): Promise<FichePourLeReleve | null> {
+  const f = await prisma.eleve.findFirst({
+    where: {
+      id: eleveId,
+      statut: "ACCEPTE",
+      utilisateur: { compteDeService: false },
+    },
+    select: {
+      id: true,
+      prenomNom: true,
+      fonction: true,
+      roleAffiche: true,
+      maison: true,
+      etatMaison: true,
+      controlesEnvoyes: {
+        select: {
+          matiereId: true,
+          annee: true,
+          rang: true,
+          note: true,
+          surCombien: true,
+          envoyeLe: true,
+        },
+        orderBy: { envoyeLe: "desc" },
+      },
+    },
+  });
+  if (!f) return null;
+
+  return {
+    eleveId: f.id,
+    prenomNom: f.prenomNom,
+    place: libellePlace(f.fonction as Fonction, f.roleAffiche),
+    annee: rangAnnee(f.fonction as Fonction),
+    maison: aUneMaison({ etatMaison: f.etatMaison }) ? f.maison : null,
+    controles: f.controlesEnvoyes,
+  };
 }
 
 // ─────────────────────────────────────────────────────────────

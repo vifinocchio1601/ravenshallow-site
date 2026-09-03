@@ -73,14 +73,14 @@ export default async function Page() {
       */}
       {peutVoirLesControles(pouvoirs) ? (
         <Link
-          href={`${ROUTES.cours}/controles`}
+          href={`${ROUTES.cours}/professeurs`}
           className="mt-6 inline-flex flex-col gap-1 rounded-md border border-aurora-teal/25 bg-void/40 px-5 py-4 transition-colors duration-300 hover:border-aurora-teal/60"
         >
           <span className="font-display text-sm tracking-[0.04em] text-parchment">
-            {TEXTES_COURS.controles.entree}
+            {TEXTES_COURS.salle.entree}
           </span>
           <span className="font-body text-xs italic text-silver">
-            {TEXTES_COURS.controles.entreeAide}
+            {TEXTES_COURS.salle.entreeAide}
           </span>
         </Link>
       ) : null}
