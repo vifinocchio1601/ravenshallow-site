@@ -106,7 +106,11 @@ export async function lecteurDeLaLecon(
     annee,
     staff,
   );
-  if (!peutOuvrirLaLecon(laLecon, anneeOuverte, staff)) return null;
+  // ⚠️ **L'instant est pris ICI, une seule fois**, et passé à la couture : elle
+  // reste pure, et les trois routes des cours posent la même question au même
+  // moment. Une leçon ouverte à 9 h ne doit pas s'ouvrir à 8 h 59 sur une
+  // route et à 9 h 00 sur une autre.
+  if (!peutOuvrirLaLecon(laLecon, anneeOuverte, staff, new Date())) return null;
 
   return {
     utilisateurId: session.id,

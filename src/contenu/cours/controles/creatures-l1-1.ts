@@ -81,6 +81,10 @@ body{background:var(--encre);color:var(--givre);font-family:var(--corps);font-we
 
 /* en-tête */
 header{border-bottom:1px solid var(--trait);margin-bottom:34px;padding:32px 0 24px}
+.retour{display:inline-block;font-family:var(--data);font-size:10px;letter-spacing:.24em;
+  text-transform:uppercase;color:var(--brume);text-decoration:none;margin-bottom:14px;
+  transition:color .3s}
+.retour:hover,.retour:focus-visible{color:var(--givre)}
 .fil{font-family:var(--data);font-size:10px;letter-spacing:.24em;text-transform:uppercase;
   color:var(--brume);margin-bottom:14px}
 h1{font-family:var(--display);font-weight:300;font-size:clamp(34px,7vw,52px);
@@ -186,6 +190,7 @@ body.corrige #resultat{display:block}
 
 <div class="wrap">
   <header>
+    <a class="retour" href="/cours/1">&#8592; Retour aux cours</a>
     <div class="fil">Créatures magiques · Première année · Leçon 1 sur 4</div>
     <h1>Contrôle de fin de leçon</h1>
     <p class="chapeau">Regarder · cinq questions</p>
@@ -298,7 +303,13 @@ maj();
 
 /* ---- confirmation ---- */
 const conf = document.getElementById('confirm');
-btn.addEventListener('click', ()=> conf.classList.add('on'));
+btn.addEventListener('click', ()=>{
+  /* Le même bouton sert deux fois : il ouvre la confirmation avant l'envoi,
+     il ramène aux cours après. Un drapeau plutôt qu'un second écouteur —
+     addEventListener ne se retire pas en posant onclick par-dessus. */
+  if(btn.dataset.sortie){ location.href = ETAT.retour; return; }
+  conf.classList.add('on');
+});
 document.getElementById('annuler').addEventListener('click', ()=> conf.classList.remove('on'));
 document.getElementById('valider').addEventListener('click', envoyer);
 conf.addEventListener('click', e=>{ if(e.target===conf) conf.classList.remove('on'); });
@@ -336,8 +347,13 @@ function peindreLaCorrection(c){
   document.getElementById('avert').style.display = 'none';
   compte.textContent = 'Contrôle envoyé · résultat consigné';
   etat.textContent = 'Ce contrôle ne se repasse pas';
-  btn.textContent = 'Contrôle envoyé';
-  btn.disabled = true;
+  /* Le contrôle est passé : « Contrôle envoyé » est déjà écrit deux fois
+     plus haut — dans le bandeau de suivi et sur le résultat. Le bouton n'a
+     plus rien à annoncer, il devient donc la sortie. Sans lui, on reste
+     bloqué sur une page qui ne propose plus rien. */
+  btn.textContent = 'Retour aux cours';
+  btn.disabled = false;
+  btn.dataset.sortie = '1';
   horloge(c.envoyeLe);
 }
 

@@ -61,6 +61,14 @@ export const TEXTES_COURS = {
       titre: "Leçons",
       lien: "Leçon {rang} sur {total} — {titre}",
       fermee: "Pas encore ouverte aux élèves",
+      /**
+       * ⚠️ **Avec la DATE**, et pas seulement « pas encore ». Seul le staff
+       * lit cette mention, et ce qu'il a besoin de savoir est *quand* — pour
+       * relire d'ici là, ou pour corriger la date si elle est fausse. C'est
+       * exactement ce qui a manqué le 3 septembre 2026 : l'ouverture dépendait
+       * du déploiement, et rien à l'écran ne disait quel jour elle tomberait.
+       */
+      ouvreLe: "Ouverte aux élèves le {quand}",
 
       /**
        * Ce qu'on lit en face d'une leçon dont le contrôle est passé.

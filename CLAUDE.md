@@ -2333,8 +2333,8 @@ se décider une fois. « 0 point » au singulier reste dans `points/affichage.ts
 ### Les leçons en ligne
 
 **Six, toute la première année**, toutes écrites par le joueur en HTML
-autonome et interactif — et **ouvertes aux élèves depuis le 4 septembre 2026 à
-9 h**, heure qu'il a fixée lui-même et annoncée au Grand Hall.
+autonome et interactif — et **ouvertes aux élèves le vendredi 4 septembre 2026
+à 9 h**, heure de Bruxelles, fixée par lui et annoncée au Grand Hall.
 
 | | |
 | --- | --- |
@@ -2351,11 +2351,32 @@ gestes** : un module de contenu, une entrée dans `LECONS`, une clé dans
 `CONTENUS`. La page de l'année liste par `leconsDe` et n'a jamais eu à bouger
 — c'est le plan du premier lot, et il tient six fois.
 
-⚠️ **Une leçon ouverte doit avoir son contrôle**, et c'est ce que
-`lecons.test.ts` fige — jamais « toutes sont ouvertes », qui figerait l'état
-plutôt que la règle et tomberait sur la première leçon posée pour relecture.
-Le test qui tenait la position inverse — « aucune n'est ouverte » — est bien
-tombé le 4 septembre, et c'était son rôle.
+⚠️ **L'ouverture est une DATE, jamais un déploiement.** `ouverteAuxElevesLe`
+porte un instant ; `null` veut dire fermée, et rien d'autre.
+
+C'était un booléen pendant quelques heures, et cela a coûté une ouverture
+prématurée : le joueur avait annoncé les cours pour le vendredi 9 h, un
+`git push` le jeudi soir les a ouverts aussitôt. **Une date annoncée aux
+membres est une donnée du site, pas un effet de bord de la mise en ligne** —
+et je l'avais signalé sans en tirer la conséquence, ce qui ne vaut pas mieux
+que de ne rien voir.
+
+⚠️ **L'instant s'écrit avec son offset** — `new Date("2026-09-04T09:00:00+02:00")`.
+En UTC il faudrait refaire le calcul à chaque relecture ; sans offset il
+dépendrait du fuseau de la machine, et Vercel vit en UTC.
+
+⚠️ **`estOuverteAuxEleves` compare avec un `>=`** : à 9 h 00 m 00 s pile, c'est
+ouvert. L'heure annoncée est celle à laquelle on entre.
+
+⚠️ **Une leçon ouverte — ou seulement annoncée — doit avoir son contrôle**, et
+c'est ce que `lecons.test.ts` fige. Jamais « toutes sont ouvertes », qui
+figerait l'état plutôt que la règle. Il fige **aussi la date**, pour qu'on ne
+puisse pas la déplacer sans venir ici.
+
+**Le staff passe avant l'heure**, et la mention qu'il lit porte **la date et
+l'heure** : « Ouverte aux élèves le 4 septembre 2026 à 9 h ». « Pas encore
+ouverte » sans dire quand ne lui apprenait rien — c'est précisément ce qui
+manquait à l'écran le jour de l'incident.
 
 **Ce qui les a ouvertes, c'est le contrôle côté serveur** : tant qu'il
 n'existait pas, ouvrir une leçon promettait une suite qui n'arrivait pas. Voir
@@ -2366,6 +2387,28 @@ n'existait pas, ouvrir une leçon promettait une suite qui n'arrivait pas. Voir
 n'oblige les deux à s'accorder — l'oubli ne se verrait qu'en ouvrant la page.
 `lecons.test.ts` relit donc le code source des DEUX routes, celle de la leçon
 et celle du contrôle. Éprouvé en retirant la ligne : il tombe et nomme la clé.
+
+### Chaque page porte sa sortie
+
+⚠️ **Une leçon et un contrôle sont des pages COMPLÈTES, sans le bandeau du
+site** : rien n'y ramène. Les douze étaient des culs-de-sac, et cela ne se voit
+pas en les écrivant — on y arrive par un lien, on ne pense pas au retour.
+Trouvé par le joueur, qui a passé un contrôle et s'est retrouvé bloqué dessus.
+
+Deux sorties, et il faut les deux :
+
+- **un lien en tête de page**, `<a class="retour">`, écrit dans le HTML : il
+  marche sans une ligne de script, ce qui compte sur une page qui n'a aucune
+  autre issue. Son adresse est écrite en toutes lettres — `lecons.test.ts`
+  vérifie qu'elle désigne bien l'année de la leçon ;
+- **le bouton du contrôle, une fois envoyé.** « Contrôle envoyé » est déjà
+  écrit deux fois plus haut ; le bouton n'a plus rien à annoncer, il devient
+  donc la sortie. Son adresse, elle, est **dérivée de l'année par la route**
+  (`ETAT.retour`) et ne peut pas se tromper.
+
+⚠️ **Un seul bouton, deux usages, et un drapeau plutôt qu'un second
+écouteur** : `addEventListener` ne se retire pas en posant `onclick`
+par-dessus.
 
 ### Ce que le renvoi du 3 septembre a appris
 

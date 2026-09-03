@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
+import { jourEtHeureAnnonces,
   enJourSaisissable,
   jourEnToutesLettres,
   jourSaisi,
@@ -71,5 +71,45 @@ describe("un jour saisi dans un champ date", () => {
   it("rend une chaîne vide quand il n’y a pas de date", () => {
     expect(enJourSaisissable(null)).toBe("");
     expect(enJourSaisissable("n’importe quoi")).toBe("");
+  });
+});
+
+describe("une heure annoncée", () => {
+  /**
+   * ⚠️ **Le fuseau est celui de l’école, jamais celui de la machine.** Ces
+   * essais tournent en UTC sur le CI et en heure locale sur le poste du
+   * développeur : sans le fuseau fixé, ils diraient deux choses différentes.
+   * C’est exactement le défaut qu’ils protègent — un serveur en UTC
+   * annonçait l’ouverture « à 7 h » là où le joueur avait écrit « 9 h ».
+   */
+  it("rend l’heure de Bruxelles, pas celle du serveur", () => {
+    // 9 h à Bruxelles en septembre (heure d’été) = 7 h UTC.
+    expect(jourEtHeureAnnonces(new Date("2026-09-04T07:00:00.000Z"))).toBe(
+      "4 septembre 2026 à 9 h",
+    );
+  });
+
+  it("suit l’heure d’hiver sans qu’on ait à y penser", () => {
+    // ⚠️ En janvier, Bruxelles est à UTC+1 : 9 h locales = 8 h UTC. Un
+    // « +02:00 » écrit en dur donnerait 10 h, et personne ne le verrait.
+    expect(jourEtHeureAnnonces(new Date("2026-01-09T08:00:00.000Z"))).toBe(
+      "9 janvier 2026 à 9 h",
+    );
+  });
+
+  it("écrit « 1er » le premier du mois, comme partout ailleurs", () => {
+    expect(jourEtHeureAnnonces(new Date("2026-09-01T07:00:00.000Z"))).toBe(
+      "1er septembre 2026 à 9 h",
+    );
+  });
+
+  /** L’heure ronde ne porte pas de « 00 » : ce n’est pas un horaire de train. */
+  it("n’écrit les minutes que lorsqu’il y en a", () => {
+    expect(jourEtHeureAnnonces(new Date("2026-09-04T07:30:00.000Z"))).toBe(
+      "4 septembre 2026 à 9 h 30",
+    );
+    expect(jourEtHeureAnnonces(new Date("2026-09-04T06:05:00.000Z"))).toBe(
+      "4 septembre 2026 à 8 h 05",
+    );
   });
 });

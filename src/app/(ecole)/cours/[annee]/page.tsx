@@ -16,7 +16,12 @@ import {
 } from "@/lib/cours/cursus";
 import { FONCTIONS, libelleAnnee, type Fonction } from "@/lib/dossier/etats";
 import { ROUTES } from "@/lib/ecole/menu";
-import { leconsDe, peutOuvrirLaLecon } from "@/lib/cours/lecons";
+import {
+  estOuverteAuxEleves,
+  leconsDe,
+  peutOuvrirLaLecon,
+} from "@/lib/cours/lecons";
+import { jourEtHeureAnnonces } from "@/lib/dates";
 import { controlesEnvoyesDe, type ControleEnvoye } from "@/lib/cours/depot";
 import { joursRestants } from "@/lib/cours/delai";
 import { avecDe } from "@/lib/francais";
@@ -258,7 +263,7 @@ function LeconsDeLaMatiere({
   maintenant: Date;
 }) {
   const visibles = leconsDe(matiereId, annee).filter((l) =>
-    peutOuvrirLaLecon(l, anneeOuverte, staff),
+    peutOuvrirLaLecon(l, anneeOuverte, staff, maintenant),
   );
   if (visibles.length === 0) return null;
 
@@ -280,10 +285,17 @@ function LeconsDeLaMatiere({
                   .replace("{total}", String(lecon.surCombien))
                   .replace("{titre}", lecon.titre)}
               </span>
-              {/* ⚠️ En toutes lettres, jamais une couleur seule. */}
-              {lecon.ouverteAuxEleves ? null : (
+              {/* ⚠️ En toutes lettres, jamais une couleur seule — et avec la
+                  DATE : « pas encore ouverte » sans dire quand n'apprend rien
+                  au staff, qui est le seul à voir cette mention. */}
+              {estOuverteAuxEleves(lecon, maintenant) ? null : (
                 <span className="font-display text-[0.6rem] uppercase tracking-[0.16em] text-silver">
-                  {T.lecons.fermee}
+                  {lecon.ouverteAuxElevesLe
+                    ? T.lecons.ouvreLe.replace(
+                        "{quand}",
+                        jourEtHeureAnnonces(lecon.ouverteAuxElevesLe),
+                      )
+                    : T.lecons.fermee}
                 </span>
               )}
             </a>

@@ -6,6 +6,7 @@ import {
   leconsDe,
   nomDeLaMatiere,
   peutOuvrirLaLecon,
+  estOuverteAuxEleves,
   type Lecon,
 } from "./lecons";
 import { matiereDe } from "./cursus";
@@ -18,6 +19,16 @@ import { clesDesQuestionnaires } from "./questionnaires";
  * chose que ce qu'ils annoncent, sans rien casser.
  */
 const laTorche = lecon("sortileges", "1")!;
+
+/**
+ * ⚠️ **Aucun essai ne lit l'horloge.** L'instant arrive en paramètre partout,
+ * et l'on éprouve donc la veille et le lendemain de l'ouverture sans attendre
+ * — c'est tout l'intérêt d'avoir remplacé le booléen par une date.
+ */
+const OUVERTURE = laTorche.ouverteAuxElevesLe!;
+const AVANT = new Date(OUVERTURE.getTime() - 60_000);
+const PILE = new Date(OUVERTURE.getTime());
+const APRES = new Date(OUVERTURE.getTime() + 60_000);
 const lesSignes = lecon("runologie", "1")!;
 const laGarde = lecon("magie_defensive", "1")!;
 
@@ -62,7 +73,10 @@ describe("les leçons déclarées", () => {
   it("n’ouvrent jamais une leçon dont le contrôle n’existe pas", () => {
     const cles = clesDesQuestionnaires();
     for (const l of LECONS) {
-      if (!l.ouverteAuxEleves) continue;
+      // ⚠️ **Une date, même future, compte comme une promesse d'ouverture** :
+      // la leçon s'ouvrira toute seule ce jour-là, et son contrôle doit
+      // exister avant. C'est le seul moment où l'on peut encore s'en apercevoir.
+      if (l.ouverteAuxElevesLe === null) continue;
       expect(cles, `${l.matiereId} — ${l.titre}`).toContain(
         `${l.matiereId}/${l.annee}/${l.rang}`,
       );
@@ -107,10 +121,82 @@ describe("les leçons déclarées", () => {
       .match(/"([a-z_]+\/[0-9]+)"/g);
 
     for (const l of LECONS) {
-      if (!l.ouverteAuxEleves) continue;
+      if (l.ouverteAuxElevesLe === null) continue;
       expect(cles, `${l.matiereId}/${l.rang}`).toContain(
         `"${l.matiereId}/${l.rang}"`,
       );
+    }
+  });
+
+  /**
+   * ⚠️ **Chaque page porte sa sortie, et elle doit désigner la BONNE année.**
+   * Le lien du haut de page est écrit dans le HTML — il doit marcher sans une
+   * ligne de script, une page de cours n'ayant aucune autre issue —, et il est
+   * donc écrit en toutes lettres. Une leçon de deuxième année copiée sur
+   * celle-ci ramènerait au programme de première sans que rien ne le dise :
+   * le lien fonctionne, il ne mène simplement pas au bon endroit.
+   *
+   * La sortie du BOUTON, elle, est dérivée de l'année par la route — c'est
+   * `ETAT.retour`, et elle ne peut pas se tromper.
+   */
+  it("portent une sortie, qui désigne l’année de la leçon", () => {
+    for (const l of LECONS) {
+      const slug = l.matiereId.replace(/_/g, "-");
+      for (const chemin of [
+        `src/contenu/cours/${slug}-l1-1.ts`,
+        `src/contenu/cours/controles/${slug}-l1-1.ts`,
+      ]) {
+        const source = readFileSync(chemin, "utf8");
+        expect(source.includes('class="retour"'), chemin).toBe(true);
+        expect(source.includes(`href="/cours/${l.annee}"`), chemin).toBe(true);
+      }
+    }
+  });
+
+  /**
+   * ⚠️ **La date d'ouverture, figée ici.** Le joueur l'a fixée au vendredi
+   * 4 septembre 2026 à 9 h, heure de Bruxelles, et l'a annoncée au Grand Hall.
+   *
+   * C'était un booléen jusqu'au 3 septembre au soir — l'ouverture dépendait
+   * donc du moment du déploiement, et un `git push` la veille a ouvert les
+   * cours un jour trop tôt. **Ce test existe pour que cela ne se reproduise
+   * pas en silence** : le jour où l'on touchera à cette date, il faudra venir
+   * ici, et ce sera une décision.
+   *
+   * ⚠️ **L'instant est comparé en UTC**, jamais par sa forme locale : la
+   * machine qui fait tourner les essais n'est pas forcément à Bruxelles, et
+   * Vercel vit en UTC. 9 h à Bruxelles en septembre, c'est 7 h UTC.
+   */
+  it("s’ouvrent le 4 septembre 2026 à 9 h, heure de Bruxelles", () => {
+    for (const l of LECONS) {
+      expect(l.ouverteAuxElevesLe?.toISOString(), l.titre).toBe(
+        "2026-09-04T07:00:00.000Z",
+      );
+    }
+  });
+
+  /**
+   * ⚠️ **Une minute avant, c'est fermé ; à l'heure pile, c'est ouvert.**
+   * L'heure annoncée est celle à laquelle on entre, pas celle après laquelle
+   * on entrera — un `>` au lieu d'un `>=` ferait attendre une seconde de plus
+   * tout le monde, et personne ne comprendrait pourquoi.
+   */
+  it("sont fermées la minute d’avant et ouvertes à l’heure pile", () => {
+    for (const l of LECONS) {
+      expect(estOuverteAuxEleves(l, AVANT), `${l.titre} — avant`).toBe(false);
+      expect(estOuverteAuxEleves(l, PILE), `${l.titre} — pile`).toBe(true);
+      expect(estOuverteAuxEleves(l, APRES), `${l.titre} — après`).toBe(true);
+    }
+  });
+
+  /**
+   * Et **le staff passe avant l'heure** : c'est ce qui lui permet de relire
+   * une leçon la veille de son ouverture, ce que le joueur fait à chaque fois.
+   */
+  it("restent ouvertes au staff avant l’heure", () => {
+    for (const l of LECONS) {
+      expect(peutOuvrirLaLecon(l, true, true, AVANT), l.titre).toBe(true);
+      expect(peutOuvrirLaLecon(l, true, false, AVANT), l.titre).toBe(false);
     }
   });
 
@@ -191,21 +277,21 @@ describe("trouver une leçon", () => {
 });
 
 describe("qui peut ouvrir une leçon", () => {
-  const fermee: Lecon = { ...laTorche, ouverteAuxEleves: false };
-  const ouverte: Lecon = { ...laTorche, ouverteAuxEleves: true };
+  const fermee: Lecon = { ...laTorche, ouverteAuxElevesLe: null };
+  const ouverte: Lecon = { ...laTorche, ouverteAuxElevesLe: AVANT };
 
   it("le staff passe partout, même sur une leçon fermée", () => {
-    expect(peutOuvrirLaLecon(fermee, true, true)).toBe(true);
+    expect(peutOuvrirLaLecon(fermee, true, true, APRES)).toBe(true);
     // Et même si son année ne l'atteint pas : c'est le parti pris du forum.
-    expect(peutOuvrirLaLecon(fermee, false, true)).toBe(true);
+    expect(peutOuvrirLaLecon(fermee, false, true, APRES)).toBe(true);
   });
 
   it("un élève n’ouvre pas une leçon fermée, même de son année", () => {
-    expect(peutOuvrirLaLecon(fermee, true, false)).toBe(false);
+    expect(peutOuvrirLaLecon(fermee, true, false, APRES)).toBe(false);
   });
 
   it("un élève ouvre une leçon ouverte de son année", () => {
-    expect(peutOuvrirLaLecon(ouverte, true, false)).toBe(true);
+    expect(peutOuvrirLaLecon(ouverte, true, false, APRES)).toBe(true);
   });
 
   /**
@@ -215,6 +301,6 @@ describe("qui peut ouvrir une leçon", () => {
    * source qui divergerait.
    */
   it("un élève n’ouvre pas une leçon d’une année qu’il n’a pas atteinte", () => {
-    expect(peutOuvrirLaLecon(ouverte, false, false)).toBe(false);
+    expect(peutOuvrirLaLecon(ouverte, false, false, APRES)).toBe(false);
   });
 });

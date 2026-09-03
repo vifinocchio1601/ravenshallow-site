@@ -93,6 +93,10 @@ body{background:var(--encre);color:var(--givre);font-family:var(--corps);font-we
 
 /* ---------- en-tête ---------- */
 header.tete{border-bottom:1px solid var(--trait);margin-bottom:56px;padding:30px 0 22px}
+.retour{display:inline-block;font-family:var(--data);font-size:10px;letter-spacing:.24em;
+  text-transform:uppercase;color:var(--brume);text-decoration:none;margin-bottom:14px;
+  transition:color .3s}
+.retour:hover,.retour:focus-visible{color:var(--givre)}
 .fil{font-family:var(--data);font-size:10px;letter-spacing:.24em;text-transform:uppercase;
   color:var(--brume);margin-bottom:14px}
 h1.titre{font-family:var(--display);font-weight:300;font-size:clamp(32px,6vw,52px);
@@ -214,6 +218,7 @@ button.acte:focus-visible{outline:2px solid var(--lueur);outline-offset:2px}
 <div class="wrap">
 
   <header class="tete">
+    <a class="retour" href="/cours/1">&#8592; Retour aux cours</a>
     <div class="fil">Magie défensive · Première année · Leçon 1 sur 4</div>
     <h1 class="titre">La garde et la distance</h1>
     <div class="module">

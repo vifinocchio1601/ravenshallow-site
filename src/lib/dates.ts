@@ -55,6 +55,57 @@ export function jourEnToutesLettres(date: Date): string {
   return `${jour === 1 ? "1er" : jour} ${MOIS[date.getMonth()]} ${date.getFullYear()}`;
 }
 
+/**
+ * **« 4 septembre 2026 à 9 h »** — un instant annoncé, dans le fuseau de
+ * l'école.
+ *
+ * ⚠️ **C'est la SEULE mise en forme du site qui fixe un fuseau**, et c'est
+ * délibéré. Partout ailleurs on affiche un instant *vécu* — l'heure d'un
+ * corbeau, la date d'un post —, et c'est le fuseau du lecteur qui a raison.
+ * Ici on affiche une **heure annoncée** : le joueur a écrit « vendredi 9 h »
+ * au Grand Hall, et cette phrase doit se lire pareil partout. Sans le fuseau,
+ * la même ouverture s'annoncerait « à 7 h » sur un serveur en UTC.
+ *
+ * ⚠️ **`Europe/Brussels`, jamais un décalage en dur.** L'heure d'été le
+ * déplace de deux heures en septembre et d'une seule en janvier ; un `+02:00`
+ * écrit à la main serait faux la moitié de l'année. C'est la leçon de la garde
+ * d'heure de La Veille, où GitHub ignore l'heure d'été.
+ *
+ * L'heure ronde s'écrit « 9 h », jamais « 9 h 00 » — c'est ainsi qu'on
+ * l'annonce, et le « 00 » d'un horaire de train n'a rien à faire ici.
+ */
+export function jourEtHeureAnnonces(date: Date): string {
+  const partie = (type: Intl.DateTimeFormatPartTypes): string =>
+    new Intl.DateTimeFormat("fr-FR", {
+      timeZone: FUSEAU_DE_L_ECOLE,
+      year: "numeric",
+      month: "numeric",
+      day: "numeric",
+      hour: "numeric",
+      minute: "numeric",
+      hour12: false,
+    })
+      .formatToParts(date)
+      .find((p) => p.type === type)!.value;
+
+  const jour = Number(partie("day"));
+  const mois = MOIS[Number(partie("month")) - 1];
+  const heure = Number(partie("hour"));
+  const minute = Number(partie("minute"));
+
+  return (
+    `${jour === 1 ? "1er" : jour} ${mois} ${partie("year")} à ` +
+    (minute === 0 ? `${heure} h` : `${heure} h ${String(minute).padStart(2, "0")}`)
+  );
+}
+
+/**
+ * Le fuseau de l'école. Le joueur et ses membres y vivent, et c'est celui de
+ * toutes les heures qu'il annonce — comme la ronde de La Veille, réglée sur
+ * 5 h de Bruxelles.
+ */
+const FUSEAU_DE_L_ECOLE = "Europe/Brussels";
+
 // ─────────────────────────────────────────────────────────────
 //  Un `<input type="date">`, dans les deux sens
 // ─────────────────────────────────────────────────────────────

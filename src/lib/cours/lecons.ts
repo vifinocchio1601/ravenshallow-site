@@ -8,25 +8,28 @@ import { matiereDe, type Annee } from "./cursus";
  * Deux choses : quelles leçons existent, et **si elles sont ouvertes aux
  * élèves**.
  *
- * ✅ **Les six de première année le sont, depuis le 4 septembre 2026 à 9 h** —
- * décision du joueur, qui a fixé l'heure lui-même. Elles étaient fermées
- * jusque-là pour une raison précise, et cette raison a cessé d'exister : le
- * contrôle qui suit chacune n'existait pas côté serveur, et ouvrir une leçon
- * promettait une suite qui n'arrivait pas. Il existe maintenant — la table,
- * les questionnaires `server-only`, les points.
+ * ✅ **Les six de première année s'ouvrent le vendredi 4 septembre 2026 à 9 h**,
+ * heure de Bruxelles — date et heure fixées par le joueur, et annoncées au
+ * Grand Hall. Elles étaient fermées avant cela pour une raison précise, qui a
+ * cessé d'exister : le contrôle qui suit chacune n'existait pas côté serveur,
+ * et ouvrir une leçon promettait une suite qui n'arrivait pas.
  *
- * ⚠️ **Ce drapeau ne se met jamais à vrai par habitude.** Une leçon sans son
- * contrôle se déclare à faux, comme les six l'étaient : `lecons.test.ts` exige
- * que toute leçon ouverte ait son questionnaire, et tombe sinon en la nommant.
+ * ⚠️ **L'ouverture est une DATE, jamais un déploiement.** C'était un booléen
+ * jusqu'au 3 septembre au soir, et l'ouverture dépendait donc du moment où
+ * l'on poussait : le `git push` de la veille a ouvert les cours un jour trop
+ * tôt, alors que l'annonce disait vendredi 9 h. Une date annoncée aux membres
+ * est une donnée du site.
  *
- * ── Pourquoi un drapeau plutôt qu'une absence ──
+ * ⚠️ **Ce champ ne se remplit jamais par habitude.** Une leçon sans son
+ * contrôle reste à `null` : `lecons.test.ts` exige que toute leçon ouverte —
+ * ou à venir — ait son questionnaire, et tombe sinon en la nommant.
+ *
+ * ── Pourquoi une date plutôt qu'une absence ──
  *
  * Parce qu'il faut pouvoir poser une leçon que le joueur relit avant qu'elle
- * ne s'ouvre. Le drapeau dit ce qu'on veut dire — « elle existe, elle n'est pas
- * encore ouverte » — là où une absence dirait « elle n'existe pas ».
- *
- * C'est le même parti pris qu'`EtatEtape` : une case vide ne dit rien, un état
- * tranche.
+ * ne s'ouvre, et pouvoir annoncer QUAND. La date dit les deux — « elle existe,
+ * elle s'ouvre tel jour » — là où une absence dirait « elle n'existe pas » et
+ * où un booléen ne disait que « pas encore ».
  *
  * ── Ce fichier est PUR ──
  *
@@ -50,17 +53,29 @@ export type Lecon = {
   surCombien: number;
   titre: string;
   /**
-   * Les élèves peuvent-ils l'ouvrir ?
+   * **L'instant où elle s'ouvre aux élèves**, ou `null` si elle ne l'est pas.
    *
-   * ⚠️ **À faux, seul le staff entre.** Ce n'est pas une permission
-   * attribuable : c'est l'état de la leçon elle-même, comme une annonce
-   * retirée du Grand Hall.
+   * ⚠️ **Un instant, et non un booléen**, depuis le 4 septembre 2026. Le
+   * drapeau faisait dépendre l'ouverture du **moment du déploiement** : le
+   * joueur avait annoncé les cours pour le vendredi 9 h, un `git push` la
+   * veille les a ouverts le jeudi. Une date annoncée aux membres est une
+   * donnée du site, pas un effet de bord de la mise en ligne.
+   *
+   * ⚠️ **`null` ne veut dire qu'une chose : fermée.** Il ne veut pas dire
+   * « ouverte depuis toujours » — l'oubli va donc dans le sens de la
+   * fermeture, comme les drapeaux du menu et comme `robots.ts`.
+   *
+   * ⚠️ **L'offset est écrit en toutes lettres** — `+02:00`. Écrire l'instant
+   * en UTC obligerait à faire le calcul de tête et à le refaire à chaque
+   * relecture ; l'écrire sans offset le ferait dépendre du fuseau de la
+   * machine, et Vercel vit en UTC. C'est la leçon de la garde d'heure de La
+   * Veille, où GitHub ignore l'heure d'été.
    *
    * ⚠️ **Une leçon ouverte doit avoir son contrôle**, et `lecons.test.ts` le
    * vérifie : sans lui, le bouton « Passer le contrôle » mène à un 404, et
    * l'élève croit que le site est cassé.
    */
-  ouverteAuxEleves: boolean;
+  ouverteAuxElevesLe: Date | null;
 };
 
 /**
@@ -69,6 +84,16 @@ export type Lecon = {
  * année à la fois ; les faire toutes deux voyager dans l'URL laisserait
  * `/cours/2/sortileges/1` désigner une leçon de première année.
  */
+/**
+ * ⚠️ **L'instant d'ouverture des six leçons de première année**, une seule
+ * fois. Le joueur l'a fixé au vendredi 4 septembre 2026 à 9 h, heure de
+ * Bruxelles, et l'a annoncé au Grand Hall.
+ *
+ * Il est écrit ici plutôt que six fois : les six s'ouvrent ensemble, c'est
+ * une même annonce, et six copies finiraient par diverger d'une minute.
+ */
+const OUVERTURE_PREMIERE_ANNEE = new Date("2026-09-04T09:00:00+02:00");
+
 export const LECONS: readonly Lecon[] = [
   {
     matiereId: "sortileges",
@@ -76,7 +101,7 @@ export const LECONS: readonly Lecon[] = [
     rang: 1,
     surCombien: 4,
     titre: "La Torche",
-    ouverteAuxEleves: true,
+    ouverteAuxElevesLe: OUVERTURE_PREMIERE_ANNEE,
   },
   {
     matiereId: "runologie",
@@ -84,7 +109,7 @@ export const LECONS: readonly Lecon[] = [
     rang: 1,
     surCombien: 4,
     titre: "Vingt-quatre signes, vingt-quatre sons",
-    ouverteAuxEleves: true,
+    ouverteAuxElevesLe: OUVERTURE_PREMIERE_ANNEE,
   },
   {
     matiereId: "magie_defensive",
@@ -92,7 +117,7 @@ export const LECONS: readonly Lecon[] = [
     rang: 1,
     surCombien: 4,
     titre: "La garde et la distance",
-    ouverteAuxEleves: true,
+    ouverteAuxElevesLe: OUVERTURE_PREMIERE_ANNEE,
   },
   {
     matiereId: "herboristerie",
@@ -100,7 +125,7 @@ export const LECONS: readonly Lecon[] = [
     rang: 1,
     surCombien: 4,
     titre: "Reconnaître",
-    ouverteAuxEleves: true,
+    ouverteAuxElevesLe: OUVERTURE_PREMIERE_ANNEE,
   },
   {
     matiereId: "creatures",
@@ -108,7 +133,7 @@ export const LECONS: readonly Lecon[] = [
     rang: 1,
     surCombien: 4,
     titre: "Regarder",
-    ouverteAuxEleves: true,
+    ouverteAuxElevesLe: OUVERTURE_PREMIERE_ANNEE,
   },
   {
     matiereId: "histoire",
@@ -116,7 +141,7 @@ export const LECONS: readonly Lecon[] = [
     rang: 1,
     surCombien: 4,
     titre: "La côte avant l’école",
-    ouverteAuxEleves: true,
+    ouverteAuxElevesLe: OUVERTURE_PREMIERE_ANNEE,
   },
 ];
 
@@ -156,9 +181,27 @@ export function peutOuvrirLaLecon(
   lecon: Lecon,
   peutOuvrirLAnnee: boolean,
   staff: boolean,
+  maintenant: Date,
 ): boolean {
   if (staff) return true;
-  return lecon.ouverteAuxEleves && peutOuvrirLAnnee;
+  return estOuverteAuxEleves(lecon, maintenant) && peutOuvrirLAnnee;
+}
+
+/**
+ * **Cette leçon est-elle ouverte aux élèves à cet instant ?**
+ *
+ * ⚠️ **`maintenant` arrive en paramètre**, et cette fonction ne lit aucune
+ * horloge : c'est ce qui permet d'éprouver la veille et le lendemain de
+ * l'ouverture sans attendre. Même parti pris qu'`etatDuPlafond`, que le frein
+ * du salon et que le délai entre deux leçons.
+ *
+ * ⚠️ **La comparaison est un `>=`** : à 9 h 00 m 00 s pile, c'est ouvert.
+ * L'heure annoncée est celle à laquelle on entre, pas celle après laquelle on
+ * entrera.
+ */
+export function estOuverteAuxEleves(lecon: Lecon, maintenant: Date): boolean {
+  if (lecon.ouverteAuxElevesLe === null) return false;
+  return maintenant.getTime() >= lecon.ouverteAuxElevesLe.getTime();
 }
 
 /** Les leçons d'une matière pour une année, dans l'ordre. */

@@ -111,6 +111,11 @@ export async function GET(
 
   const etat = {
     envoi: "/api/cours/controle",
+    // ⚠️ **La sortie est DÉRIVÉE de l'année**, jamais écrite en dur dans le
+    // script : le contrôle d'une leçon de deuxième année ramènerait sinon au
+    // programme de première. Le lien du haut de page, lui, est dans le HTML —
+    // `lecons.test.ts` vérifie qu'il désigne bien la bonne année.
+    retour: `/cours/${annee}`,
     matiere: laLecon.matiereId,
     annee,
     rang: laLecon.rang,
