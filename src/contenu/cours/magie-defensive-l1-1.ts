@@ -8,11 +8,11 @@ import "server-only";
  * **déployée** et **gardée**, et que `public/` ne garde rien tandis que `fs`
  * ne se déploie pas à coup sûr.
  *
- * ⚠️ **Elles sont trois, et le seuil est atteint.** La note de la première
- * annonçait qu'au-delà de quelques leçons il faudrait une table et un script
- * d'import, pour qu'une coquille se corrige sans déploiement. La question a
- * été posée au joueur le 2 septembre 2026, avec ce lot. **Ne pas poser une
- * quatrième dans un module sans sa réponse.**
+ * ⚠️ **Elles sont trois, et le joueur a tranché quand elles iront en base :**
+ * pas maintenant. Décision du 2 septembre 2026 — on attend qu'il ait fini
+ * d'envoyer ses leçons, et l'on bascule tout d'un coup. L'import ne s'écrit
+ * qu'une fois, et il s'écrit mieux sur une série complète que sur trois cas.
+ * Poser les suivantes ici, de la même façon.
  *
  * ── Ce qui a changé par rapport au fichier d'origine ──
  *

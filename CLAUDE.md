@@ -2387,12 +2387,23 @@ Deux exigences ferment les autres portes : il doit être **déployé** et
 risquerait de ne pas être embarqué — Next ne trace que ce qu'il voit importer,
 et la page marcherait en développement pour rendre 500 en production.
 
-⚠️ **Ce n'est pas le rangement définitif, et le seuil est ATTEINT.** Elles
-iront en base comme les grimoires, avec un script d'import : une correction de
-coquille ne doit pas demander un déploiement — et il y en a déjà une à faire
-(« 4 cercle »). Trois modules tiennent encore ; neuf matières n'y tiendront
-pas. **La question a été posée au joueur le 2 septembre 2026 ; ne pas poser
-une quatrième leçon dans un module sans sa réponse.**
+⚠️ **Ce n'est pas le rangement définitif, et le joueur a tranché QUAND.**
+Les leçons iront en base comme les grimoires, avec un script d'import : une
+correction de coquille ne doit pas demander un déploiement — et il y en a déjà
+une en attente (« 4 cercle »). Mais **pas maintenant** : décision du
+2 septembre 2026, on **attend qu'il ait fini d'envoyer**, et l'on bascule tout
+d'un coup.
+
+C'est le bon calcul, et pour une raison qui n'est pas la commodité :
+**l'import ne s'écrit qu'une fois**, et il s'écrit mieux sur une série
+complète que sur trois cas. Une convention tirée de trois fichiers se révèle
+fausse au septième ; les grimoires ont montré qu'un import se règle sur ce
+qu'il doit lire en entier.
+
+**D'ici là, on continue en modules** — c'est trois gestes par leçon, et rien
+ne se dégrade. ⚠️ **Le signal de bascule est le sien** : quand les envois
+s'arrêteront, ou quand la première année sera complète. Le lui reproposer
+alors, plutôt que de le décider en voyant le dossier grossir.
 
 ### L'image, sortie de la page — et ce sera vrai à chaque fois
 
