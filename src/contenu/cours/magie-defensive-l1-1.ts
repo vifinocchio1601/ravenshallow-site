@@ -27,6 +27,19 @@ import "server-only";
  * du site s'écrivent en tirets. Le jour où l'on générerait ce chemin, c'est
  * ici qu'il faudrait revenir.
  *
+ * ── L'accord de « cercle », corrigé à sa demande ──
+ *
+ * Le compteur de distance affichait « 4 cercle » : le mot était en dur dans
+ * le HTML, à côté d'un nombre qui monte jusqu'à neuf. Il vit maintenant dans
+ * un `<span id="motcercle">` que le script accorde — juste à 0 et à 1, au
+ * pluriel ensuite. C'est la faute d'« Il manque 1 lignes » et de « 1 matières
+ * imposées », et le troisième endroit du site où elle se corrige.
+ *
+ * ⚠️ **La correction a été portée dans le fichier du joueur aussi**, dans
+ * `Perso/Ravenshallow/Les cours/`. Sans cela, elle reviendrait le jour où
+ * l'on repartirait de sa source — et c'est ce qui arrivera quand les leçons
+ * passeront en base.
+ *
  * Le reste — le texte, la mise en scène, le plan de la halle en SVG et
  * l'exercice de placement — est celui du joueur, au signe près. Les
  * apostrophes droites comprises.
@@ -290,7 +303,7 @@ button.acte:focus-visible{outline:2px solid var(--lueur);outline-offset:2px}
     </svg>
 
     <div class="commande" id="cmd-pas">
-      <div class="mesure"><span>Distance</span><span><b id="nbpas">0</b> cercle</span></div>
+      <div class="mesure"><span>Distance</span><span><b id="nbpas">0</b> <span id="motcercle">cercle</span></span></div>
       <div class="jauge"><i id="j-pas" style="width:0%"></i></div>
     </div>
 
@@ -448,6 +461,7 @@ btnAction.addEventListener('click', ()=>{
     if(pas < MAXPAS){
       pas++; majPlan(); dit(COMM[pas]);
       document.getElementById('nbpas').textContent = pas;
+      document.getElementById('motcercle').textContent = pas > 1 ? 'cercles' : 'cercle';
       document.getElementById('j-pas').style.width = (pas/MAXPAS*100)+'%';
       btnStop.style.display = '';
       if(pas >= MAXPAS) finEtape1();
@@ -529,6 +543,7 @@ function etape3(){
 document.getElementById('btn-reprendre').addEventListener('click', ()=>{
   etape = 1; pas = 0; trouvees = 0; slider.value = 0;
   document.getElementById('nbpas').textContent = '0';
+  document.getElementById('motcercle').textContent = 'cercle';
   document.getElementById('j-pas').style.width = '0%';
   document.getElementById('surf').textContent = '100';
   document.getElementById('j-surf').style.width = '100%';

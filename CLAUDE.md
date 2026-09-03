@@ -625,12 +625,16 @@ ferme le lieu à tout le monde et ferait taire le convoqué. Et ne pas détourne
 `DETENTEUR_PERMISSION` sans maison : le refus annoncerait « il faut une
 permission » sans pouvoir dire laquelle.
 
-### L'école : cinq sections, vingt pièces
+### L'école : cinq sections, vingt et une pièces
 
-Posées par `20260826130000_ecole`. **Les lieux vivent en base**, jamais dans
-le code : une description se corrige sans toucher au moteur — par une
-migration tout de même, sinon la correction est vraie aujourd'hui et perdue
-le jour où la base serait reconstruite.
+Vingt posées par `20260826130000_ecole`, et **la halle ajoutée le 3 septembre
+2026** avec la leçon de magie défensive — voir « Les leçons en ligne ». **Les
+lieux vivent en base**, jamais dans le code : une description se corrige sans
+toucher au moteur — par une migration tout de même, sinon la correction est
+vraie aujourd'hui et perdue le jour où la base serait reconstruite.
+
+Ce qui suit décrit **les vingt premières** et leur relecture ; la vingt et
+unième est arrivée par un autre chemin, et sa note est avec sa leçon.
 
 **Ces vingt textes ne sont pas du décor : ils sont le plan intérieur du
 château.** La bible le dit deux fois, et il a fallu les rapprocher —
@@ -2436,12 +2440,17 @@ compressée. Même raison que la carte.
 les trois fichiers portent. Ce qu'on trouve se **signale**, et c'est à lui de
 trancher.
 
-Sur la **Magie défensive**, un seul point, et il se voit à l'écran :
+✅ **Une seule exception, et elle vient de lui** : « 4 cercle », corrigé le
+3 septembre 2026 à sa demande. Le mot était en dur dans le HTML, à côté d'un
+compteur qui monte jusqu'à neuf — juste à 0 et à 1, faux ensuite. C'est la
+faute d'« Il manque 1 lignes » et de « 1 matières imposées », cette fois dans
+son texte. Il vit maintenant dans un `<span id="motcercle">` que le script
+accorde.
 
-- ⚠️ **« 4 cercle » — le mot ne s'accorde jamais.** « cercle » est en dur dans
-  le HTML, à côté d'un compteur qui monte jusqu'à dix. Juste à 0 et à 1, faux
-  ensuite. C'est la faute de « Il manque 1 lignes » et de « 1 matières
-  imposées », cette fois dans son texte à lui.
+⚠️ **La correction a été portée dans SON fichier aussi**, hors du dépôt. Sans
+cela elle reviendrait le jour où l'on repartirait de sa source — et c'est
+précisément ce qui arrivera quand les leçons passeront en base. **Le faire à
+chaque fois**, ou le lot du rangement ramènera toutes les coquilles corrigées.
 
 **Ce qui a été vérifié et qui tient** : les quatre runes du linteau —
 ᛉᚨᚱᚾ, Algiz Ansuz Raidho Naudhiz — sont **toutes dans la table de la leçon de
@@ -2451,13 +2460,32 @@ de duel en base ; et le `<div class="g">` vide du bloc « Module » est un
 **cercle de craie dessiné en CSS**, pas une rune oubliée — ne pas le
 « réparer ».
 
-⚠️ **La halle de magie défensive n'est PAS l'une des vingt pièces du
-château.** La base porte « La salle de duel » dans la même aile — plancher
-marqué, deuxième année exigée —, la leçon décrit une halle voûtée au
-rez-de-chaussée, dalles et cercles à la craie, en première année. Rien ne se
-contredit **si ce sont deux pièces**, et c'est ainsi que je l'ai lu. Mais la
-halle n'existe nulle part sur le forum : l'y ajouter demanderait une
-migration, et c'est **sa décision** (art. 12.4).
+✅ **La halle est entrée dans l'aile est** le 3 septembre 2026, par
+`20260903100000_la_halle` — vingt et unième pièce du château, et la
+**première salle de cours** du forum. Décision du joueur : l'article 12.4 fait
+de son accord la condition pour inventer un lieu, il l'a donné, et ce texte
+fait donc autorité pour le RP au même titre que les vingt autres.
+
+⚠️ **Ce n'est PAS la salle de duel**, qui est dans la même aile, et les
+confondre est la faute à ne pas commettre :
+
+| | La salle de duel | La halle |
+| --- | --- | --- |
+| le sol | plancher marqué | dalles, et des cercles de craie |
+| l'année | **deuxième** | aucune — c'est celle du première année |
+| ce qu'on y apprend | à perdre un duel | à reculer, se tourner, trouver les sorties |
+
+**Sa description sort de la leçon, phrase par phrase**, et rien n'y a été
+inventé — sauf le nom. La leçon ne la nomme jamais autrement que « la halle » :
+j'ai gardé ce mot plutôt que d'inventer un qualificatif ou de la baptiser
+d'après une matière, ce qu'aucun autre lieu du château ne fait. **Il se change
+d'un mot.**
+
+⚠️ **Les vingt pièces excluaient les salles de cours à dessein** — « chantier à
+part », disait la migration de l'école. Celle-ci l'entame, et les huit autres
+matières sont dans le même cas : **la salle de runologie est déjà décrite**,
+dans sa leçon, et n'est nulle part sur le forum. Ne pas les poser en série sans
+le lui demander ; chacune est un lieu de RP de plus.
 
 Sur la **Runologie**, trois points, aucun corrigé :
 
@@ -3963,7 +3991,8 @@ compte de joueur n'en porte : le staff écrit les annonces en attendant, et le
 jour où le joueur nomme un préfet, il n'y a rien à développer.
 
 **Le moteur du forum est posé, et L'école est meublée** : quatre tables, les
-quatre espaces avec leur paramétrage, **cinq sections et vingt pièces** en base,
+quatre espaces avec leur paramétrage, **cinq sections et vingt et une pièces**
+en base,
 la couture qui dit qui lit et qui écrit, les dix lignes, le repère de scènes,
 et deux écrans — `/ecole` et `/ecole/<pièce>` — qui se parcourent déjà. Seul
 l'espace `maison` reste vide : on le remplira quand on aura de quoi.
