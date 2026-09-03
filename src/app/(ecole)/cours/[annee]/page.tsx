@@ -17,6 +17,8 @@ import {
 import { FONCTIONS, libelleAnnee, type Fonction } from "@/lib/dossier/etats";
 import { ROUTES } from "@/lib/ecole/menu";
 import { leconsDe, peutOuvrirLaLecon } from "@/lib/cours/lecons";
+import { controlesEnvoyesDe, type ControleEnvoye } from "@/lib/cours/depot";
+import { joursRestants } from "@/lib/cours/delai";
 import { avecDe } from "@/lib/francais";
 import { pouvoirsDe } from "@/lib/forum/depot-pouvoirs";
 import { estStaff } from "@/lib/forum/pouvoirs";
@@ -58,6 +60,16 @@ export default async function Page({ params }: { params: { annee: string } }) {
   const imposees = obligatoires(annee);
   const offertes = auChoix(annee);
 
+  // ⚠️ **Une requête pour toute la page**, jamais une par leçon : la première
+  // année en compte six, et la septième en comptera cinq de plus.
+  const controles = compte.eleveId
+    ? await controlesEnvoyesDe(compte.eleveId)
+    : new Map<string, ControleEnvoye>();
+  // L'instant est pris UNE fois : deux lectures d'horloge dans le même rendu
+  // pourraient tomber de part et d'autre d'une minute et afficher deux
+  // décomptes différents sur la même page.
+  const maintenant = new Date();
+
   return (
     <main className="mx-auto max-w-content px-5 pb-24 pt-10 sm:px-8 sm:pt-14">
       <Link
@@ -96,6 +108,8 @@ export default async function Page({ params }: { params: { annee: string } }) {
               annee={annee}
               anneeOuverte
               staff={estStaff(pouvoirs)}
+              controles={controles}
+              maintenant={maintenant}
             />
           ))}
         </ul>
@@ -131,6 +145,8 @@ export default async function Page({ params }: { params: { annee: string } }) {
                 annee={annee}
                 anneeOuverte
                 staff={estStaff(pouvoirs)}
+                controles={controles}
+                maintenant={maintenant}
               />
             ))}
           </ul>
@@ -156,12 +172,17 @@ function LigneMatiere({
   annee,
   anneeOuverte,
   staff,
+  controles,
+  maintenant,
 }: {
   matiere: Matiere;
   annee: Annee;
   /** L’année est déjà ouverte : on est sur sa page. */
   anneeOuverte: boolean;
   staff: boolean;
+  /** Ce que ce compte a déjà envoyé, par clé « matiere/rang ». */
+  controles: Map<string, ControleEnvoye>;
+  maintenant: Date;
 }) {
   const statut = statutDe(matiere.id, annee);
   // Les prérequis sont nommés, jamais montrés par leur identifiant : c’est le
@@ -200,6 +221,8 @@ function LigneMatiere({
         annee={annee}
         anneeOuverte={anneeOuverte}
         staff={staff}
+        controles={controles}
+        maintenant={maintenant}
       />
     </li>
   );
@@ -224,11 +247,15 @@ function LeconsDeLaMatiere({
   annee,
   anneeOuverte,
   staff,
+  controles,
+  maintenant,
 }: {
   matiereId: string;
   annee: Annee;
   anneeOuverte: boolean;
   staff: boolean;
+  controles: Map<string, ControleEnvoye>;
+  maintenant: Date;
 }) {
   const visibles = leconsDe(matiereId, annee).filter((l) =>
     peutOuvrirLaLecon(l, anneeOuverte, staff),
@@ -237,27 +264,60 @@ function LeconsDeLaMatiere({
 
   return (
     <ul className="mt-4 grid grid-cols-1 gap-2 border-t border-silver/10 pt-4">
-      {visibles.map((lecon) => (
-        <li key={lecon.rang} className="min-w-0">
-          <a
-            href={`${ROUTES.cours}/${annee}/${lecon.matiereId}/${lecon.rang}`}
-            className="group inline-flex flex-wrap items-baseline gap-x-3 gap-y-1 font-body text-sm text-parchment transition-colors duration-300 hover:text-aurora-teal"
-          >
-            <span className="min-w-0 break-words">
-              {T.lecons.lien
-                .replace("{rang}", String(lecon.rang))
-                .replace("{total}", String(lecon.surCombien))
-                .replace("{titre}", lecon.titre)}
-            </span>
-            {/* ⚠️ En toutes lettres, jamais une couleur seule. */}
-            {lecon.ouverteAuxEleves ? null : (
-              <span className="font-display text-[0.6rem] uppercase tracking-[0.16em] text-silver">
-                {T.lecons.fermee}
+      {visibles.map((lecon) => {
+        const envoye = controles.get(`${lecon.matiereId}/${lecon.rang}`);
+        const jours = envoye ? joursRestants(envoye.envoyeLe, maintenant) : 0;
+
+        return (
+          <li key={lecon.rang} className="min-w-0">
+            <a
+              href={`${ROUTES.cours}/${annee}/${lecon.matiereId}/${lecon.rang}`}
+              className="group inline-flex flex-wrap items-baseline gap-x-3 gap-y-1 font-body text-sm text-parchment transition-colors duration-300 hover:text-aurora-teal"
+            >
+              <span className="min-w-0 break-words">
+                {T.lecons.lien
+                  .replace("{rang}", String(lecon.rang))
+                  .replace("{total}", String(lecon.surCombien))
+                  .replace("{titre}", lecon.titre)}
               </span>
-            )}
-          </a>
-        </li>
-      ))}
+              {/* ⚠️ En toutes lettres, jamais une couleur seule. */}
+              {lecon.ouverteAuxEleves ? null : (
+                <span className="font-display text-[0.6rem] uppercase tracking-[0.16em] text-silver">
+                  {T.lecons.fermee}
+                </span>
+              )}
+            </a>
+
+            {/*
+              Le contrôle passé, et le chrono des sept jours.
+
+              ⚠️ **Hors du lien**, et c'est voulu : le lien mène à la LEÇON,
+              et son nom accessible ne doit pas se charger d'une note qui n'a
+              rien à voir avec l'endroit où il conduit.
+
+              ⚠️ **Le chrono tourne même sans leçon 2** — décision du joueur,
+              4 septembre 2026. Il n'ouvre rien aujourd'hui ; il dit que le
+              contrôle est enregistré et quand la suite viendra.
+            */}
+            {envoye ? (
+              <p className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 font-body text-xs italic text-silver">
+                <span>
+                  {T.lecons.controleEnvoye
+                    .replace("{note}", String(envoye.note))
+                    .replace("{total}", String(envoye.surCombien))}
+                </span>
+                <span className="text-aurora-teal/70">
+                  {jours === 0
+                    ? T.lecons.prochaineOuverte
+                    : jours === 1
+                      ? T.lecons.prochaineDansUnJour
+                      : T.lecons.prochaineDans.replace("{n}", String(jours))}
+                </span>
+              </p>
+            ) : null}
+          </li>
+        );
+      })}
     </ul>
   );
 }

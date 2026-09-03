@@ -142,6 +142,7 @@ logique ailleurs, l'y ajouter.
 | `lib/cours/lecons.ts` | **quelles leçons existent, et si elles sont ouvertes aux élèves.** Pur : ni base, ni session, ni contenu |
 | `lib/cours/questionnaires.ts` | **les trente questions et leurs bonnes réponses** — `server-only`, jamais expédié au client. `enoncesDe` est la seule porte vers le navigateur |
 | `lib/cours/garde.ts` | **les six questions qu'on pose avant d'ouvrir une leçon**, partagées par les trois routes des cours |
+| `lib/cours/delai.ts` | **les sept jours entre deux leçons** — quand la suivante s'ouvre, et comment le temps qui reste s'écrit. Pur : ni base, ni horloge |
 | `lib/cours/depot.ts` | l'accès aux contrôles. **Seul endroit qui compose une requête** sur `controles_envoyes` — et le seul qui enchaîne corriger, écrire la note et accorder les points, dans une seule transaction |
 | `lib/partenariat/bannieres.ts` | **les trois formats de bannière, et le code qu'un partenaire colle chez lui** — HTML et BBCode. **Aucun import** : la page, les textes et le composant de copie y puisent sans qu'un cycle se forme. Le seul endroit qui connaisse le nom de domaine du site |
 | `lib/partenariat/freins.ts` | **ce qui distingue un robot d'un partenaire** — le pot de miel, le délai de remplissage, le plafond horaire. Pur : ni horloge, ni base |
@@ -2686,15 +2687,48 @@ migration.** `base:sauvegarder` déduit ses tables du schéma Prisma : elle
 échoue sur une table déclarée mais pas encore créée. Migrer d'abord — une
 création de table ne touche aucune donnée —, sauvegarder ensuite.
 
+### Le chrono des sept jours tourne, et il n'oppose rien
+
+Décision du joueur, 4 septembre 2026 : **le chrono part à l'envoi du contrôle
+même s'il n'y a pas encore de leçon 2.** Il n'ouvre rien — il n'y a rien
+derrière —, mais il dit à l'élève que son contrôle est enregistré et quand la
+suite viendra. Une horloge à zéro serait plus troublante qu'une horloge qui
+tourne sur une leçon qu'on écrit encore.
+
+`lib/cours/delai.ts` est le seul endroit qui compte ces jours, et il le faut :
+**deux écrans les affichent**, et deux comptes qui divergeraient donneraient
+deux nombres à un élève sur la même attente.
+
+| | |
+| --- | --- |
+| la page du contrôle | une horloge à la seconde, `6 j 23 h 58 m 40 s` |
+| la liste des matières | « Contrôle envoyé · 4 sur 5 · Prochaine leçon dans 6 jours » |
+
+⚠️ **Il compte depuis l'ENVOI**, jamais depuis l'ouverture de la leçon. C'est
+la seule date que la base garde, et le déclencheur la fige — l'horloge de la
+page repartait sinon à sept jours pleins à chaque rafraîchissement.
+
+⚠️ **Les jours restants s'arrondissent VERS LE HAUT**, et jamais à moins d'un
+tant que le délai court. Six jours et vingt-trois heures s'écrivent « 7 jours » :
+annoncer « 6 » ferait attendre un jour de plus que ce qu'on a dit. Même règle
+que le décompte des lignes qui manquent à un post — et **« demain » a sa propre
+phrase**, parce que « dans 1 jours » est la faute que personne ne relit.
+
+⚠️ **L'instant est pris UNE fois par rendu de page.** Deux lectures d'horloge
+dans le même rendu peuvent tomber de part et d'autre d'une minute, et deux
+matières afficheraient alors deux décomptes différents pour le même envoi.
+
+⚠️ **Le jour où la leçon 2 arrivera, c'est `delai.ts` qu'on branchera sur
+`peutOuvrirLaLecon`**, et nulle part ailleurs. La règle est déjà écrite ; il ne
+manque qu'un appelant.
+
 ### Ce qui reste à faire
 
 - **Les examens de fin d'année**, et les deux seuils (50 % par matière, 60 % de
   moyenne). Les valeurs sont **déjà écrites** dans `REGLES` ; le lot qui vient
   les lit, il ne les redécide pas.
-- **Le rythme d'une leçon par semaine** (`delaiEntreLeconsJours`, 7) n'oppose
-  rien aujourd'hui : il n'y a qu'une leçon par matière. L'horloge de la page
-  l'affiche, personne ne la vérifie côté serveur. **À brancher quand la leçon 2
-  arrivera**, et pas avant.
+- **La leçon 2 de chaque matière** — et c'est elle qui donnera au chrono
+  quelque chose à ouvrir.
 - **L'inscription aux options** de la Marée et de la Veille, qui demande une
   table.
 - **Les leçons en base**, avec un script d'import — voir « Les leçons en

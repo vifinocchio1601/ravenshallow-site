@@ -61,6 +61,20 @@ export const TEXTES_COURS = {
       titre: "Leçons",
       lien: "Leçon {rang} sur {total} — {titre}",
       fermee: "Pas encore ouverte aux élèves",
+
+      /**
+       * Ce qu'on lit en face d'une leçon dont le contrôle est passé.
+       *
+       * ⚠️ **Le singulier compte**, et c'est la faute que personne ne relit :
+       * « 1 jours », « 1 bonne réponses ». Même règle que « 0 point » et
+       * qu'« Il manque 1 ligne ».
+       */
+      controleEnvoye: "Contrôle envoyé · {note} sur {total}",
+      /** Le chrono des sept jours, vu de la liste. Il tourne à la seconde sur
+       *  la page du contrôle ; ici, une liste n'a pas besoin des secondes. */
+      prochaineDans: "Prochaine leçon dans {n} jours",
+      prochaineDansUnJour: "Prochaine leçon demain",
+      prochaineOuverte: "Le délai est écoulé",
     },
 
     retour: "Retour aux sept années",
