@@ -3777,12 +3777,27 @@ déconnexion hors du cadre. Trois remèdes, tous nécessaires :
   reste sur la page. C'est le procédé de la Tour (`NOM_COURT` / `NOM_LONG`) ;
 - son **trait d'union est insécable** (U+2011). Avec un tiret ordinaire, le
   mot se coupe en « NON- / MAGES » et l'entrée retombe sur trois lignes ;
-- le bandeau passe au déroulé **sous `lg`** et non sous `md`, et le mot
-  « Ravenshallow » à côté du sceau ne revient qu'au-delà de `2xl` — il coûte
-  130 px, et le sceau dit déjà où l'on est.
+- le bandeau passe au déroulé **sous `lg`** et non sous `md` ;
+- ⚠️ **le mot « Ravenshallow » a disparu du bandeau**, et il ne revient pas.
+  Il ne s'affichait qu'au-delà de `2xl`, et c'est là qu'il coûtait le plus
+  cher : le joueur l'a vu le 3 septembre 2026 sur son propre écran, « Se
+  déconnecter » **coupé en deux**. Mesuré : le mot poussait le bouton
+  **74 px hors du parchemin** ; sans lui il reste 28 px de marge. Décision du
+  joueur — le sceau dit déjà où l'on est.
+
+  Rien ne se perd pour un lecteur d'écran : l'`alt` du blason porte « Blason
+  de Ravenshallow », et c'est lui qui donne son nom accessible au lien du
+  sceau. **Ne pas remettre le mot** en croyant réparer une omission.
 
 Ne pas ajouter `shrink-0` sur les entrées pour « régler » le problème : elles
 cessent alors de se comprimer et débordent sur le nom du membre.
+
+⚠️ **Il reste un débordement à 1024 px exactement**, et c'est un autre défaut :
+`lg` s'active à 1024, les cinq entrées demandent 621 px, le bloc de droite 353,
+et il manque **127 px**. Retirer le mot n'y change rien — il ne s'affichait pas
+si bas. Ça tient de nouveau vers 1150 px. Le remède serait de passer au déroulé
+sous `xl` plutôt que sous `lg`, au prix du menu horizontal entre 1024 et 1279 :
+**c'est une décision du joueur**, signalée le 3 septembre 2026, non prise.
 
 **`not` de Prisma exclut les valeurs nulles**, là où le `IS DISTINCT FROM` du
 SQL les garde. `auteurId: { not: moi }` laissait donc tomber tous les corbeaux

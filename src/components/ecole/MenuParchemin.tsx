@@ -118,10 +118,20 @@ export default function MenuParchemin({
 
         <div className="parchemin relative mx-1 rounded-[2px] px-4 py-3 sm:mx-2 sm:px-7 sm:py-4">
           <div className="flex items-center justify-between gap-4">
-            {/* — Le sceau de l’école — */}
+            {/* — Le sceau de l’école —
+                ⚠️ **Le nom n’est plus écrit à côté, et il ne revient pas.**
+                Il ne s’affichait qu’au-delà de `2xl`, et c’est précisément
+                là qu’il coûtait le plus cher : ses cent trente pixels
+                poussaient « Se déconnecter » hors du parchemin, coupé en
+                deux. Décision du joueur, 3 septembre 2026 — le sceau dit
+                déjà où l’on est, et le mot ne l’apprenait à personne.
+
+                Rien ne se perd pour un lecteur d’écran : l’`alt` du blason
+                porte « Blason de Ravenshallow », et c’est lui qui donne son
+                nom accessible à ce lien. */}
             <Link
               href={ROUTES.bureau}
-              className="flex shrink-0 items-center gap-3 rounded-sm"
+              className="flex shrink-0 items-center rounded-sm"
             >
               <Image
                 src={BLASON_ECOLE.src}
@@ -131,9 +141,6 @@ export default function MenuParchemin({
                 sizes="32px"
                 className="h-9 w-auto sm:h-11"
               />
-              <span className="hidden font-display text-[0.72rem] font-semibold uppercase tracking-[0.26em] text-ink 2xl:inline">
-                Ravenshallow
-              </span>
             </Link>
 
             {/* — Les entrées, sur écran large — */}
