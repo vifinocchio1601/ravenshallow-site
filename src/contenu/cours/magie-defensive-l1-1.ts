@@ -3,50 +3,34 @@ import "server-only";
 /**
  * La leçon 1 de Magie défensive — « La garde et la distance ».
  *
- * Le pourquoi du rangement est écrit une fois pour toutes dans
- * `sortileges-l1-1.ts` : un module TypeScript parce qu'une leçon doit être
- * **déployée** et **gardée**, et que `public/` ne garde rien tandis que `fs`
- * ne se déploie pas à coup sûr.
+ * Même rangement que `sortileges-l1-1.ts` : un module TypeScript parce
+ * qu'une leçon doit être **déployée** et **gardée**, et que `public/` ne
+ * garde rien tandis que `fs` ne se déploie pas à coup sûr.
  *
- * ⚠️ **Elles sont trois, et le joueur a tranché quand elles iront en base :**
- * pas maintenant. Décision du 2 septembre 2026 — on attend qu'il ait fini
- * d'envoyer ses leçons, et l'on bascule tout d'un coup. L'import ne s'écrit
- * qu'une fois, et il s'écrit mieux sur une série complète que sur trois cas.
- * Poser les suivantes ici, de la même façon.
+ * ⚠️ **Elles sont six, et la première année est complète.** C'est le signal
+ * que le joueur avait lui-même posé le 2 septembre 2026 pour la bascule en
+ * base : « quand les envois s'arrêteront, ou quand la première année sera
+ * complète ». Elle l'est. La bascule n'a pas été faite ici, faute de temps
+ * avant l'ouverture aux élèves — **à lui reproposer**, avec son script
+ * d'import, plutôt qu'à décider en voyant le dossier grossir.
  *
  * ── Ce qui a changé par rapport au fichier d'origine ──
  *
- * Une seule chose, la troisième fois de suite : les trois `data:image` sont
- * devenus l'adresse `/cours/magie-defensive/halle.jpg`. C'était **la même
- * image encodée trois fois**, 646 Ko dont 431 pour rien, et rien de tout cela
- * ne pouvait être mis en cache. La page passe de 660 Ko à 29 Ko.
+ * Une seule chose, la même que pour les cinq autres : les trois
+ * `data:image` sont devenus l'adresse `/cours/magie-defensive/halle.jpg`.
+ * C'était **la même image encodée trois fois**, 474 Ko dont 316 pour
+ * rien, et rien de tout cela ne pouvait être mis en cache. La page passe de
+ * 660 Ko à 29 Ko ; l'image est téléchargée une fois et gardée.
  *
- * ⚠️ **Le dossier public porte un SLUG, pas l'identifiant de matière** —
- * `magie-defensive` et non `magie_defensive`. L'adresse est écrite en toutes
- * lettres dans le HTML, rien ne la dérive de `matiereId` ; et tous les slugs
- * du site s'écrivent en tirets. Le jour où l'on générerait ce chemin, c'est
- * ici qu'il faudrait revenir.
+ * ⚠️ **Et une seconde, qui n'est pas de moi.** L'accord de « cercles »,
+ * corrigé le 3 septembre 2026 à sa demande, **avait disparu de son envoi du
+ * même jour** : son fichier de 8 h 42 le portait, celui du zip de 10 h 09 non.
+ * Il a été reposé ici. C'est exactement ce que la note du lot précédent
+ * annonçait — une correction portée dans le dépôt seul revient dès qu'on
+ * repart de la source du joueur —, et c'est arrivé au premier renvoi.
  *
- * ── L'accord de « cercle », corrigé à sa demande ──
- *
- * Le compteur de distance affichait « 4 cercle » : le mot était en dur dans
- * le HTML, à côté d'un nombre qui monte jusqu'à neuf. Il vit maintenant dans
- * un `<span id="motcercle">` que le script accorde — juste à 0 et à 1, au
- * pluriel ensuite. C'est la faute d'« Il manque 1 lignes » et de « 1 matières
- * imposées », et le troisième endroit du site où elle se corrige.
- *
- * ⚠️ **La correction a été portée dans le fichier du joueur aussi**, dans
- * `Perso/Ravenshallow/Les cours/`. Sans cela, elle reviendrait le jour où
- * l'on repartirait de sa source — et c'est ce qui arrivera quand les leçons
- * passeront en base.
- *
- * Le reste — le texte, la mise en scène, le plan de la halle en SVG et
- * l'exercice de placement — est celui du joueur, au signe près. Les
- * apostrophes droites comprises.
- *
- * ⚠️ **Le `<div class="g">` du bloc « Module » est vide À DESSEIN** : son CSS
- * en fait un cercle de craie, qui est le motif de la leçon. Ce n'est pas la
- * rune manquante de la Runologie — ne pas « réparer ».
+ * Le reste — le texte, la mise en scène, le plan de la halle en SVG et l'exercice de placement — est celui du joueur,
+ * au signe près. Les apostrophes droites comprises.
  */
 
 export const LECON_MAGIE_DEFENSIVE_L1_1 = `<!DOCTYPE html>
@@ -570,7 +554,13 @@ document.getElementById('btn-reprendre').addEventListener('click', ()=>{
 
 majPlan();
 document.getElementById('btn-controle').addEventListener('click', function(){
-  this.textContent = 'Contrôle ouvert'; this.disabled = true;
+  /* Le contrôle est une page à part, servie et gardée par le serveur.
+     L'adresse se dérive de celle-ci : la leçon vit à /cours/1/<matiere>/1,
+     son contrôle à /cours/1/<matiere>/1/controle. On ne l'écrit pas en dur —
+     ce serait la seule chose de cette page qui connaîtrait le plan du site. */
+  this.textContent = 'Ouverture du contrôle'; this.disabled = true;
+  const ici = location.pathname;
+  location.href = (ici.endsWith('/') ? ici.slice(0, -1) : ici) + '/controle';
 });
 </script>
 </body>

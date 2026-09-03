@@ -13,6 +13,7 @@
     "forum:essai": "vitest run --config vitest.essai.mts src/lib/forum/en-base.essai.ts",
     "points:essai": "vitest run --config vitest.essai.mts src/lib/points/en-base.essai.ts",
     "calendrier:essai": "vitest run --config vitest.essai.mts src/lib/calendrier/en-base.essai.ts",
+    "cours:essai": "vitest run --config vitest.essai.mts src/lib/cours/en-base.essai.ts",
     "partenariat:essai": "vitest run --config vitest.essai.mts src/lib/partenariat/en-base.essai.ts",
     "grimoires:essai": "vitest run --config vitest.essai.mts src/lib/grimoires/en-base.essai.ts",
     "veille": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --import ./scripts/alias-veille.mjs src/lib/veille/ronde.ts --sans-envoi",

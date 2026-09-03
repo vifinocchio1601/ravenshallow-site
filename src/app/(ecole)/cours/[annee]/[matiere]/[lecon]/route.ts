@@ -1,14 +1,10 @@
-import { cookies } from "next/headers";
+import { LECON_CREATURES_L1_1 } from "@/contenu/cours/creatures-l1-1";
+import { LECON_HERBORISTERIE_L1_1 } from "@/contenu/cours/herboristerie-l1-1";
+import { LECON_HISTOIRE_L1_1 } from "@/contenu/cours/histoire-l1-1";
 import { LECON_MAGIE_DEFENSIVE_L1_1 } from "@/contenu/cours/magie-defensive-l1-1";
 import { LECON_RUNOLOGIE_L1_1 } from "@/contenu/cours/runologie-l1-1";
 import { LECON_SORTILEGES_L1_1 } from "@/contenu/cours/sortileges-l1-1";
-import { estUneAnnee, peutOuvrirLAnnee, type Annee } from "@/lib/cours/cursus";
-import { lecon, peutOuvrirLaLecon } from "@/lib/cours/lecons";
-import { pouvoirsDe } from "@/lib/forum/depot-pouvoirs";
-import { estStaff } from "@/lib/forum/pouvoirs";
-import { prisma } from "@/lib/prisma";
-import type { Fonction } from "@/lib/dossier/etats";
-import { COOKIE_SESSION, lireSession } from "@/lib/session/session";
+import { lecteurDeLaLecon } from "@/lib/cours/garde";
 
 /**
  * Une leçon — servie **telle que le joueur l'a écrite**.
@@ -47,6 +43,9 @@ const CONTENUS: Record<string, string> = {
   "sortileges/1": LECON_SORTILEGES_L1_1,
   "runologie/1": LECON_RUNOLOGIE_L1_1,
   "magie_defensive/1": LECON_MAGIE_DEFENSIVE_L1_1,
+  "herboristerie/1": LECON_HERBORISTERIE_L1_1,
+  "creatures/1": LECON_CREATURES_L1_1,
+  "histoire/1": LECON_HISTOIRE_L1_1,
 };
 
 function introuvable(): Response {
@@ -59,48 +58,21 @@ export async function GET(
   _requete: Request,
   { params }: { params: { annee: string; matiere: string; lecon: string } },
 ): Promise<Response> {
-  // ── Qui regarde ? ──
-  const session = await lireSession(cookies().get(COOKIE_SESSION)?.value);
-  if (!session) return introuvable();
-
-  const compte = await prisma.utilisateur.findUnique({
-    where: { id: session.id },
-    select: {
-      sessionVersion: true,
-      statutAcces: true,
-      eleve: { select: { statut: true, fonction: true } },
-    },
-  });
-
-  // Le cookie porte la version qu'il avait à la connexion : un changement de
-  // mot de passe ferme les sessions ouvertes, y compris celle d'un intrus.
-  if (!compte || compte.sessionVersion !== session.v) return introuvable();
-  if (compte.statutAcces !== "VALIDE") return introuvable();
-  if (compte.eleve?.statut !== "ACCEPTE") return introuvable();
-
-  // ── Quelle leçon ? ──
-  if (!estUneAnnee(params.annee)) return introuvable();
-  const annee = Number(params.annee) as Annee;
-
-  const laLecon = lecon(params.matiere, params.lecon);
-  // ⚠️ L'année de l'adresse doit être celle de la leçon : sans cette égalité,
-  // `/cours/7/sortileges/1` désignerait une leçon de première année, et la
-  // garde d'année ne voudrait plus rien dire.
-  if (!laLecon || laLecon.annee !== annee) return introuvable();
-
-  const contenu = CONTENUS[`${laLecon.matiereId}/${laLecon.rang}`];
-  if (!contenu) return introuvable();
-
-  // ── A-t-il le droit ? ──
-  const pouvoirs = await pouvoirsDe(session.id);
-  const staff = estStaff(pouvoirs);
-  const anneeOuverte = peutOuvrirLAnnee(
-    compte.eleve.fonction as Fonction,
-    annee,
-    staff,
+  // ⚠️ **La garde est partagée avec les deux routes du contrôle**, et elle est
+  // refaite en entier — session, dossier accepté, leçon existante, année de
+  // l'adresse égale à celle de la leçon, année ouverte, leçon ouverte. Elle
+  // vivait ici en toutes lettres tant qu'il n'y avait qu'une route ; à trois,
+  // la recopier serait garantir qu'un jour l'une d'elles oublie une ligne.
+  const lecteur = await lecteurDeLaLecon(
+    params.annee,
+    params.matiere,
+    params.lecon,
   );
+  if (!lecteur) return introuvable();
 
-  if (!peutOuvrirLaLecon(laLecon, anneeOuverte, staff)) return introuvable();
+  const contenu =
+    CONTENUS[`${lecteur.laLecon.matiereId}/${lecteur.laLecon.rang}`];
+  if (!contenu) return introuvable();
 
   return new Response(contenu, {
     headers: {

@@ -382,6 +382,11 @@ model Eleve {
   /// message reste dans la pièce.
   messagesDeSalon MessageSalon[]
 
+  /// Les contrôles de leçon qu'il a envoyés. Un seul par leçon, pour toujours
+  /// (`REGLES.controleEnvoiUnique`), et la ligne lui survit comme celles du
+  /// carnet : ce qui a été passé a été passé.
+  controlesEnvoyes ControleEnvoye[]
+
   creeLe DateTime @default(now())
   majLe  DateTime @updatedAt
 
@@ -1334,6 +1339,56 @@ enum SourcePoint {
   /// fait pas la même chose : celui-ci vise UN ÉLÈVE et alimente les deux
   /// compteurs (art. 18.2), celui-là vise une maison et n'alimente que le sien.
   ADMINISTRATION
+}
+
+/// **Le contrôle d'une leçon, envoyé.** Un par élève et par leçon, jamais deux.
+///
+/// ⚠️ **Aucune question, aucune bonne réponse.** Elles vivent dans
+/// `lib/cours/questionnaires.ts`, `server-only`, et ne descendent jamais dans
+/// le navigateur avant l'envoi — même parti pris que le barème de la Cérémonie
+/// du Miroir. Cette table ne porte que ce que l'élève a répondu, et ce que
+/// cela valait.
+///
+/// ⚠️ **Il n'y a pas de brouillon en base.** La page dit « Brouillon
+/// enregistré » ; ce brouillon vit dans l'onglet. Ce qui est écrit ici est un
+/// contrôle ENVOYÉ, et l'envoi est définitif.
+model ControleEnvoye {
+  id String @id @default(cuid())
+
+  /// La FICHE, et non le compte : un contrôle est passé par un personnage.
+  /// Nulle si le compte a été supprimé — la ligne reste, comme au carnet.
+  eleveId String?
+  eleve   Eleve?  @relation(fields: [eleveId], references: [id], onDelete: SetNull)
+
+  /// L'identifiant de matière du cursus — « sortileges », jamais son nom.
+  /// Pas de clé étrangère : le cursus vit dans le code, il n'a pas de table.
+  matiereId String
+  /// L'année ET le rang : une matière porte plusieurs leçons par année, et
+  /// une leçon 1 existe dans plusieurs années.
+  annee     Int    @db.SmallInt
+  rang      Int    @db.SmallInt
+
+  /// Ce qu'il a répondu, dans l'ordre des questions — l'indice de la réponse
+  /// **au questionnaire**, jamais celui de l'ordre affiché, qui est mélangé à
+  /// chaque ouverture et ne veut rien dire hors de la page.
+  reponses Int[] @db.SmallInt
+
+  /// Le nombre de bonnes réponses, et le nombre de questions. Le second est
+  /// figé lui aussi : un questionnaire qui gagnerait une question ne doit pas
+  /// changer le sens des notes déjà données.
+  note       Int @db.SmallInt
+  surCombien Int @db.SmallInt
+
+  /// **C'est elle qui fait courir les sept jours** avant la leçon suivante
+  /// (`REGLES.delaiEntreLeconsJours`). Elle ne bouge plus — un déclencheur
+  /// refuse toute réécriture de cette ligne.
+  envoyeLe DateTime @default(now())
+
+  /// Un seul envoi par élève et par leçon. ⚠️ **Partiel** : dans un index
+  /// unique, deux NULL sont distincts, et l'index vit en SQL parce que Prisma
+  /// ne sait pas l'exprimer. Voir la migration.
+  @@index([eleveId, envoyeLe])
+  @@map("controles_envoyes")
 }
 
 /// **Le carnet.** Une ligne par point gagné, et la seule vérité du lot.

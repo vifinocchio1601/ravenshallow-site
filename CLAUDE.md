@@ -42,7 +42,7 @@ joueur, pas des choix d'implémentation. Ne pas les réécrire sans demander.
 
 ```bash
 npm run dev              # http://localhost:3000
-npm test                 # vitest, 1080 tests — ne touche JAMAIS la base
+npm test                 # vitest, 1104 tests — ne touche JAMAIS la base
 npm run lint
 npx tsc --noEmit
 npm run build            # à passer avant tout déploiement
@@ -54,6 +54,7 @@ npm run base:sauvegarder  # recopie toute la base dans un fichier, hors du dép�
 npm run forum:essai       # exerce les pouvoirs ET le forum SUR LA VRAIE BASE
 npm run points:essai      # exerce les points, la clôture et l'archivage SUR LA VRAIE BASE
 npm run calendrier:essai  # exerce le calendrier SUR LA VRAIE BASE
+npm run cours:essai       # exerce les contrôles de leçon SUR LA VRAIE BASE
 npm run partenariat:essai # exerce les partenariats SUR LA VRAIE BASE
 npm run veille            # une ronde de surveillance, rapport à l'écran
 npm run veille:envoyer    # une ronde complète, courriel compris
@@ -138,6 +139,10 @@ logique ailleurs, l'y ajouter.
 | `lib/annonces/extrait.ts` | **les premiers mots d'une annonce**, pour le journal du bureau. Calculé, jamais stocké |
 | `lib/texte.ts` | le ménage sur un texte libre écrit par un joueur, **partagé** par les corbeaux et par les posts |
 | `lib/cours/cursus.ts` | **le cursus des sept années**, écrit par le joueur : les neuf matières, leurs statuts, les trois cycles, les seuils. Toute logique d'inscription le lit, et **rien n'en recopie une valeur** |
+| `lib/cours/lecons.ts` | **quelles leçons existent, et si elles sont ouvertes aux élèves.** Pur : ni base, ni session, ni contenu |
+| `lib/cours/questionnaires.ts` | **les trente questions et leurs bonnes réponses** — `server-only`, jamais expédié au client. `enoncesDe` est la seule porte vers le navigateur |
+| `lib/cours/garde.ts` | **les six questions qu'on pose avant d'ouvrir une leçon**, partagées par les trois routes des cours |
+| `lib/cours/depot.ts` | l'accès aux contrôles. **Seul endroit qui compose une requête** sur `controles_envoyes` — et le seul qui enchaîne corriger, écrire la note et accorder les points, dans une seule transaction |
 | `lib/partenariat/bannieres.ts` | **les trois formats de bannière, et le code qu'un partenaire colle chez lui** — HTML et BBCode. **Aucun import** : la page, les textes et le composant de copie y puisent sans qu'un cycle se forme. Le seul endroit qui connaisse le nom de domaine du site |
 | `lib/partenariat/freins.ts` | **ce qui distingue un robot d'un partenaire** — le pot de miel, le délai de remplissage, le plafond horaire. Pur : ni horloge, ni base |
 | `lib/partenariat/depot.ts` | l'accès aux partenariats. **Seul endroit qui compose une requête** sur `partenaires` et `demandes_partenariat` |
@@ -2326,39 +2331,68 @@ se décider une fois. « 0 point » au singulier reste dans `points/affichage.ts
 
 ### Les leçons en ligne
 
-Trois, toutes en première année, toutes écrites par le joueur en HTML autonome
-et interactif :
+**Six, toute la première année**, toutes écrites par le joueur en HTML
+autonome et interactif — et **ouvertes aux élèves depuis le 4 septembre 2026 à
+9 h**, heure qu'il a fixée lui-même et annoncée au Grand Hall.
 
 | | |
 | --- | --- |
-| **Sortilèges L1-1** | « La Torche », leçon 1 sur 4 — 1er septembre 2026 |
-| **Runologie L1-1** | « Vingt-quatre signes, vingt-quatre sons » — 2 septembre 2026 |
-| **Magie défensive L1-1** | « La garde et la distance » — 2 septembre 2026 |
+| **Sortilèges** | « La Torche » — 1er septembre 2026 |
+| **Runologie** | « Vingt-quatre signes, vingt-quatre sons » — 2 septembre |
+| **Magie défensive** | « La garde et la distance » — 2 septembre |
+| **Herboristerie nordique** | « Reconnaître » — 3 septembre |
+| **Créatures magiques** | « Regarder » — 3 septembre |
+| **Histoire de Ravenshallow** | « La côte avant l'école » — 3 septembre |
 
-**Chacune n'a demandé que trois gestes** : un module de contenu, une entrée
-dans `LECONS`, une clé dans `CONTENUS`. La page de l'année liste par
-`leconsDe` et n'a jamais eu à bouger — c'est le plan du premier lot, et il
-tient trois fois.
+Chacune est la leçon 1 sur 4 de sa matière, et les six matières imposées de
+première année en ont maintenant une. **Chacune n'a demandé que trois
+gestes** : un module de contenu, une entrée dans `LECONS`, une clé dans
+`CONTENUS`. La page de l'année liste par `leconsDe` et n'a jamais eu à bouger
+— c'est le plan du premier lot, et il tient six fois.
 
-⚠️ **Aucune n'est ouverte aux élèves, et c'est une décision.** Le contrôle qui
-suit chacune n'existe pas encore côté serveur ; ouvrir une leçon promettrait
-une suite qui n'arrive pas. `LECONS[].ouverteAuxEleves` est à faux, et
-`lecons.test.ts` fige ce choix — le test tombera le jour où l'on ouvrira, ce
-qui est voulu : ce sera une décision, pas un effet de bord.
+⚠️ **Une leçon ouverte doit avoir son contrôle**, et c'est ce que
+`lecons.test.ts` fige — jamais « toutes sont ouvertes », qui figerait l'état
+plutôt que la règle et tomberait sur la première leçon posée pour relecture.
+Le test qui tenait la position inverse — « aucune n'est ouverte » — est bien
+tombé le 4 septembre, et c'était son rôle.
 
-**Le staff, lui, voit les leçons** avec la mention « Pas encore ouverte aux
-élèves » en toutes lettres. Un élève ne voit pas le lien du tout, et l'adresse
-lui rend 404 — « elle existe, mais pas pour vous » se lit comme une
-confirmation. Vérifié à l'écran le 2 septembre 2026, avec le même compte
-basculé d'un rôle à l'autre : élève, 404 et aucun lien ; modérateur, les trois
-leçons annoncées et chacune qui s'ouvre.
+**Ce qui les a ouvertes, c'est le contrôle côté serveur** : tant qu'il
+n'existait pas, ouvrir une leçon promettait une suite qui n'arrivait pas. Voir
+« Les contrôles ».
 
 ⚠️ **Une leçon déclarée sans contenu rend 404, en silence.** La liste vit dans
 `lecons.ts`, le HTML est branché dans `CONTENUS` à l'autre bout, et rien
-n'oblige les deux à s'accorder — l'oubli ne se verrait qu'en ouvrant la page,
-c'est-à-dire jamais tant qu'elle est fermée aux élèves. `lecons.test.ts` relit
-donc le code source de la route, comme `etancheite.test.ts` relit celui de
-l'administration. Éprouvé en retirant la ligne : il tombe et nomme la clé.
+n'oblige les deux à s'accorder — l'oubli ne se verrait qu'en ouvrant la page.
+`lecons.test.ts` relit donc le code source des DEUX routes, celle de la leçon
+et celle du contrôle. Éprouvé en retirant la ligne : il tombe et nomme la clé.
+
+### Ce que le renvoi du 3 septembre a appris
+
+Le joueur a renvoyé **les six leçons d'un coup**, les trois déjà en ligne
+comprises. Trois leçons de plus, six contrôles, et deux surprises.
+
+⚠️ **Il avait uniformisé le fond des six pages**, et cela ne se voyait que par
+comparaison : `opacity: .42`, `blur(1.6px)`, un nouveau dégradé. **Ne jamais
+supposer qu'un fichier déjà en ligne est revenu inchangé** — comparer, toujours,
+et sur le texte débarrassé de son image.
+
+⚠️ **Et « cercles » avait disparu de son envoi.** La correction de la veille —
+l'accord du mot à côté d'un compteur qui monte jusqu'à neuf — était dans son
+fichier de 8 h 42 et absente de celui de 10 h 09. C'est **exactement** ce que
+la note du lot précédent annonçait : une correction portée dans le dépôt seul
+revient dès qu'on repart de sa source. Elle a été reposée dans le dépôt **et**
+dans son dossier, et son fichier d'avant est gardé en `.avant-3sept`.
+
+⚠️ **Son dossier de travail et son envoi divergent dans les deux sens.** Au
+3 septembre : trois fichiers du zip n'étaient pas chez lui, deux des siens
+étaient plus vieux, un plus récent. **Le zip fait foi** — c'est ce qu'il
+envoie —, sauf sur une correction qu'il a demandée.
+
+⚠️ **La première année est complète**, et c'est le signal de bascule qu'il
+avait lui-même posé le 2 septembre : « quand les envois s'arrêteront, ou quand
+la première année sera complète ». **La bascule en base n'a pas été faite** —
+l'échéance de l'ouverture ne laissait pas le temps d'écrire l'import. C'est la
+première chose à lui reproposer.
 
 ### Une route, et non une page
 
@@ -2503,26 +2537,170 @@ Sur la **Runologie**, trois points, aucun corrigé :
 nom de la directrice — la bible dit « Elena R. Tidevann, le R. pour Runa » —,
 et la Runologie est bien obligatoire en première année au cursus.
 
+## Les contrôles
+
+Posés le 4 septembre 2026, **parce qu'ils tenaient tout le reste** : tant
+qu'un contrôle n'existait pas côté serveur, aucune leçon ne pouvait s'ouvrir.
+
+### Le défaut des maquettes, et la seule chose que ce lot devait corriger
+
+Dans les six pages du joueur, **les bonnes réponses et leurs explications
+vivaient dans le JavaScript** : n'importe quel élève ouvrant le code source
+avait ses cinq réponses avant de commencer. Son propre commentaire l'annonçait
+— « comme il le sera côté serveur ».
+
+C'est exactement ce que la Cérémonie du Miroir avait déjà résolu, et de la
+même façon : `lib/cours/questionnaires.ts` est `server-only`, et **`enoncesDe`
+est la seule porte** par laquelle un questionnaire descend dans le navigateur.
+
+⚠️ **Elle est écrite champ par champ**, jamais par une copie dont on retirerait
+deux clés : un champ ajouté demain à `Question` ne partirait pas tout seul.
+C'est le procédé du résumé de La Veille.
+
+⚠️ **Le vrai filet relit le code source des six pages servies** —
+`questionnaires.test.ts` — et échoue si une explication, un mot du professeur
+ou un `bonne:` y a survécu. Aucun essai de logique ne verrait la fuite : la
+page marcherait parfaitement. **Éprouvé en recollant une explication dans une
+page : il tombe et nomme le fichier.**
+
+**La correction descend une fois le contrôle envoyé**, et seulement là. Il ne
+se repasse pas ; lui cacher les réponses après coup lui retirerait tout ce
+qu'il a de pédagogique.
+
+### Une bonne réponse, un point
+
+Règle du joueur, 3 septembre 2026. **La note EST le nombre de points**, et il
+n'y a rien à convertir.
+
+| | Décision du joueur, 3 septembre 2026 |
+| --- | --- |
+| les deux compteurs | **oui** — art. 18.2, comme un post |
+| le plafond de dix points par jour | **non** — un contrôle ne se repasse pas |
+
+⚠️ **Le plafond ne s'applique pas, ET ces points ne le remplissent pas.**
+`accorderLePointDUnPost` écarte désormais `QCM` **et** `ADMINISTRATION` de sa
+lecture du carnet — le défaut inverse serait tout aussi injuste : cinq bonnes
+réponses le matin fermeraient la moitié de la journée d'écriture. Vérifié à
+l'écran : six contrôles, **29 points en une journée**, les deux compteurs à 29.
+
+⚠️ **Zéro n'écrit aucune ligne au carnet.** Le contrôle est enregistré avec sa
+note dans sa propre table ; une ligne à zéro point serait du bruit, et
+l'historique en montrerait une par contrôle raté.
+
+### L'envoi est unique, et c'est l'INDEX qui le tient
+
+`REGLES.controleEnvoiUnique`, écrit par le joueur dans `cours/cursus.ts`.
+
+⚠️ **Pas une lecture avant écriture** — deux clics simultanés la passeraient
+tous les deux. C'est l'index unique de `controles_envoyes`, et **les points
+sont accordés dans la même transaction** : le second envoi refusé emporte ses
+points avec lui. La lecture qu'on fait quand même sert à répondre proprement.
+
+⚠️ **L'index est PARTIEL** (`WHERE "eleveId" IS NOT NULL`). Dans un index
+unique, Postgres tient deux `NULL` pour distincts : sans le `WHERE`, il
+refuserait d'exister le jour où deux comptes supprimés auraient passé le même
+contrôle. Cousin exact du piège de `permissions_accordees`.
+
+**409, jamais 403** : c'est un rejeu, pas un refus — et la route **rend la
+correction**, pour qu'un second clic ne laisse pas l'élève devant une page
+morte. Même distinction que le Miroir et la boutique.
+
+**422 pour des réponses incomplètes**, 404 pour une leçon qu'on n'a pas le
+droit d'ouvrir. Les trois ne disent pas la même chose, et les confondre ferait
+lire « vous n'avez pas le droit » à qui a seulement oublié une question.
+
+### Il n'y a pas de brouillon en base
+
+La page dit « Brouillon enregistré » ; ce brouillon vit dans l'onglet, et rien
+d'autre. Une table de brouillons demanderait une écriture à chaque clic sur une
+réponse, pour une promesse que personne n'a faite. **Ce qui est écrit est un
+contrôle ENVOYÉ.**
+
+### La garde est partagée par les trois routes
+
+`lib/cours/garde.ts` — `lecteurDeLaLecon`. Six questions : session valide,
+dossier accepté, leçon existante, année de l'adresse égale à celle de la leçon,
+année ouverte, leçon ouverte. Elle vivait en toutes lettres dans la route de la
+leçon tant qu'il n'y en avait qu'une ; **à trois, la recopier serait garantir
+qu'un jour l'une oublie une ligne**, et une route se contourne en l'appelant.
+
+### Ce qui a changé dans les pages du joueur, et rien de plus
+
+Trois choses, les mêmes dans les six :
+
+- `QUESTIONS` ne porte plus ni `bonne` ni `e` — la route l'injecte ;
+- `envoyer()` passe par le serveur, et **peint exactement ce que la page
+  peignait** : la même boucle, les mêmes classes, les mêmes mots ;
+- la page **s'ouvre sur son résultat** quand le contrôle est déjà envoyé.
+
+L'horloge des sept jours part de l'envoi **réel** : elle repartait à sept jours
+pleins à chaque rafraîchissement.
+
+⚠️ **L'image de fond reste encodée dans les pages de contrôle**, à la
+différence des leçons : elle n'y est qu'**une** fois — 18 à 29 Ko, aucun
+gâchis —, et la page est servie `no-store` de toute façon.
+
+### Le piège qui ne tombait dans aucun test
+
+⚠️ **Un littéral de gabarit mange les barres obliques inversées.** Une ligne
+correcte dans l'éditeur —
+
+```
+location.pathname.replace(/\/$/, '')
+```
+
+— arrive dans le navigateur comme `replace(//$/, '')`, où `//` ouvre un
+commentaire qui avale la fin de la ligne. Le script meurt sur une accolade
+orpheline, **toute la page cesse de fonctionner**, et rien ne le dit : la leçon
+s'affiche parfaitement, seuls ses boutons sont morts.
+
+Rencontré le 4 septembre sur les six leçons à la fois, et trouvé **en
+cliquant**. `tsc` ne peut rien voir — c'est du texte. D'où
+`src/contenu/cours/pages.test.ts`, qui défait l'échappement des douze pages et
+**analyse leurs scripts** avec `new Function`. Éprouvé en remettant la faute :
+il tombe et nomme le fichier.
+
+⚠️ **Le générateur échappe correctement ; ce sont les corrections posées après
+coup, directement dans le `.ts`, qui oublient.** Et l'outil de relecture qui a
+servi à vérifier mentait lui aussi : il ne défaisait que trois échappements sur
+tous ceux qui existent. **Une vérification qui ne défait pas tout confirme ce
+qu'on espère.**
+
+### Ce que la base tient elle-même
+
+Onze garanties dans `20260903150000_controles_de_lecon`, **éprouvées sur la
+vraie base et gardées** : `npm run cours:essai` — 13 essais, 21 garanties, qui
+nettoient derrière eux.
+
+⚠️ **Un contrôle envoyé ne se réécrit pas** — un déclencheur le refuse. Le lien
+vers l'élève, lui, peut s'annuler : refuser les deux rendrait un compte
+indestructible, comme un vieux signalement l'aurait fait.
+
+⚠️ **On antidate pour éprouver ce déclencheur, on ne met pas `now()`.** Dans
+une transaction, `now()` rend l'instant du DÉBUT — donc la valeur que la ligne
+vient de recevoir par défaut. Le déclencheur ne voit aucun changement, et
+l'essai annonce un trou qui n'existe pas. Payé le 3 septembre 2026.
+
+⚠️ **La sauvegarde ne peut pas tourner entre l'écriture du modèle et sa
+migration.** `base:sauvegarder` déduit ses tables du schéma Prisma : elle
+échoue sur une table déclarée mais pas encore créée. Migrer d'abord — une
+création de table ne touche aucune donnée —, sauvegarder ensuite.
+
 ### Ce qui reste à faire
 
-⚠️ **Le contrôle ne peut pas être mis en ligne tel quel.** Dans le fichier du
-joueur, `Controle_Sortileges_L1-1.html`, **les cinq bonnes réponses et leurs
-explications sont dans le JavaScript de la page** : n'importe quel élève
-ouvrant le code source les aurait avant de commencer. Son propre commentaire
-l'annonce — « comme il le sera côté serveur ».
-
-C'est exactement ce que la Cérémonie du Miroir a résolu : le barème vit dans
-un fichier `server-only` et ne quitte jamais le serveur. Le contrôle demandera
-le même traitement, plus une table pour les réponses et la note.
-
-**Celui de la Magie défensive est dans le même cas** — `bonne:1`, `bonne:2`
-dans son `QUESTIONS`, et le même commentaire du joueur : « ordre des réponses
-mélangé à l'affichage, comme il le sera côté serveur ».
-
-**La Runologie n'a pas encore de contrôle du tout** — son dossier ne porte que
-la leçon. Le bouton « Passer le contrôle » des trois pages ne fait rien de plus
-que se désactiver.
-
+- **Les examens de fin d'année**, et les deux seuils (50 % par matière, 60 % de
+  moyenne). Les valeurs sont **déjà écrites** dans `REGLES` ; le lot qui vient
+  les lit, il ne les redécide pas.
+- **Le rythme d'une leçon par semaine** (`delaiEntreLeconsJours`, 7) n'oppose
+  rien aujourd'hui : il n'y a qu'une leçon par matière. L'horloge de la page
+  l'affiche, personne ne la vérifie côté serveur. **À brancher quand la leçon 2
+  arrivera**, et pas avant.
+- **L'inscription aux options** de la Marée et de la Veille, qui demande une
+  table.
+- **Les leçons en base**, avec un script d'import — voir « Les leçons en
+  ligne ». La première année est complète : c'est le moment qu'il avait choisi.
+- **Aucun écran d'administration ne montre les contrôles envoyés.** La table se
+  lit, rien ne l'affiche. À poser le jour où il voudra savoir qui a passé quoi.
 
 ---
 
@@ -4079,21 +4257,22 @@ quatre-vingt-douze blocs — et l'écran d'administration. Vérifié à l'écran
 élève voit quatre chapitres, le cinquième n'existe pas pour lui, et « Sortilège
 de Hel » n'apparaît dans aucune réponse. Voir « Les Grimoires ».
 
-**Pas encore** : **les contrôles et les examens** — c'est le dernier chantier,
-et le plus gros. Trois leçons sont posées (Sortilèges, Runologie et Magie
-défensive, première année, fermées aux élèves), mais rien de ce qui doit s'y
-accrocher ne l'est :
-le rythme d'une leçon par matière et par semaine (`delaiEntreLeconsJours`), un
-contrôle à envoi unique, un examen qui n'ouvre qu'une fois tous les contrôles
-envoyés, deux seuils — 50 % par matière, 60 % de moyenne —, et
-**l'inscription aux options** de la Marée et de la Veille, qui demande une
-table.
+**Les cours sont ouverts** : les six leçons de première année et leurs six
+contrôles, depuis le 4 septembre 2026 à 9 h. **Une bonne réponse, un point** —
+et les deux compteurs, comme un post. Voir « Les leçons en ligne » et « Les
+contrôles ».
 
-⚠️ **C'est le contrôle qui tient tout le reste.** Tant qu'il n'existe pas côté
-serveur, aucune leçon ne s'ouvre aux élèves — les trois qui sont en ligne ne se
-voient que du staff. **Deux maquettes de contrôle existent déjà** (Sortilèges
-et Magie défensive), et les deux portent leurs bonnes réponses dans leur
-JavaScript : c'est le même travail à faire une fois, pas deux.
+**Pas encore** : **les examens**, et le rythme d'une leçon par semaine.
+
+- l'examen n'ouvre qu'une fois tous les contrôles d'une matière envoyés
+  (`examenExigeTousLesControles`), et il faut deux seuils — 50 % par matière,
+  60 % de moyenne ;
+- `delaiEntreLeconsJours` n'oppose rien tant qu'il n'y a qu'une leçon par
+  matière. **À brancher quand la leçon 2 arrivera**, et pas avant : l'horloge
+  de la page l'affiche déjà, personne ne la vérifie ;
+- **l'inscription aux options** de la Marée et de la Veille, qui demande une
+  table ;
+- **aucun écran d'administration ne montre les contrôles envoyés.**
 
 ⚠️ **Les valeurs de tout cela sont DÉJÀ écrites**, dans `REGLES` de
 `cours/cursus.ts`. Le lot qui viendra les lit ; il ne les redécide pas.
@@ -4102,8 +4281,8 @@ JavaScript : c'est le même travail à faire une fois, pas deux.
 gardé tel quel le 28 août 2026. Les dortoirs vivent déjà comme pièces du
 château, et la page `/maison` porte le tableau d'affichage, le top du mois et
 le salon. Ne pas le remplir sans le lui redemander.
-Le point d'accroche des cours est posé : `SourcePoint.QCM` et
-`SourcePoint.EXAMEN` existent dans l'enum et n'attendent que d'être écrits.
+Le point d'accroche des cours a servi : `SourcePoint.QCM` porte maintenant de
+vraies lignes de carnet. `SourcePoint.EXAMEN` attend encore son lot.
 
 ⚠️ **Le salon est par MAISON, et le risque était connu.** Avec quatre maisons
 et peu de joueurs, ce sont peut-être quatre pièces vides ; le joueur a tranché

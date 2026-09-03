@@ -52,6 +52,8 @@ export type Portee =
   | "archivage"
   | "depot"
   | "forum"
+  /** Les cours : l'envoi d'un contrôle, et rien d'autre pour l'instant. */
+  | "cours"
   | "inconnu";
 
 /**

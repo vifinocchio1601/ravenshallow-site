@@ -96,11 +96,17 @@ export const TEXTES_COURS = {
     },
 
     /**
-     * **Le lot des leçons n’est pas construit : on le dit** plutôt que de
-     * laisser croire à une page cassée. C’est le procédé des salles à venir.
+     * **Ce qui manque encore se dit**, plutôt que de laisser croire à une page
+     * cassée. C'est le procédé des salles à venir.
+     *
+     * ⚠️ **Cette phrase a menti pendant quelques heures le 4 septembre 2026** :
+     * elle annonçait encore les leçons et les contrôles « avec le lot suivant »
+     * alors que les six premiers étaient en ligne au-dessus d'elle. Une phrase
+     * de ce genre se relit à chaque lot qui la dépasse — elle ne tombe dans
+     * aucun test, et c'est l'écran qui l'a montrée.
      */
     aVenir:
-      "Les leçons, les contrôles et les examens viendront avec le lot suivant. Le programme, lui, est posé.",
+      "Les examens de fin d’année viendront avec le lot suivant. Les leçons de première année, elles, sont ouvertes, et chacune se termine par un contrôle.",
   },
 
   /** Les inscriptions ne sont pas construites non plus. */

@@ -133,7 +133,12 @@ export async function accorderLePointDUnPost(
   const recents = await tx.pointGagne.findMany({
     where: {
       eleveId: auteur.eleveId,
-      source: { not: "ADMINISTRATION" },
+      // ⚠️ **Deux sources écartées, et pour deux raisons différentes.**
+      // `ADMINISTRATION` parce qu’un geste délibéré n’est pas de l’activité ;
+      // `QCM` parce qu’un contrôle ne se multiplie pas — cinq bonnes réponses
+      // le matin fermeraient sinon la moitié de la journée d’écriture. Le
+      // plafond mesure ce qu’on peut répéter, et un contrôle ne se repasse pas.
+      source: { notIn: ["ADMINISTRATION", "QCM"] },
       gagneLe: { gte: new Date(maintenant.getTime() - 24 * 60 * 60 * 1000) },
     },
     select: { gagneLe: true, points: true },
@@ -170,6 +175,98 @@ export async function accorderLePointDUnPost(
   }
 
   return verdict;
+}
+
+// ─────────────────────────────────────────────────────────────
+//  Accorder les points d’un contrôle — une bonne réponse, un point
+// ─────────────────────────────────────────────────────────────
+
+/**
+ * **Ce que rapporte un contrôle envoyé.**
+ *
+ * Règle du joueur, 3 septembre 2026 : *une bonne réponse, un point*. La note
+ * EST le nombre de points, et il n’y a rien à convertir — c’est pour cela que
+ * cette fonction ne calcule rien et reçoit la note toute faite.
+ *
+ * Appelée **dans la transaction qui enregistre le contrôle**, et c’est ce qui
+ * rend le double gain impossible : l’index unique de `controles_envoyes`
+ * refuse le second envoi, la transaction entière est annulée, et les points ne
+ * sont pas écrits. Aucune lecture avant écriture ne pourrait en dire autant —
+ * deux envois simultanés passeraient tous les deux.
+ *
+ * ── Deux compteurs, comme un post ──
+ *
+ * Art. 18.2 : « ces points alimentent la progression individuelle **et** le
+ * compteur de la maison ». Décision du joueur reconduite pour les contrôles le
+ * 3 septembre 2026 — ce serait sinon le premier point du site à ne pas le
+ * faire, et personne ne saurait dire pourquoi en le relisant.
+ *
+ * ⚠️ **Le plafond quotidien ne s’applique PAS.** Décision du joueur, même
+ * jour. Il existe pour qu’un membre très actif ne fasse pas gagner sa maison à
+ * lui seul, et il pèse donc sur ce qu’on peut multiplier : les posts. Un
+ * contrôle ne se passe qu’une fois — la note est méritée, et la plafonner
+ * ferait perdre des points à qui répond juste. C’est le même raisonnement qui
+ * écarte déjà la source `ADMINISTRATION` du plafond.
+ *
+ * ⚠️ **Ces points-là ne remplissent pas non plus le plafond des posts.** Ils
+ * portent la source `QCM`, et `accorderLePointDUnPost` ne lit du carnet que ce
+ * qui n’est pas `ADMINISTRATION` — donc les compte. Ce serait le défaut
+ * inverse et tout aussi injuste : cinq bonnes réponses le matin fermeraient la
+ * moitié de la journée d’écriture. Voir la lecture du carnet plus haut, qui
+ * écarte désormais les deux sources.
+ *
+ * ── Zéro n’écrit rien ──
+ *
+ * Une ligne à zéro point ne dirait rien qu’on ne sache déjà : le contrôle est
+ * enregistré, avec sa note, dans sa propre table. Le carnet est la trace de ce
+ * qui a été GAGNÉ ; une ligne vide y serait du bruit, et l’historique public
+ * en montrerait une par élève et par contrôle raté.
+ *
+ * Rend le nombre de points réellement inscrits — zéro quand rien n’a été
+ * écrit, pour que l’appelant puisse le dire à l’élève sans le redeviner.
+ */
+export async function accorderLesPointsDUnControle(
+  tx: Prisma.TransactionClient,
+  auteur: AuteurDUnPost,
+  note: number,
+  maintenant = new Date(),
+): Promise<number> {
+  if (note <= 0) return 0;
+
+  const saison = await saisonEnCours(tx);
+  // Comme pour un post : un point qui n’a nulle part où se poser ne doit pas
+  // faire échouer l’envoi. L’élève a répondu, sa note est consignée.
+  if (!saison) return 0;
+
+  const maison = maisonQuiCompte(auteur);
+
+  await tx.pointGagne.create({
+    data: {
+      saisonId: saison.id,
+      eleveId: auteur.eleveId,
+      // Figée au moment du gain, comme celle d’un post, et pour la même
+      // raison : ce qu’un élève a gagné pour sa maison lui reste acquis le
+      // jour où il la quitte.
+      maison,
+      points: note,
+      source: "QCM",
+      // ⚠️ Nul, et la base l’exige : la contrainte n’accepte un `postId` que
+      // pour la source `POST`. Un contrôle n’est pas un post.
+      postId: null,
+      gagneLe: maintenant,
+    },
+  });
+
+  await tx.eleve.update({
+    where: { id: auteur.eleveId },
+    data: { points: { increment: note } },
+  });
+
+  if (maison) {
+    await crediterLaMaison(tx, saison.id, maison, note);
+  }
+
+  return note;
 }
 
 // ─────────────────────────────────────────────────────────────

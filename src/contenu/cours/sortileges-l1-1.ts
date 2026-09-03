@@ -3,39 +3,27 @@ import "server-only";
 /**
  * La leçon 1 de Sortilèges — « La Torche ».
  *
- * ── Pourquoi le HTML vit dans un fichier TypeScript ──
+ * Même rangement que `sortileges-l1-1.ts` : un module TypeScript parce
+ * qu'une leçon doit être **déployée** et **gardée**, et que `public/` ne
+ * garde rien tandis que `fs` ne se déploie pas à coup sûr.
  *
- * Parce qu'il doit être **déployé** et **gardé**, et que ces deux exigences
- * ferment les autres portes :
- *
- *   • dans `public/`, il serait servi sans aucune garde — n'importe qui
- *     pourrait l'ouvrir en tapant son adresse, et les élèves n'y ont pas
- *     encore accès ;
- *   • lu depuis le disque avec `fs`, il risquerait de ne pas être embarqué
- *     dans le paquet déployé : Next ne trace que ce qu'il voit importer, et
- *     un chemin construit à l'exécution ne se voit pas. La page marcherait en
- *     développement et rendrait 500 en production.
- *
- * Un module importé, lui, part toujours avec le déploiement, et `server-only`
- * garantit qu'il ne descend jamais dans le navigateur autrement que par la
- * route qui le sert.
- *
- * ⚠️ **Ce n'est pas le rangement définitif.** Le jour où il y aura plusieurs
- * leçons — quatre rien que pour cette matière et cette année —, elles iront
- * en base comme les grimoires et les lieux du château, avec un script
- * d'import : une correction ne doit pas demander un déploiement. Pour une
- * seule leçon, une table serait un moteur sans voiture.
+ * ⚠️ **Elles sont six, et la première année est complète.** C'est le signal
+ * que le joueur avait lui-même posé le 2 septembre 2026 pour la bascule en
+ * base : « quand les envois s'arrêteront, ou quand la première année sera
+ * complète ». Elle l'est. La bascule n'a pas été faite ici, faute de temps
+ * avant l'ouverture aux élèves — **à lui reproposer**, avec son script
+ * d'import, plutôt qu'à décider en voyant le dossier grossir.
  *
  * ── Ce qui a changé par rapport au fichier d'origine ──
  *
- * Une seule chose : les trois `data:image` ont été remplacés par l'adresse
- * `/cours/sortileges/salle.jpg`. C'était **la même image encodée trois fois**,
- * soit 489 Ko dont 326 pour rien, et rien de tout cela ne pouvait être mis en
- * cache. La page est passée de 684 Ko à 32 Ko ; l'image est téléchargée une
- * fois et gardée. Piège déjà payé sur les portraits des fiches.
+ * Une seule chose, la même que pour les cinq autres : les trois
+ * `data:image` sont devenus l'adresse `/cours/sortileges/salle.jpg`.
+ * C'était **la même image encodée trois fois**, 489 Ko dont 326 pour
+ * rien, et rien de tout cela ne pouvait être mis en cache. La page passe de
+ * 684 Ko à 32 Ko ; l'image est téléchargée une fois et gardée.
  *
- * Le reste — le texte, la mise en scène, le script du tracé — est celui du
- * joueur, au signe près.
+ * Le reste — le texte, la mise en scène, le script du tracé — est celui du joueur,
+ * au signe près. Les apostrophes droites comprises.
  */
 
 export const LECON_SORTILEGES_L1_1 = `<!DOCTYPE html>
@@ -61,11 +49,10 @@ export const LECON_SORTILEGES_L1_1 = `<!DOCTYPE html>
 html,body{margin:0;padding:0}
 body::before{content:"";position:fixed;inset:0;z-index:-2;
   background:url("/cours/sortileges/salle.jpg") center 22% / cover no-repeat;
-  opacity:.20;filter:saturate(.55) contrast(1.05)}
+  opacity:.42;filter:saturate(.55) contrast(1.02) blur(1.6px)}
 body::after{content:"";position:fixed;inset:0;z-index:-1;
-  background:linear-gradient(180deg,rgba(11,16,23,.72) 0%,rgba(11,16,23,.90) 42%,rgba(11,16,23,.97) 100%)}
-body{
-  background:var(--encre); color:var(--givre);
+  background:linear-gradient(180deg,rgba(11,16,23,.58) 0%,rgba(11,16,23,.84) 38%,rgba(11,16,23,.93) 70%,rgba(11,16,23,.96) 100%)}
+body{background:var(--encre);color:var(--givre);
   font-family:var(--corps); font-weight:300; font-size:17px; line-height:1.72;
   -webkit-font-smoothing:antialiased;
   background-image:radial-gradient(ellipse 110% 55% at 50% -8%, rgba(111,168,184,.06), transparent 62%);
@@ -618,8 +605,14 @@ RATES.forEach((r,i)=>{
 });
 
 document.getElementById('btn-controle').addEventListener('click', function(){
-  this.textContent = 'Contrôle ouvert';
+  /* Le contrôle est une page à part, servie et gardée par le serveur.
+     L'adresse se dérive de celle-ci : la leçon vit à /cours/1/<matiere>/1,
+     son contrôle à /cours/1/<matiere>/1/controle. On ne l'écrit pas en dur —
+     ce serait la seule chose de cette page qui connaîtrait le plan du site. */
+  this.textContent = 'Ouverture du contrôle';
   this.disabled = true;
+  const ici = location.pathname;
+  location.href = (ici.endsWith('/') ? ici.slice(0, -1) : ici) + '/controle';
 });
 </script>
 </body>

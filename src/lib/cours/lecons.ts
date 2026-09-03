@@ -5,21 +5,25 @@ import { matiereDe, type Annee } from "./cursus";
  *
  * ── Ce que ce fichier décide, seul ──
  *
- * Deux choses, et la seconde est la seule qui compte aujourd'hui : quelles
- * leçons existent, et **si elles sont ouvertes aux élèves**.
+ * Deux choses : quelles leçons existent, et **si elles sont ouvertes aux
+ * élèves**.
  *
- * ⚠️ **Aucune ne l'est pour l'instant.** Décision du joueur du 1er septembre
- * 2026, reconduite le 2 : les leçons sont posées pour qu'il les voie dans le
- * site, pas pour qu'on les joue. Le contrôle qui suit chacune n'existe pas
- * encore côté serveur — et tant qu'il n'existe pas, ouvrir une leçon
- * promettrait une suite qui n'arrive pas.
+ * ✅ **Les six de première année le sont, depuis le 4 septembre 2026 à 9 h** —
+ * décision du joueur, qui a fixé l'heure lui-même. Elles étaient fermées
+ * jusque-là pour une raison précise, et cette raison a cessé d'exister : le
+ * contrôle qui suit chacune n'existait pas côté serveur, et ouvrir une leçon
+ * promettait une suite qui n'arrivait pas. Il existe maintenant — la table,
+ * les questionnaires `server-only`, les points.
+ *
+ * ⚠️ **Ce drapeau ne se met jamais à vrai par habitude.** Une leçon sans son
+ * contrôle se déclare à faux, comme les six l'étaient : `lecons.test.ts` exige
+ * que toute leçon ouverte ait son questionnaire, et tombe sinon en la nommant.
  *
  * ── Pourquoi un drapeau plutôt qu'une absence ──
  *
- * On aurait pu ne déclarer aucune des deux. Mais alors le joueur ne pourrait
- * pas les regarder en ligne, et c'est précisément ce qu'il demande. Le drapeau
- * dit ce qu'on veut dire — « elle existe, elle n'est pas encore ouverte » — là
- * où une absence dirait « elle n'existe pas ».
+ * Parce qu'il faut pouvoir poser une leçon que le joueur relit avant qu'elle
+ * ne s'ouvre. Le drapeau dit ce qu'on veut dire — « elle existe, elle n'est pas
+ * encore ouverte » — là où une absence dirait « elle n'existe pas ».
  *
  * C'est le même parti pris qu'`EtatEtape` : une case vide ne dit rien, un état
  * tranche.
@@ -50,9 +54,11 @@ export type Lecon = {
    *
    * ⚠️ **À faux, seul le staff entre.** Ce n'est pas une permission
    * attribuable : c'est l'état de la leçon elle-même, comme une annonce
-   * retirée du Grand Hall. Le jour où le contrôle fonctionnera côté serveur,
-   * ce drapeau passera à vrai — et ce sera une décision du joueur, pas un
-   * effet de bord.
+   * retirée du Grand Hall.
+   *
+   * ⚠️ **Une leçon ouverte doit avoir son contrôle**, et `lecons.test.ts` le
+   * vérifie : sans lui, le bouton « Passer le contrôle » mène à un 404, et
+   * l'élève croit que le site est cassé.
    */
   ouverteAuxEleves: boolean;
 };
@@ -70,7 +76,7 @@ export const LECONS: readonly Lecon[] = [
     rang: 1,
     surCombien: 4,
     titre: "La Torche",
-    ouverteAuxEleves: false,
+    ouverteAuxEleves: true,
   },
   {
     matiereId: "runologie",
@@ -78,7 +84,7 @@ export const LECONS: readonly Lecon[] = [
     rang: 1,
     surCombien: 4,
     titre: "Vingt-quatre signes, vingt-quatre sons",
-    ouverteAuxEleves: false,
+    ouverteAuxEleves: true,
   },
   {
     matiereId: "magie_defensive",
@@ -86,7 +92,31 @@ export const LECONS: readonly Lecon[] = [
     rang: 1,
     surCombien: 4,
     titre: "La garde et la distance",
-    ouverteAuxEleves: false,
+    ouverteAuxEleves: true,
+  },
+  {
+    matiereId: "herboristerie",
+    annee: 1,
+    rang: 1,
+    surCombien: 4,
+    titre: "Reconnaître",
+    ouverteAuxEleves: true,
+  },
+  {
+    matiereId: "creatures",
+    annee: 1,
+    rang: 1,
+    surCombien: 4,
+    titre: "Regarder",
+    ouverteAuxEleves: true,
+  },
+  {
+    matiereId: "histoire",
+    annee: 1,
+    rang: 1,
+    surCombien: 4,
+    titre: "La côte avant l’école",
+    ouverteAuxEleves: true,
   },
 ];
 
