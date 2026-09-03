@@ -58,7 +58,7 @@ export const TEXTES_POUVOIRS = {
     nommeLe: "Préfet de {maison} depuis le {date}",
   },
 
-  /** Les libellés des cinq permissions, et ce que chacune ouvre vraiment. */
+  /** Les libellés des six permissions, et ce que chacune ouvre vraiment. */
   permissions: {
     ANNONCES_MAISON: {
       nom: "Écrire les annonces d’une maison",
@@ -87,6 +87,12 @@ export const TEXTES_POUVOIRS = {
       nom: "Verrouiller une section",
       detail:
         "Fermer un lieu à l’écriture, sans en cacher le contenu : ce qui s’y est joué reste lisible.",
+      portee: "Tout le forum",
+    },
+    VOIR_LES_CONTROLES: {
+      nom: "Voir les contrôles",
+      detail:
+        "Consulter les contrôles de leçon envoyés : qui, quelle matière, quelle note. La porte des professeurs, qui sont des joueurs ordinaires. N'ouvre ni les années non atteintes, ni les leçons avant leur heure, ni les copies.",
       portee: "Tout le forum",
     },
   },

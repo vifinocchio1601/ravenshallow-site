@@ -131,6 +131,32 @@ export const TEXTES_COURS = {
       "Les examens de fin d’année viendront avec le lot suivant. Les leçons de première année, elles, sont ouvertes, et chacune se termine par un contrôle.",
   },
 
+  /**
+   * **Le registre des contrôles** — la porte des professeurs, posée le
+   * 4 septembre 2026.
+   *
+   * ⚠️ **On dit « les contrôles envoyés », jamais « les copies ».** L'écran
+   * ne montre que des notes, et le vocabulaire ne doit pas promettre plus que
+   * ce que la permission ouvre.
+   */
+  controles: {
+    /** L'entrée sur la page des cours, visible du seul détenteur. */
+    entree: "Le registre des contrôles",
+    entreeAide: "Qui a passé quoi, et avec quelle note.",
+
+    titre: "Le registre des contrôles",
+    chapeau:
+      "Les contrôles de leçon envoyés, du plus récent au plus ancien. On y lit une note, jamais une copie : les réponses d'un élève ne quittent pas le serveur.",
+
+    /** Le singulier a sa phrase : « 1 contrôles » est la faute qu'on ne relit pas. */
+    compte: "{n} contrôles envoyés",
+    compteUn: "1 contrôle envoyé",
+    aucun: "Aucun contrôle n'a encore été envoyé.",
+
+    /** La ligne survit au compte : le nom, lui, s'en va. */
+    compteParti: "Un membre qui n'est plus là",
+  },
+
   /** Les inscriptions ne sont pas construites non plus. */
   inscriptions: {
     aVenir:

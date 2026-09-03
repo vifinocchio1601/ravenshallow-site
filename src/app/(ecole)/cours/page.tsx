@@ -13,7 +13,7 @@ import {
 import { FONCTIONS, libelleAnnee, type Fonction } from "@/lib/dossier/etats";
 import { ROUTES } from "@/lib/ecole/menu";
 import { pouvoirsDe } from "@/lib/forum/depot-pouvoirs";
-import { estStaff } from "@/lib/forum/pouvoirs";
+import { estStaff, peutVoirLesControles } from "@/lib/forum/pouvoirs";
 import { exigerAcces } from "@/lib/session/garde";
 
 const T = TEXTES_COURS.annees;
@@ -58,6 +58,32 @@ export default async function Page() {
       <p className="mt-4 max-w-[62ch] font-body leading-[1.8] text-parchment-dim">
         {T.chapeau}
       </p>
+
+      {/*
+        **La porte des professeurs.**
+
+        ⚠️ **Elle ne s'affiche qu'à qui l'ouvre**, et ce n'est pas une exception
+        à « une porte close s'affiche » : les années fermées et les maisons où
+        l'on n'entre pas se montrent parce qu'elles sont des faits du monde,
+        qu'un élève gagne à connaître. Un registre d'administration n'en est
+        pas un — l'annoncer à toute l'école ne lui apprendrait rien, et
+        donnerait à croire qu'il lui manque quelque chose.
+
+        Même lecture que le menu, où une entrée fermée disparaît.
+      */}
+      {peutVoirLesControles(pouvoirs) ? (
+        <Link
+          href={`${ROUTES.cours}/controles`}
+          className="mt-6 inline-flex flex-col gap-1 rounded-md border border-aurora-teal/25 bg-void/40 px-5 py-4 transition-colors duration-300 hover:border-aurora-teal/60"
+        >
+          <span className="font-display text-sm tracking-[0.04em] text-parchment">
+            {TEXTES_COURS.controles.entree}
+          </span>
+          <span className="font-body text-xs italic text-silver">
+            {TEXTES_COURS.controles.entreeAide}
+          </span>
+        </Link>
+      ) : null}
 
       {CYCLES.map((cycle) => (
         <section key={cycle.id} className="mt-12">

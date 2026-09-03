@@ -1,0 +1,39 @@
+-- ═══════════════════════════════════════════════════════════════
+--  La sixième permission — voir les contrôles passés
+-- ═══════════════════════════════════════════════════════════════
+--
+-- Décision du joueur, 4 septembre 2026 : les professeurs doivent pouvoir voir
+-- qui a passé quel contrôle, et avec quelle note. Rien de plus.
+--
+-- ⚠️ **Elle n'ouvre QUE la lecture des contrôles.** Pas les années qu'un
+-- professeur n'a pas atteintes, pas les leçons avant leur heure, pas
+-- l'écriture. Le joueur a écarté les trois — une permission qui ouvrirait
+-- plusieurs choses à la fois ne se retirerait plus proprement.
+--
+-- ⚠️ **Pourquoi une permission plutôt que le rôle affiché.** Écrire
+-- « Professeur d'alchimie » dans `Eleve.roleAffiche` ne doit strictement rien
+-- ouvrir — c'est une règle du joueur, tenue par `role-affiche.test.ts` de
+-- trois façons. Un professeur reçoit donc un vrai pouvoir, accordé depuis
+-- `/admin/pouvoirs`, tracé au journal, et retiré d'un clic.
+--
+-- ⚠️ **Pourquoi pas « les nommer modérateurs ».** Cela marcherait sans rien
+-- construire, et donnerait le forum entier avec : masquer un post, lire les
+-- espaces réservés d'une maison, passer partout. Beaucoup plus que ce qu'on
+-- veut, et impossible à reprendre à moitié.
+--
+-- ⚠️ **Postgres ne sait pas ajouter une valeur d'enum depuis le code.** C'est
+-- la raison d'être de cette migration, et c'est le même chemin qu'a pris la
+-- quatrième nature d'un événement de calendrier le jour où elle arrivera.
+
+ALTER TYPE "Permission" ADD VALUE IF NOT EXISTS 'VOIR_LES_CONTROLES';
+
+-- ── Ce qui n'a PAS besoin de changer, et pourquoi ──
+--
+-- La contrainte `permissions_accordees_portee` dit qu'une permission de maison
+-- porte une maison et qu'une permission globale n'en porte pas. Elle est
+-- écrite en nommant les deux permissions de maison — `ANNONCES_MAISON` et
+-- `LIRE_ESPACES_MAISON` —, jamais « toutes les autres » : celle-ci est donc
+-- globale d'office, sans qu'on ait à y toucher.
+--
+-- Les deux index uniques partiels ne connaissent pas les valeurs non plus :
+-- ils se partagent la table sur `maison IS NULL` et `maison IS NOT NULL`.

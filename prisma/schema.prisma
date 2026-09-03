@@ -937,6 +937,20 @@ enum Permission {
   EPINGLER_SUJET
   /// Portée : tout le forum.
   VERROUILLER_SECTION
+
+  /// Portée : tout le forum. **Voir les contrôles de leçon envoyés** — qui,
+  /// quelle matière, quelle note. Posée le 4 septembre 2026 pour les
+  /// professeurs, qui sont des joueurs ordinaires.
+  ///
+  /// ⚠️ **Elle n'ouvre QUE cela.** Pas les années au-delà de la sienne, pas
+  /// les leçons avant leur heure, pas l'écriture — le joueur a écarté les
+  /// trois. Une permission qui ouvrirait plusieurs choses à la fois ne se
+  /// retirerait plus proprement.
+  ///
+  /// ⚠️ **Elle ne donne accès à aucune copie.** On voit une note, jamais les
+  /// réponses d'un élève : ce n'est pas nécessaire pour enseigner, et le
+  /// moins qu'une permission ouvre, le mieux elle se relit.
+  VOIR_LES_CONTROLES
 }
 
 /// Une permission accordée à un membre, sur une maison ou sur tout le forum.

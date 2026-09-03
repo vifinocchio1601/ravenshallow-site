@@ -527,9 +527,14 @@ Le lot des pouvoirs l'a branché : `MODERATEUR` et `ADMIN` sont le staff.
 `ACCES_MODIFIE` : suspendre un compte et le faire modérateur ne se lisent pas
 de la même façon, et le journal affichait sinon « Accès modifié : MODERATEUR ».
 
-**Cinq permissions, et la sixième n'existe pas.** Deux portent sur une maison
-— écrire ses annonces, lire ses espaces réservés —, trois sur tout le forum :
-clore une scène, épingler un sujet, verrouiller une section.
+**Six permissions.** Deux portent sur une maison — écrire ses annonces, lire
+ses espaces réservés —, quatre sur tout le forum : clore une scène, épingler un
+sujet, verrouiller une section, et **voir les contrôles** depuis le
+4 septembre 2026.
+
+**La sixième est arrivée comme il faut qu'elles arrivent** : le test qui figeait
+les cinq est tombé, on est venu relire la règle, et le joueur avait tranché
+avant qu'une ligne ne soit écrite. Voir « L'accès professeurs ».
 
 **Aucune ne touche à la Tour aux Corbeaux**, sous aucune forme, pas même
 désactivée. `pouvoirs.test.ts` compte les valeurs de la liste et relit le code
@@ -2764,6 +2769,57 @@ matières afficheraient alors deux décomptes différents pour le même envoi.
 ⚠️ **Le jour où la leçon 2 arrivera, c'est `delai.ts` qu'on branchera sur
 `peutOuvrirLaLecon`**, et nulle part ailleurs. La règle est déjà écrite ; il ne
 manque qu'un appelant.
+
+### L'accès professeurs
+
+Posé le 4 septembre 2026, à la demande du joueur : « ce qu'il faudrait sur la
+page des cours, c'est un accès professeurs. »
+
+⚠️ **Il ne se déduit PAS du rôle affiché.** Écrire « Professeur d'alchimie »
+dans `Eleve.roleAffiche` n'ouvre rien, jamais — c'est une règle du joueur que
+`role-affiche.test.ts` tient de trois façons. Un professeur est un **joueur
+ordinaire** ; il lui faut donc un vrai pouvoir.
+
+**D'où `VOIR_LES_CONTROLES`, la sixième permission**, et pas autre chose :
+
+| | Écarté, et pourquoi |
+| --- | --- |
+| les nommer modérateurs | donnerait le forum entier avec — masquer un post, lire les espaces réservés d'une maison, passer partout |
+| une permission par matière | plus juste, mais neuf lignes à poser par professeur au lieu d'une |
+
+⚠️ **Elle n'ouvre QUE la lecture des contrôles** — décision du joueur, qui a
+écarté explicitement les trois autres portes proposées : les années qu'un
+professeur n'a pas atteintes (art. 14.4 vaut pour tout le monde), les leçons
+avant leur heure, et l'écriture des leçons. Une permission qui ouvrirait
+plusieurs choses à la fois ne se retirerait plus proprement.
+
+⚠️ **Aucune copie ne descend.** Le dépôt ne rend pas `reponses`, et l'écran
+n'aurait pas de quoi les afficher : un professeur a besoin d'une note. Le jour
+où il faudra les copies, ce sera une décision, pas un `select` de plus glissé
+dans un lot.
+
+**Rien n'a eu à bouger dans l'administration** : `/admin/pouvoirs` et le
+panneau de la fiche parcourent tous deux `PERMISSIONS`. Une permission de plus
+est donc **une ligne dans la liste**, et elle apparaît partout — c'est le plan
+du lot des pouvoirs, et il tient pour la première fois. Un essai vérifie en
+retour que chacune porte bien un libellé : sans lui, la case serait cochable
+et sans nom.
+
+⚠️ **`/cours/controles` n'est pas une année.** Le segment est statique, il
+l'emporte sur `[annee]` — qui de toute façon refuserait « controles ». Et
+`routeAutorisee` reconnaît tout ce qui commence par `/cours/` : il n'y a rien à
+déclarer au menu ni dans `ROUTES_HORS_MENU`.
+
+**L'entrée ne s'affiche qu'à qui l'ouvre**, et ce n'est pas une entorse à
+« une porte close s'affiche » : les années fermées et les maisons où l'on
+n'entre pas se montrent parce que ce sont des faits du monde. Un registre
+d'administration n'en est pas un.
+
+⚠️ **La maison d'un professeur ne s'affiche pas dans le registre**, et le piège
+a été rencontré à l'écran : la colonne `maison` est **toujours** écrite, et
+lire `eleve.maison` faisait apparaître la directrice comme une élève de Tideål.
+C'est `aUneMaison` qui tranche — dans le dépôt, jamais en comparant l'état dans
+un composant.
 
 ### Ce qui reste à faire
 

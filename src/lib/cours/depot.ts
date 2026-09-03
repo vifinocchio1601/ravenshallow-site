@@ -2,6 +2,7 @@ import "server-only";
 import { transaction } from "@/lib/base/transaction";
 import { accorderLesPointsDUnControle } from "@/lib/points/depot";
 import { prisma } from "@/lib/prisma";
+import { aUneMaison } from "@/lib/session/acces";
 import type { Annee } from "./cursus";
 import {
   corriger,
@@ -78,6 +79,86 @@ export async function controlesEnvoyesDe(
   return new Map(
     lignes.map((l) => [`${l.matiereId}/${l.rang}`, l as ControleEnvoye]),
   );
+}
+
+// ─────────────────────────────────────────────────────────────
+//  Le registre des professeurs — art. rien, décision du joueur
+// ─────────────────────────────────────────────────────────────
+
+/** Une ligne du registre : qui, quoi, quelle note. */
+export type ControleVu = {
+  id: string;
+  /** Nul quand le compte a été supprimé : la ligne reste, elle. */
+  prenomNom: string | null;
+  /**
+   * **La maison, si elle s'affiche** — `aUneMaison`, jamais la colonne brute.
+   * Nulle pour une directrice ou un professeur, dont la maison reste écrite en
+   * base sous `SANS_OBJET`.
+   */
+  maison: string | null;
+  matiereId: string;
+  annee: number;
+  rang: number;
+  note: number;
+  surCombien: number;
+  envoyeLe: Date;
+};
+
+/**
+ * **Tous les contrôles envoyés**, pour qui a le droit de les voir.
+ *
+ * ⚠️ **Ce dépôt ne décide d’aucun droit — il les reçoit.** L’appelant a déjà
+ * demandé `peutVoirLesControles` ; recopier la question ici en ferait une
+ * seconde source, qui divergerait le jour où l’on toucherait aux pouvoirs.
+ * C’est le parti pris du tableau d’affichage d’une maison.
+ *
+ * ⚠️ **On ne rend AUCUNE réponse d’élève.** La colonne `reponses` existe, et
+ * elle reste au chaud : un professeur a besoin d’une note, pas d’une copie.
+ * Le moins qu’une permission ouvre, le mieux elle se relit — et le jour où
+ * il faudra les copies, ce sera une décision du joueur, pas un `select` de
+ * plus glissé dans un lot.
+ *
+ * ⚠️ **Ni portrait ni biographie**, pour la même raison que le Registre : un
+ * portrait pèse deux cents kilo-octets en base, et une requête de liste ne
+ * doit jamais en ramener.
+ *
+ * Rendus du plus récent au plus ancien : c’est ce qu’un professeur vient
+ * voir — qui a passé quelque chose depuis sa dernière visite.
+ */
+export async function listerLesControles(): Promise<ControleVu[]> {
+  const lignes = await prisma.controleEnvoye.findMany({
+    select: {
+      id: true,
+      matiereId: true,
+      annee: true,
+      rang: true,
+      note: true,
+      surCombien: true,
+      envoyeLe: true,
+      eleve: { select: { prenomNom: true, maison: true, etatMaison: true } },
+    },
+    orderBy: { envoyeLe: "desc" },
+  });
+
+  return lignes.map((l) => ({
+    id: l.id,
+    prenomNom: l.eleve?.prenomNom ?? null,
+    // ⚠️ **La colonne `maison` est TOUJOURS écrite, et ne dit rien à elle
+    // seule.** Une directrice garde la sienne au chaud sous `SANS_OBJET`, et
+    // la rendre telle quelle l'afficherait comme une élève de Tideål. C'est
+    // `aUneMaison` qui tranche — ici, et jamais en comparant l'état dans un
+    // composant. Constaté à l'écran le 4 septembre 2026.
+    maison:
+      l.eleve && aUneMaison({ etatMaison: l.eleve.etatMaison })
+        ? l.eleve.maison
+        : null,
+    matiereId: l.matiereId,
+    annee: l.annee,
+    rang: l.rang,
+    note: l.note,
+    surCombien: l.surCombien,
+    envoyeLe: l.envoyeLe,
+  }));
 }
 
 // ─────────────────────────────────────────────────────────────

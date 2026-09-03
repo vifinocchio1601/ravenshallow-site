@@ -12,10 +12,10 @@
  *
  * ── Trois choses que ce fichier ne fait pas, et ne fera jamais ──
  *
- * 1. **Il n’ouvre pas la Tour aux Corbeaux.** Aucune des cinq permissions ne
- *    donne accès à une conversation privée, sous aucune forme. La sixième
- *    n’existe pas — et `pouvoirs.test.ts` compte les valeurs pour que personne
- *    ne l’ajoute sans s’en apercevoir.
+ * 1. **Il n’ouvre pas la Tour aux Corbeaux.** Aucune des six permissions ne
+ *    donne accès à une conversation privée, sous aucune forme, et
+ *    `pouvoirs.test.ts` relit leurs noms pour que personne n’en ajoute une
+ *    qui s’en approcherait.
  * 2. **Il ne lit pas `roleAffiche`.** Écrire « Directrice » dans le champ
  *    décoratif n’ouvre rien : les pouvoirs viennent d’ici, et d’ici seulement.
  * 3. **Il n’attribue rien.** Aucune permission ne permet d’en accorder une —
@@ -27,18 +27,20 @@
 import type { Maison, Role } from "@/lib/dossier/etats";
 
 /**
- * **Les cinq permissions attribuables.** Miroir de l’enum Prisma `Permission`.
+ * **Les six permissions attribuables.** Miroir de l’enum Prisma `Permission`.
  *
- * Deux portent sur une maison, trois sur tout le forum. Cette liste est
- * figée par un test : en ajouter une sixième est un geste délibéré, pas une
- * ligne qui passe dans un lot.
+ * Deux portent sur une maison, quatre sur tout le forum. Cette liste est figée
+ * par un test : en ajouter une est un geste délibéré, pas une ligne qui passe
+ * dans un lot. La sixième — `VOIR_LES_CONTROLES` — est arrivée ainsi, le
+ * 4 septembre 2026, et le test qui figeait les cinq est bien tombé.
  */
 export type Permission =
   | "ANNONCES_MAISON"
   | "LIRE_ESPACES_MAISON"
   | "CLORE_SCENE"
   | "EPINGLER_SUJET"
-  | "VERROUILLER_SECTION";
+  | "VERROUILLER_SECTION"
+  | "VOIR_LES_CONTROLES";
 
 /** Dans l’ordre d’affichage : les deux de maison d’abord, puis les globales. */
 export const PERMISSIONS: readonly Permission[] = [
@@ -47,6 +49,7 @@ export const PERMISSIONS: readonly Permission[] = [
   "CLORE_SCENE",
   "EPINGLER_SUJET",
   "VERROUILLER_SECTION",
+  "VOIR_LES_CONTROLES",
 ];
 
 /**
@@ -217,6 +220,26 @@ export function peutEpinglerUnSujet(pouvoirs: Pouvoirs): boolean {
 /** Verrouiller une section. Tout le forum. */
 export function peutVerrouillerUneSection(pouvoirs: Pouvoirs): boolean {
   return estStaff(pouvoirs) || detient(pouvoirs, "VERROUILLER_SECTION", null);
+}
+
+/**
+ * **Peut-il voir les contrôles de leçon envoyés ?** — la porte des professeurs.
+ *
+ * Elle ouvre la liste : qui a passé quel contrôle, quand, et avec quelle note.
+ * Et **rien d’autre** :
+ *
+ *   • pas les années qu’il n’a pas atteintes — c’est `peutOuvrirLAnnee` qui en
+ *     décide, et l’article 14.4 vaut pour tout le monde ;
+ *   • pas les leçons avant leur heure d’ouverture — c’est `peutOuvrirLaLecon` ;
+ *   • pas les réponses d’un élève, copie par copie. On voit une note.
+ *
+ * ⚠️ **Elle ne se déduit JAMAIS du rôle affiché.** Écrire « Professeur
+ * d’alchimie » dans le champ décoratif n’ouvre rien — c’est la règle du
+ * joueur, et `role-affiche.test.ts` la tient de trois façons. Un professeur
+ * reçoit cette permission depuis `/admin/pouvoirs`, comme les cinq autres.
+ */
+export function peutVoirLesControles(pouvoirs: Pouvoirs): boolean {
+  return estStaff(pouvoirs) || detient(pouvoirs, "VOIR_LES_CONTROLES", null);
 }
 
 /**

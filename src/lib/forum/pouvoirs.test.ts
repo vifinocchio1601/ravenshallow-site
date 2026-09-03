@@ -2,6 +2,7 @@ import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { MAISONS } from "@/lib/dossier/etats";
+import { TEXTES_POUVOIRS } from "./constantes";
 import type { EtatAcces } from "@/lib/session/acces";
 import {
   AUCUN_POUVOIR,
@@ -16,6 +17,7 @@ import {
   peutParlerDansLeSalonDe,
   peutVerrouillerUneSection,
   peutVisiterLaMaison,
+  peutVoirLesControles,
   porteSurUneMaison,
   type Permission,
   type Pouvoirs,
@@ -30,7 +32,7 @@ function membre(partiel: Partial<Pouvoirs> = {}): Pouvoirs {
 //  La liste elle-même
 // ─────────────────────────────────────────────────────────────
 
-describe("les cinq permissions, et pas une de plus", () => {
+describe("les six permissions, et pas une de plus", () => {
   /**
    * Ce test n’interdit pas d’en ajouter une : il interdit de le faire sans
    * s’en apercevoir. Le jour où une sixième arrive, c’est ici qu’on relit la
@@ -43,6 +45,9 @@ describe("les cinq permissions, et pas une de plus", () => {
       "CLORE_SCENE",
       "EPINGLER_SUJET",
       "VERROUILLER_SECTION",
+      // Posée le 4 septembre 2026, pour les professeurs. Le test qui figeait
+      // les cinq est bien tombé ce jour-là — c'était son rôle.
+      "VOIR_LES_CONTROLES",
     ]);
   });
 
@@ -60,13 +65,31 @@ describe("les cinq permissions, et pas une de plus", () => {
     }
   });
 
-  it("deux permissions portent sur une maison, trois sur tout le forum", () => {
+  /**
+   * ⚠️ **Une permission sans libellé s'affiche vide.** L'écran
+   * d'administration et le panneau de la fiche parcourent tous deux
+   * `PERMISSIONS` — c'est ce qui fait qu'une nouvelle apparaît sans toucher à
+   * un seul composant —, mais rien n'oblige `TEXTES_FORUM` à suivre. La case
+   * serait cochable, sans nom ni portée, et personne ne saurait ce qu'il
+   * accorde. Éprouvé en retirant un libellé : il tombe et nomme la permission.
+   */
+  it("ont toutes un libellé, une portée et une explication", () => {
+    for (const permission of PERMISSIONS) {
+      const texte = TEXTES_POUVOIRS.permissions[permission];
+      expect(texte, permission).toBeDefined();
+      expect(texte.nom.trim(), permission).not.toBe("");
+      expect(texte.detail.trim(), permission).not.toBe("");
+      expect(texte.portee.trim(), permission).not.toBe("");
+    }
+  });
+
+  it("deux permissions portent sur une maison, quatre sur tout le forum", () => {
     expect([...PERMISSIONS_DE_MAISON]).toEqual([
       "ANNONCES_MAISON",
       "LIRE_ESPACES_MAISON",
     ]);
     const globales = PERMISSIONS.filter((p) => !porteSurUneMaison(p));
-    expect(globales).toHaveLength(3);
+    expect(globales).toHaveLength(4);
   });
 });
 
@@ -79,6 +102,7 @@ describe("un membre sans rien n’a rien", () => {
     ["clore une scène", peutCloreUneScene],
     ["épingler un sujet", peutEpinglerUnSujet],
     ["verrouiller une section", peutVerrouillerUneSection],
+    ["voir les contrôles", peutVoirLesControles],
   ])("ne peut pas %s", (_nom, question) => {
     expect(question(AUCUN_POUVOIR)).toBe(false);
   });
@@ -118,6 +142,62 @@ describe("une permission d’annonce sur Kaldrafn ne donne rien sur Nattorm", ()
     expect(peutCloreUneScene(surKaldrafn)).toBe(false);
     expect(peutEpinglerUnSujet(surKaldrafn)).toBe(false);
     expect(peutVerrouillerUneSection(surKaldrafn)).toBe(false);
+    expect(peutVoirLesControles(surKaldrafn)).toBe(false);
+  });
+});
+
+/**
+ * **La sixième permission — la porte des professeurs**, posée le 4 septembre
+ * 2026. Ce qu'elle ouvre tient en une ligne ; ce qu'elle n'ouvre PAS est le
+ * vrai sujet, et c'est ce que le joueur a écarté explicitement.
+ */
+describe("voir les contrôles n’ouvre que les contrôles", () => {
+  const professeur = membre({
+    permissions: [{ permission: "VOIR_LES_CONTROLES", maison: null }],
+  });
+
+  it("ouvre le registre des contrôles", () => {
+    expect(peutVoirLesControles(professeur)).toBe(true);
+  });
+
+  it("n’ouvre rien d’autre sur le forum", () => {
+    expect(peutCloreUneScene(professeur)).toBe(false);
+    expect(peutEpinglerUnSujet(professeur)).toBe(false);
+    expect(peutVerrouillerUneSection(professeur)).toBe(false);
+  });
+
+  it("n’ouvre aucune maison, ni en lecture ni en écriture", () => {
+    for (const maison of MAISONS) {
+      expect(peutEcrireLesAnnoncesDe(professeur, maison), maison).toBe(false);
+      expect(peutLireLesEspacesDe(professeur, maison), maison).toBe(false);
+      expect(peutVisiterLaMaison(professeur, null, maison), maison).toBe(false);
+      expect(peutParlerDansLeSalonDe(professeur, null, maison), maison).toBe(false);
+    }
+  });
+
+  /**
+   * ⚠️ **Elle ne fait pas de lui un membre du staff**, et c'est tout l'intérêt
+   * d'avoir posé une permission plutôt que de nommer les professeurs
+   * modérateurs : le staff passe partout sur le forum, masque un post, lit les
+   * espaces réservés. Un professeur ne fait rien de tout cela.
+   */
+  it("ne fait pas de lui un membre du staff", () => {
+    expect(estStaff(professeur)).toBe(false);
+  });
+
+  /** Le staff, lui, y entre sans qu'on lui accorde quoi que ce soit. */
+  it("est ouverte au staff sans permission", () => {
+    expect(peutVoirLesControles(membre({ role: "MODERATEUR" }))).toBe(true);
+    expect(peutVoirLesControles(membre({ role: "ADMIN" }))).toBe(true);
+  });
+
+  /**
+   * ⚠️ **Un préfet ne la reçoit pas.** Son droit dérive de sa nomination et
+   * porte sur sa maison ; il n'a aucune raison de lire les notes de l'école.
+   */
+  it("n’est pas donnée par une préfecture", () => {
+    const prefet = membre({ prefetDe: ["KALDRAFN"] });
+    expect(peutVoirLesControles(prefet)).toBe(false);
   });
 });
 
